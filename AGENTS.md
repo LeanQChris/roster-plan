@@ -25,7 +25,7 @@ Greenfield design/spec project. Nothing implemented. All `.md` (requirements, sp
 | **Audit log** | HMAC-SHA256 chained, append-only triggers prevent UPDATE/DELETE |
 | **Auth** | Session tokens stored hashed (SHA256) in DB, not JWT. bcrypt cost 12. No refresh tokens for MVP (session lasts 7d, extended +7d on use within 24h of expiry) |
 | **RRULE** | RFC 5545 — store as string, expand on publish (not on read) |
-| **RBAC (MVP)** | 3 roles hardcoded in middleware: `company_admin`, `manager`, `employee`. No `role_permissions` join table. `super_admin` is DB-only, no UI |
+| **RBAC (MVP)** | 4 roles hardcoded in middleware: `company_admin`, `manager`, `employee`, `super_admin`. No `role_permissions` join table. `super_admin` is seeded in DB (no signup), uses same login flow |
 | **Clock entries** | Append-only enforced by triggers. `ON DELETE SET NULL` on person/assignment FKs to preserve records after GDPR erasure. Included in MVP (basic clock in/out, no break tracking) |
 | **Data residency** | Regional sharding by company — `region_routing` table maps company to DB cluster (Phase D) |
 | **Text fields** | VARCHAR limits enforced at DB level, never trust client-side validation |
@@ -36,7 +36,7 @@ Greenfield design/spec project. Nothing implemented. All `.md` (requirements, sp
 The full MVP scope, deferred features, schema simplifications, UI screens, and effort estimate are defined **once** in `docs/04-mvp-plan.md`. That document is the single source of truth. Key highlights:
 
 ### What's IN (MVP)
-Multi-tenant auth (register, login, logout), company settings, teams CRUD, people CRUD + email invite, shift templates + RRULE, shift publish (expand templates → instances), manager assigns people to shifts, basic week calendar view (read-only for employees), clock in/out, 1 notification email (shift assigned), role gating (3 roles, hardcoded middleware).
+Multi-tenant auth (register, login, logout), company settings, teams CRUD, people CRUD + email invite, shift templates + RRULE, shift publish (expand templates → instances), manager assigns people to shifts, basic week calendar view (read-only for employees), clock in/out, 1 notification email (shift assigned), role gating (4 roles, hardcoded middleware), super admin module (list companies, suspend/activate, platform audit).
 
 ### What's DEFERRED (MVP+)
 Self-scheduling, break tracking, time-off requests, shift swaps, positions CRUD, skills/certifications, locations/sites, attendance reports, calendar export (iCal/webcal), notification upgrades (reminders, digest, preferences, Slack/Teams), integrations, timezone toggle, coverage heatmap, conflict detection UI, audit log UI, compliance UI, password reset, rate limiting, webcal.
@@ -49,16 +49,16 @@ Self-scheduling, break tracking, time-off requests, shift swaps, positions CRUD,
 
 ### MVP RBAC
 ```typescript
-const roleHierarchy = { employee: 0, manager: 1, company_admin: 2 };
+const roleHierarchy = { employee: 0, manager: 1, company_admin: 2, super_admin: 3 };
 // User with role X can access any endpoint requiring role <= X
 ```
-Permissions hardcoded in middleware, no join table.
+Permissions hardcoded in middleware, no join table. `super_admin` is seeded in DB (no signup), uses same login flow.
 
 ### MVP Schema Simplifications
 See `docs/04-mvp-plan.md §Schema Simplifications` for authoritative list. Note: the full schema (`db/02-schema.sql`) defines all tables/columns for forward-compat — MVP simply ignores deferred columns (they're nullable/unused, not dropped).
 
-### MVP UI Screens (13 — no new pages, clock integrated into Dashboard + My Schedule)
-Login, Signup, Company Setup, Dashboard, My Schedule, Team Schedule, Assign Shift (modal), Shift Templates, Template Form, Team People, Invite People, Company Settings, Employees List.
+### MVP UI Screens (14 — no new pages, clock integrated into Dashboard + My Schedule)
+Login, Signup, Company Setup, Dashboard, My Schedule, Team Schedule, Assign Shift (modal), Shift Templates, Template Form, Team People, Invite People, Company Settings, Employees List, Admin Dashboard.
 
 ### MVP API Endpoints (subset of spec/01-api-spec.md)
 NOTE: All endpoints use the `/api/v1` prefix. Full details in `spec/01-api-spec.md`.
@@ -70,10 +70,11 @@ NOTE: All endpoints use the `/api/v1` prefix. Full details in `spec/01-api-spec.
 **Shifts**: `GET /api/v1/shifts`, `GET /api/v1/shifts/:id`, `POST /api/v1/shifts`, `PATCH /api/v1/shifts/:id`, `DELETE /api/v1/shifts/:id`, `POST /api/v1/shift-templates/:tid/expand`, `POST /api/v1/teams/:tid/schedules/publish`
 **Assignments**: `POST /api/v1/shifts/:sid/assign`, `DELETE /api/v1/shift-assignments/:id`, `GET /api/v1/shifts/:sid/assignments`
 **Clock**: `POST /api/v1/clock/clock-in`, `POST /api/v1/clock/:cid/clock-out`, `GET /api/v1/people/:pid/clock-entries`
+**Admin**: `GET /api/v1/admin/companies`, `PATCH /api/v1/admin/companies/:cid`, `GET /api/v1/admin/audit-log`
 **Calendar**: `GET /api/v1/me/schedule`, `GET /api/v1/teams/:tid/schedule`
 
 ### MVP Effort Estimate
-~35 days / 7 weeks (17.5 backend, 17.5 frontend)
+~38.5 days / 8 weeks (19 backend, 19.5 frontend)
 
 ## Post-MVP Phases
 
@@ -87,7 +88,7 @@ NOTE: All endpoints use the `/api/v1` prefix. Full details in `spec/01-api-spec.
 ## Key specs quick reference
 
 - **Database**: `db/02-schema.sql` — 30+ tables, all UUID PKs, TIMESTAMPTZ in UTC, RLS enabled on all data tables, HMAC-chained audit, append-only clock triggers
-- **RBAC**: `spec/02-rbac-matrix.md` — 3 layers: RLS (DB), middleware (app), UI (frontend); 4 roles in full spec, 3 in MVP
+- **RBAC**: `spec/02-rbac-matrix.md` — 3 layers: RLS (DB), middleware (app), UI (frontend); 4 roles in full spec and MVP
 - **Sessions**: `spec/06-session-management.md` — 7-day sliding sessions, extended +7d on API call within 24h of expiry
 - **Calendar export**: `spec/03-calendar-export-spec.md` — RFC 5545 .ics, webcal subscription with secret token (MVP+)
 - **Pagination**: `spec/04-pagination.md` — offset-based with cursor-readiness, default 50 per page

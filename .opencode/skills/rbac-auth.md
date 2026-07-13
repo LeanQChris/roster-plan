@@ -64,10 +64,10 @@ const roleHierarchy = {
 3. **Frontend** — route guards and component-level visibility
 
 ### MVP simplifications
-- No viewer or super_admin UI
-- super_admin exists in DB only, no UI screens
+- No viewer UI (post-MVP)
+- super_admin seeded in DB (no signup), has dedicated admin UI
 - Permissions hardcoded in middleware, not in a join table
-- employee = most restricted; manager inherits employee + team mgmt; company_admin inherits all
+- employee = most restricted; manager inherits employee + team mgmt; company_admin inherits all; super_admin inherits all companies + admin actions
 
 ## Password handling
 - bcrypt with cost 12

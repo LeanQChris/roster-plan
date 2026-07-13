@@ -4,13 +4,13 @@
 
 | Role | Scope | Description | MVP? |
 |---|---|---|---|
-| `super_admin` | Global (all tenants) | Platform operations, all companies | ✅ DB-level only, no UI |
+| `super_admin` | Global (all tenants) | Platform operations, all companies | ✅ |
 | `company_admin` | Single company | Company settings, all teams, all people, audit log, compliance, integrations | ✅ |
 | `manager` | Single team(s) | Team schedule, shift templates, approvals, team roster, reports | ✅ |
 | `employee` | Self | Own schedule, self-scheduling requests, clock in/out, time-off requests | ✅ |
 | `viewer` | Single team(s) (read-only) | HR, payroll, auditing — can view but not edit | ❌ MVP+ |
 
-MVP uses 3 roles: `company_admin`, `manager`, `employee`. `super_admin` exists in DB but has no UI. `viewer` is post-MVP only. See `docs/04-mvp-plan.md` for details.
+MVP uses 4 roles: `company_admin`, `manager`, `employee`, `super_admin`. `super_admin` is seeded in DB (no signup) and has a dedicated admin UI. `viewer` is post-MVP only. See `docs/04-mvp-plan.md` for details.
 
 ## 2. Permission Definitions
 
@@ -254,12 +254,14 @@ requirePermission('person.create', req.user, req.companyId)
 ## 5. MVP Simplification Note
 
 For MVP, RBAC is simplified:
-- 3 roles only: `company_admin`, `manager`, `employee` (no `viewer` or `super_admin` UI)
-- `super_admin` and `viewer` roles exist in the database schema (full enum) but have no UI screens in MVP
+- 4 roles: `company_admin`, `manager`, `employee`, `super_admin`
+- `viewer` role exists in the database schema (full enum) but has no UI screens in MVP
+- `super_admin` is seeded in DB (no signup), uses same login flow, has dedicated admin UI
 - Permissions are hardcoded by role in middleware, not stored in a join table
 - `employee` permission set is the most restricted
 - `manager` inherits all `employee` permissions plus scheduling and team management
 - `company_admin` inherits all permissions for their company
+- `super_admin` inherits all permissions across all companies plus admin actions
 
 ```typescript
 // MVP RBAC: hardcoded role hierarchy
@@ -267,6 +269,7 @@ const roleHierarchy = {
     employee: 0,
     manager: 1,
     company_admin: 2,
+    super_admin: 3,
 };
 // A user with role X can access any endpoint requiring role <= X.
 ```

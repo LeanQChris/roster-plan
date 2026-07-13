@@ -39,7 +39,7 @@ Detail that is correct but far beyond current project phase:
 ## Cross-reference checklist
 
 ### Check these ground truths (from AGENTS.md)
-- RBAC: 3 roles hardcoded in middleware, NO role_permissions join table for MVP
+- RBAC: 4 roles hardcoded in middleware (employee, manager, company_admin, super_admin), NO role_permissions join table for MVP
 - RRULE: expand on publish, not on read
 - Audit log: HMAC-SHA256 chained, append-only triggers
 - Clock entries: append-only, `ON DELETE SET NULL` on person/assignment FKs

@@ -14,6 +14,7 @@ Sign up company → Add teams → Invite employees
   → Assign employees to shifts
   → Employees log in and view their schedule
   → Employees clock in/out during their shifts
+  → Super admin manages tenants (suspend/activate, platform view)
 ```
 
 ### Features Kept
@@ -30,6 +31,7 @@ Sign up company → Add teams → Invite employees
 | Clock in / out | Core value — track attendance |
 | 1 notification email | Essential feedback loop (shift assigned) |
 | Role gating (admin/manager/employee) | Security, but simplified |
+| Super admin module | Platform ops — list companies, suspend/activate, platform audit |
 
 ### Features Deferred (MVP+)
 | Feature | Why Deferred |
@@ -178,6 +180,13 @@ The full API spec has more; here is the exact MVP endpoint list.
 | POST | `/api/v1/clock/:clockEntryId/clock-out` | Employee | Clock out from shift |
 | GET | `/api/v1/people/:personId/clock-entries` | Self, Manager+ | View clock entries for range (`?from=&to=`) |
 
+### Admin (Super Admin)
+| Method | Path | Who | Description |
+|---|---|---|---|
+| GET | `/api/v1/admin/companies` | Super admin | List all companies with stats |
+| PATCH | `/api/v1/admin/companies/:companyId` | Super admin | Suspend, activate, force delete |
+| GET | `/api/v1/admin/audit-log` | Super admin | Platform-wide audit log |
+
 ### Calendar (Employee-facing)
 | Method | Path | Who | Description |
 |---|---|---|---|
@@ -238,6 +247,18 @@ The full API spec has more; here is the exact MVP endpoint list.
 6. Clock entry visible in My Schedule for that shift block
 ```
 
+### Flow 5: Super Admin Manages Tenants
+
+```
+1. Super admin logs in via same login page → redirected to /admin
+2. Sees table of all companies: name, slug, member count, status, created date
+3. Can filter/sort companies by status (active, suspended)
+4. Clicks a company row → views company details and stats
+5. Clicks "Suspend" → confirmation modal → company is suspended
+6. Clicks "Activate" → company re-enabled
+7. "Audit Log" tab → platform-wide event log (read-only)
+```
+
 ---
 
 ## MVP UI Screens (Exact List)
@@ -257,8 +278,9 @@ The full API spec has more; here is the exact MVP endpoint list.
 | 11 | Invite People | `/invite` | Company admin | Email input(s), team selector, send button |
 | 12 | Company Settings | `/company/settings` | Company admin | Company name, timezone, branding (optional) |
 | 13 | Employees List | `/people` | Company admin | Full company people list, filter by team |
+| 14 | Admin Dashboard | `/admin` | Super admin | Companies list with stats, status toggle, platform audit log |
 
-**Not included in MVP**: Audit log UI, admin panel, export buttons, timezone toggle, coverage heatmap, notification preferences, profile page, break tracking, attendance live view.
+**Not included in MVP**: Audit log UI (company-level), export buttons, timezone toggle, coverage heatmap, notification preferences, profile page, break tracking, attendance live view.
 
 ---
 
@@ -267,11 +289,12 @@ The full API spec has more; here is the exact MVP endpoint list.
 ### Authentication
 - Session tokens stored in database, not JWT (allows invalidation).
 - No refresh tokens for MVP (session lasts 7 days, extend on use).
-- No password reset for MVP (admin can reset via direct support).
+- No password reset for MVP (company admin can reset via direct support).
+- Super admin is created via DB seed and uses the same login flow.
 
 ### RBAC (Simplified for MVP)
 - 3 roles: `company_admin`, `manager`, `employee`.
-- `super_admin` is a database-level role, no UI.
+- `super_admin` is seeded in DB (no signup), has dedicated admin UI.
 - Permission check is a simple middleware: `requireRole('manager')`.
 - No `role_permissions` join table for MVP — permissions are hardcoded by role in middleware.
 
@@ -281,6 +304,7 @@ const roleHierarchy = {
     employee: 0,
     manager: 1,
     company_admin: 2,
+    super_admin: 3,
 };
 // A user with role X can access any endpoint requiring role <= X.
 ```
@@ -308,8 +332,16 @@ const roleHierarchy = {
 
 ### Audit Log (Write-Only)
 - All writes to people, teams, shifts, assignments are logged.
-- No audit log UI in MVP.
+- No company-level audit log UI in MVP.
 - HMAC chain is fully implemented as designed.
+- Super admin can view platform audit log via admin API.
+
+### Super Admin (Simplified)
+- Super admin account created via DB seed (not through signup).
+- Same login flow as regular users (session-based auth).
+- Role check in middleware: endpoints requiring `super_admin` check `role >= 3`.
+- Admin endpoints are prefixed with `/api/v1/admin/`.
+- MVP admin features: list all companies with stats, suspend/activate companies, view platform audit log.
 
 ### Calendar View (Simplified)
 - Week view only (no month or day) for MVP.
@@ -739,9 +771,12 @@ After product-market fit, these unlock larger customers.
 - [ ] Employee can see clock status (clocked in/out) on their schedule
 - [ ] Manager can view clock entries for their team members
 - [ ] Company admin can edit company settings
-- [ ] All state changes are recorded in the audit log (no UI needed)
+- [ ] All state changes are recorded in the audit log (no company-level UI needed)
 - [ ] Session persists across page reloads
 - [ ] Logging out invalidates the session
+- [ ] Super admin can list all companies with member count and status
+- [ ] Super admin can suspend and activate a company
+- [ ] Super admin can view platform-wide audit log
 
 ---
 
@@ -758,20 +793,22 @@ After product-market fit, these unlock larger customers.
 | Clock in/out | 1.5 | 2 | Clock in/out endpoints, timer UI, clock status on schedule |
 | Dashboard | 0.5 | 2 | Upcoming shifts, quick links |
 | Emails | 1 | 0 | Template + send logic |
+| Super admin module | 1.5 | 2 | Admin endpoints, companies list, suspend/activate, platform audit |
 | Audit log | 1 | 0 | DB triggers only |
 | Company settings | 0.5 | 0.5 | Form + API |
 | Infrastructure | 2 | 1 | Deployment, DB, CI, env |
-| **Total** | **17.5** | **17.5** | **~35 days / 7 weeks** |
+| **Total** | **19** | **19.5** | **~38.5 days / 8 weeks** |
 
 ---
 
 ## MVP Delivery Milestone
 
 ```
-Week 1-2:   Auth, Teams, People (infrastructure + foundation)
+Week 1-2:   Auth, Teams, People, Super admin seed (infrastructure + foundation)
 Week 3-4:   Templates, RRULE, Shifts, Assignments (core scheduling)
 Week 5:     Calendar view, Dashboard, Emails, Clock in/out (employee experience)
-Week 6-7:   Polish, bug fixes, deployment, internal dogfooding
+Week 6:     Super admin UI, admin endpoints, platform audit
+Week 7-8:   Polish, bug fixes, deployment, internal dogfooding
 ```
 
-At week 7, the app is deployed with real data from 1–2 pilot companies. After validation, the MVP+ backlog (self-scheduling, break tracking, export) begins.
+At week 8, the app is deployed with real data from 1–2 pilot companies. After validation, the MVP+ backlog (self-scheduling, break tracking, export) begins.

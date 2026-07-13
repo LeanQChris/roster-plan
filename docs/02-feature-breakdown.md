@@ -32,6 +32,14 @@ This document breaks every feature into atomic units and organizes them into imp
 - [ ] Permission check middleware / guard on every protected route
 - [ ] Default role seeding on company creation
 
+### P1.6 — Super Admin Module
+- [ ] Super admin account seeded in DB (no signup flow)
+- [ ] Super admin login via same auth flow (role-based access)
+- [ ] `GET /api/v1/admin/companies` — list all companies with stats (member count, status, created_at)
+- [ ] `PATCH /api/v1/admin/companies/:id` — suspend, activate, force delete
+- [ ] `GET /api/v1/admin/audit-log` — platform-wide audit log
+- [ ] Super admin UI: admin dashboard with companies table, status toggle, audit log viewer
+
 ### P1.5 — Org Hierarchy (Teams & People)
 - [ ] `teams` table with company_id, name, manager_id
 - [ ] `people` table with company_id, team_id, name, email, timezone, role, status

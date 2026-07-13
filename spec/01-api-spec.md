@@ -620,14 +620,21 @@ Company-scoped audit log (inferred from session). Query: `?actor_id=X&resource_t
 ## 20. Admin (Super Admin)
 
 ### GET /api/v1/admin/companies
-→ `200` → all companies with stats (member count, storage, last active)
+List all companies with stats.
+Query: `?status=active&page=1&per_page=50`.
+→ `200` → `{ "companies": [{ id, name, slug, timezone, status, member_count, created_at, last_active_at }], "total": 12, "page": 1 }`
 
 ### PATCH /api/v1/admin/companies/:companyId
-Suspend, activate, force delete. → `200`
+Suspend, activate, force delete.
+```json
+{ "status": "suspended" }
+```
+→ `200`
 
 ### GET /api/v1/admin/audit-log
 Platform-wide audit log (all companies).
-→ `200`
+Query: `?actor_id=X&resource_type=company&action=update&from=DATE&to=DATE&page=1`.
+→ `200` → `{ "entries": [...], "total": 123, "page": 1 }`
 
 ---
 
