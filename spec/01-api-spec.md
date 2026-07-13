@@ -416,8 +416,6 @@ List pending swap requests for a team.
 
 ## 12. Clock Entries
 
-> **⚠ MVP STATUS**: Clock in/out is deferred to Phase B. Do not implement during MVP.
-
 ### POST /api/v1/clock/clock-in
 ```json
 { "shift_assignment_id": "uuid", "latitude": 45.5152, "longitude": -122.6784, "notes": "" }
@@ -428,13 +426,13 @@ List pending swap requests for a team.
 ```json
 { "notes": "Overtime approval pending" }
 ```
-→ `200` → `{ "id", "clock_in_at", "clock_out_at", "break_duration_minutes", "duration_minutes" }`
+→ `200` → `{ "id", "clock_in_at", "clock_out_at", "duration_minutes" }`
 
-### POST /api/v1/clock/:clockEntryId/break-in
+### POST /api/v1/clock/:clockEntryId/break-in (MVP+)
 Start meal break.
 → `200` → `{ "break_in_at": "..." }`
 
-### POST /api/v1/clock/:clockEntryId/break-out
+### POST /api/v1/clock/:clockEntryId/break-out (MVP+)
 End meal break.
 ```json
 { "notes": "" }

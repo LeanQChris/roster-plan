@@ -90,7 +90,7 @@ Each permission is a string `resource:action` where resource is a domain entity 
 
 ## 3. Role → Permission Mapping
 
-For MVP, only a subset of these permissions is enforced. Permissions for clock, swap, time-off, positions, skills, locations, integrations, holidays, reports, notification preferences, and MFA are defined here for forward-planning but are **not implemented in MVP middleware**. See `docs/04-mvp-plan.md` for the exact MVP endpoint list.
+For MVP, only a subset of these permissions is enforced. Permissions for swap, time-off, positions, skills, locations, integrations, holidays, reports, notification preferences, and MFA are defined here for forward-planning but are **not implemented in MVP middleware**. Clock in/out permissions (`clock.clock_in`, `clock.clock_out`, `clock.read`) **are** implemented in MVP. See `docs/04-mvp-plan.md` for the exact MVP endpoint list.
 
 ### super_admin
 | Permission | Granted |
@@ -193,16 +193,16 @@ For MVP, only a subset of these permissions is enforced. Permissions for clock, 
 | `shift.read` | ✅ (own + own team published) | ✅ |
 | `shift.request` | ✅ (self-scheduling) | ❌ MVP+ |
 | `shift.swap` | ✅ (request swap from manager) | ❌ MVP+ |
-| `clock.clock_in` | ✅ | ❌ Phase B |
-| `clock.clock_out` | ✅ | ❌ Phase B |
-| `clock.break_in` | ✅ | ❌ Phase B |
-| `clock.break_out` | ✅ | ❌ Phase B |
-| `clock.read` | ✅ (self only) | ❌ Phase B |
+| `clock.clock_in` | ✅ | ✅ |
+| `clock.clock_out` | ✅ | ✅ |
+| `clock.break_in` | ✅ | ❌ MVP+ |
+| `clock.break_out` | ✅ | ❌ MVP+ |
+| `clock.read` | ✅ (self only) | ✅ |
 | `time_off.create` | ✅ | ❌ MVP+ |
 | `time_off.read` | ✅ (self only) | ❌ MVP+ |
 | `time_off.update` | ✅ (own pending only) | ❌ MVP+ |
 | `time_off.delete` | ✅ (own pending only) | ❌ MVP+ |
-| `holiday.read` | ✅ | ❌ MVP+ (holidays deferred) |
+| `holiday.read` | ✅ | ❌ MVP+ |
 | `notification.read` | ✅ | ✅ |
 | `notification.update` | ✅ | ✅ |
 | `notification.manage_preferences` | ✅ | ❌ MVP+ |

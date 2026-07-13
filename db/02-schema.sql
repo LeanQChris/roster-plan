@@ -10,7 +10,7 @@
 --   - team_memberships (single team per person in MVP)
 --   - shift_swap_requests (no swap workflow in MVP)
 --   - time_off_requests (deferred)
---   - clock_entries (deferred)
+--   - clock_entries (MVP — basic clock in/out, no break tracking)
 --   - integrations (deferred)
 --   - compliance_violations (deferred)
 --   - region_routing (Phase D)
@@ -366,6 +366,7 @@ CREATE TABLE shift_swap_requests (
 -- CLOCK ENTRIES (immutable)
 -- ==========================================================
 
+-- MVP: basic clock in/out only. break_in_at/break_out_at columns exist for forward-compat but are unused in MVP.
 CREATE TABLE clock_entries (
     id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     shift_assignment_id   UUID REFERENCES shift_assignments(id) ON DELETE SET NULL,

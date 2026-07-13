@@ -13,6 +13,7 @@ Sign up company → Add teams → Invite employees
   → Expand & publish schedule for a date range
   → Assign employees to shifts
   → Employees log in and view their schedule
+  → Employees clock in/out during their shifts
 ```
 
 ### Features Kept
@@ -26,6 +27,7 @@ Sign up company → Add teams → Invite employees
 | Shift instances + publish | Core value — making schedule live |
 | Manager assigns shifts | Core value — who works when |
 | Basic calendar view | Core value — see the schedule |
+| Clock in / out | Core value — track attendance |
 | 1 notification email | Essential feedback loop (shift assigned) |
 | Role gating (admin/manager/employee) | Security, but simplified |
 
@@ -34,7 +36,7 @@ Sign up company → Add teams → Invite employees
 |---|---|
 | Self-scheduling (employee picks shifts) | Manager-assign is simpler, unblocks initial use |
 | Self-scheduling approvals workflow | Builds on self-scheduling |
-| Clock in / out | Separate concern, adds scope |
+| Break tracking (meal/rest breaks) | Basic clock in/out sufficient for MVP |
 | Time-off / leave requests | Requires approval workflow, separate from scheduling |
 | Shift swaps / trades | Builds on shift assignments, requires conflict detection |
 | Positions CRUD | Nice-to-have, shifts can be created without named positions |
@@ -77,7 +79,7 @@ Only these tables are needed for MVP. The full schema in `db/02-schema.sql` has 
 | `skills` | ❌ | No qualification validation in MVP |
 | `shift_swap_requests` | ❌ | No swap workflow in MVP |
 | `time_off_requests` | ❌ | Deferred with time-off feature |
-| `clock_entries` | ❌ | Deferred |
+| `clock_entries` | ✅ | Basic clock in/out (no break tracking) |
 | `integrations` | ❌ | Deferred |
 | `feature_flags` | ❌ | Deferred |
 | `compliance_violations` | ❌ | Deferred |
@@ -100,6 +102,10 @@ ALTER TABLE shift_assignments DROP COLUMN IF EXISTS approved_by;
 -- Ignore 'slack','teams','webhook','push' enum values (post-MVP).
 
 -- people: remove subscription_token, data_exported_at for MVP.
+
+-- clock_entries: no break tracking for MVP. break_in_at/break_out_at columns
+-- exist in schema for forward-compat but are not used in MVP.
+-- GPS coordinates are optional (no enforcement).
 ```
 
 ---
@@ -165,10 +171,17 @@ The full API spec has more; here is the exact MVP endpoint list.
 | DELETE | `/api/v1/shift-assignments/:id` | Manager | Remove assignment |
 | GET | `/api/v1/shifts/:shiftId/assignments` | Manager+ | List assignments for shift |
 
+### Clock
+| Method | Path | Who | Description |
+|---|---|---|---|
+| POST | `/api/v1/clock/clock-in` | Employee | Clock in to an assigned shift |
+| POST | `/api/v1/clock/:clockEntryId/clock-out` | Employee | Clock out from shift |
+| GET | `/api/v1/people/:personId/clock-entries` | Self, Manager+ | View clock entries for range (`?from=&to=`) |
+
 ### Calendar (Employee-facing)
 | Method | Path | Who | Description |
 |---|---|---|---|
-| GET | `/api/v1/me/schedule` | Employee | `?start=ISO&end=ISO` → my shifts for range |
+| GET | `/api/v1/me/schedule` | Employee | `?start=ISO&end=ISO` → my shifts for range (includes clock status) |
 | GET | `/api/v1/teams/:teamId/schedule` | Manager+ | Full team schedule for range |
 
 ---
@@ -210,8 +223,19 @@ The full API spec has more; here is the exact MVP endpoint list.
 2. Sees: "Your upcoming shifts" list (next 7 days)
 3. Clicks "View full schedule" → /me/schedule
 4. Week calendar shows shifts as blocks
-5. Shift blocks show: title, time (in company TZ), team name
-6. That's it — read-only view
+5. Shift blocks show: title, time (in company TZ), team name, clock status
+6. Current/upcoming shift shows "Clock In" button
+```
+
+### Flow 4: Employee Clocks In/Out (per shift)
+
+```
+1. Employee logs in → Dashboard
+2. Sees upcoming shifts with "Clock In" button next to current shift
+3. Clicks "Clock In" → timestamp recorded, button changes to "Clock Out"
+4. Timer displayed on dashboard while clocked in
+5. Clicks "Clock Out" → optional notes prompt → records end time
+6. Clock entry visible in My Schedule for that shift block
 ```
 
 ---
@@ -223,8 +247,8 @@ The full API spec has more; here is the exact MVP endpoint list.
 | 1 | Login | `/login` | All | Email + password form, "Create company" link |
 | 2 | Signup | `/signup` | Public | Company name, email, password, submit |
 | 3 | Company Setup | `/company/setup` | Company admin | Timezone picker, locale, create first team |
-| 4 | Dashboard | `/dashboard` | All | Welcome message, upcoming shifts list (employee) or shortcuts (manager) |
-| 5 | My Schedule | `/me/schedule` | Employee | Week view calendar, shift blocks, no editing |
+| 4 | Dashboard | `/dashboard` | All | Welcome message, upcoming shifts list (employee) with Clock In/Out button, shortcuts (manager) |
+| 5 | My Schedule | `/me/schedule` | Employee | Week view calendar, shift blocks with clock status (clocked in/out/missed) |
 | 6 | Team Schedule | `/teams/:id/schedule` | Manager+ | Week view, shift blocks, click shift to assign |
 | 7 | Assign Shift | *(modal on #6)* | Manager | Person picker dropdown, confirm button |
 | 8 | Shift Templates | `/teams/:id/templates` | Manager | List of templates, create/edit form, expand button |
@@ -234,7 +258,7 @@ The full API spec has more; here is the exact MVP endpoint list.
 | 12 | Company Settings | `/company/settings` | Company admin | Company name, timezone, branding (optional) |
 | 13 | Employees List | `/people` | Company admin | Full company people list, filter by team |
 
-**Not included in MVP**: Audit log UI, admin panel, export buttons, timezone toggle, coverage heatmap, notification preferences, profile page (use a minimal version).
+**Not included in MVP**: Audit log UI, admin panel, export buttons, timezone toggle, coverage heatmap, notification preferences, profile page, break tracking, attendance live view.
 
 ---
 
@@ -292,7 +316,18 @@ const roleHierarchy = {
 - Shifts render as horizontal bars in a 7-column grid.
 - Single timezone: company timezone. No toggle.
 - Employee view: read-only. Manager view: click shift → assign modal.
+- Clock status indicator shown on each shift block (clocked in/out/missed).
 - Fully server-rendered or single-page app — tech choice deferred.
+
+### Clock In/Out (Simplified)
+- Employee must have an active shift assignment to clock in.
+- Clock-in records `shift_assignment_id`, timestamp, and optional notes.
+- Clock-out closes the entry and auto-calculates duration.
+- No break tracking for MVP (break_in_at/break_out_at columns exist but unused).
+- No GPS enforcement (latitude/longitude columns are optional).
+- Clock entries are append-only (enforced by DB triggers).
+- No grace period enforcement (configured but not validated in MVP).
+- Manager can view clock entries for their team via `GET /api/v1/people/:personId/clock-entries`.
 
 ---
 
@@ -433,7 +468,7 @@ Manager clicks "Publish Week of Jul 13"
 | Employee works multiple teams | Cross-team assign deferred | Won't appear on secondary team schedule |
 | Shift spans midnight | Stored as UTC, rendered same day | May appear on wrong day in calendar |
 | DST transition week | Single company TZ, basic rendering | Might show 1-hour offset visually |
-| Employee clock in/out | Feature deferred | No time tracking at all |
+| Break tracking (meal/rest) | Feature deferred | No break compliance data |
 | 500+ employees per company | No pagination for MVP | Browser may lag loading all shifts |
 | Mobile browsing | No responsive design for MVP | Layout breaks on small screens |
 | Email delivery failure | No queue, no retry | User sees error, shift still saved |
@@ -446,13 +481,13 @@ Each of these gets addressed in the post-MVP roadmap below.
 
 ## Post-MVP Roadmap
 
-After the employee can see their schedule, the natural progression follows the employee's relationship with their shifts over time: **before → during → after** their shift happens.
+After the employee can see their schedule and clock in/out, the natural progression follows the employee's relationship with their shifts over time: **before → during → after** their shift happens.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    MVP (Done)                            │
 │  Employee sees schedule ⟶ Manager assigns shifts        │
-│  ⟶ Emails sent                                         │
+│  ⟶ Clock in/out ⟶ Emails sent                          │
 └─────────────────────────────────────────────────────────┘
          │
          ▼
@@ -469,8 +504,9 @@ After the employee can see their schedule, the natural progression follows the e
 ┌─────────────────────────────────────────────────────────┐
 │  PHASE B: During the Shift                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐ │
-│  │ Clock in/out │  │ Mobile       │  │ Real-time     │ │
-│  │ + GPS proof  │  │ (app or PWA) │  │ coverage view │ │
+│  │ Break tracking│  │ Mobile       │  │ Real-time     │ │
+│  │ (meal/rest)   │  │ (app or PWA) │  │ coverage view │ │
+│  │ + GPS proof   │  │              │  │ + attendance  │ │
 │  └──────────────┘  └──────────────┘  └───────────────┘ │
 └─────────────────────────────────────────────────────────┘
          │
@@ -555,36 +591,46 @@ After an employee sees their schedule, they need **control** over it before the 
 
 ### Phase B: During the Shift
 
-After employees can control their schedule, they need to **execute** it.
+After employees can control their schedule and clock in/out, they need **richer execution** capabilities.
 
-#### B1: Clock In / Out
+#### B1: Break Tracking (Meal / Rest Breaks)
 
-**The problem**: Manager doesn't know who actually showed up. Payroll has no data.
+**The problem**: Manager doesn't know if employees are taking required meal and rest breaks. Labor law compliance requires tracking.
 
 **The feature**:
-- Employee opens app during shift → sees "Clock In" button
-- One click → timestamp recorded, button changes to "Clock Out"
-- Clock Out → optional notes prompt
-- Timer visible on dashboard while clocked in
-- Immutable entries (cannot edit or delete)
-- Grace period: configurable window before/after shift start for clock-in
+- Employee on an active clock sees "Start Break" button
+- Break timer starts → "End Break" button appears
+- System tracks meal break (≥30min) vs rest break (≥10min) based on shift duration
+- Compliance violation detected if break is missed or too short
+- Configurable thresholds: meal break trigger (default 5h), rest break trigger (default 4h)
 
 **Manager view**:
 ```
   Attendance ─ Engineering ─ Jul 13
-┌────────────────────────────────────────────────┐
-│ Shift           │ Scheduled │ Clocked │ Status │
-├─────────────────┼───────────┼─────────┼────────┤
-│ Morning Support │ Alice     │ 08:01   │ ✅ On  │
-│                 │ Bob       │ 08:12   │ ✅ Late│
-│                 │ Carol     │ —       │ ⏳ No  │
-│ Evening Support │ Dave      │ 16:02   │ ✅ On  │
-└────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│ Shift           │ Person │ Clocked │ Breaks      │
+├─────────────────┼────────┼─────────┼─────────────┤
+│ Morning Support │ Alice  │ 08:01   │ 12:30-13:00 │
+│                 │ Bob    │ 08:12   │ ❌ missed   │
+│                 │ Carol  │ —       │ —           │
+└──────────────────────────────────────────────────┘
 ```
 
-#### B2: Mobile (PWA or Native)
+#### B2: Attendance Live View
 
-**The problem**: Employee can't clock in from a phone browser. Manager can't approve on the go.
+**The problem**: Manager can see individual clock entries but lacks a live dashboard of who's on the floor.
+
+**The feature**:
+- Live view of who is clocked in right now, by team
+- Who's scheduled next (upcoming shifts)
+- Status indicators: on time, late, no-show, on break
+- Quick action: message available person to cover
+
+**Why this order**: Break tracking gives the data needed for a live attendance view.
+
+#### B3: Mobile (PWA or Native)
+
+**The problem**: Employee can't clock in/out or view schedule easily from a phone.
 
 **The feature**:
 - Responsive web or Progressive Web App (PWA) for v1
@@ -592,17 +638,7 @@ After employees can control their schedule, they need to **execute** it.
 - Push notifications for reminders and changes
 - GPS location capture on clock-in (optional, configurable per company)
 
-**Why this order**: Clock-in without mobile is desk-bound. Mobile + clock together enable real workforce management.
-
-#### B3: Real-Time Coverage View
-
-**The problem**: Manager sees a gap 5 minutes before shift starts and doesn't know who's available.
-
-**The feature**:
-- Live view of who is clocked in right now, by team
-- Who's scheduled next (upcoming clock-ins)
-- Who's available (no shift scheduled, not clocked in)
-- Quick action: message available person to cover
+**Why this order**: Break tracking + attendance view are higher value than mobile responsiveness.
 
 ---
 
@@ -680,9 +716,9 @@ After product-market fit, these unlock larger customers.
 
 | Phase | Unlocks For Employee | Unlocks For Manager | Business Value |
 |---|---|---|---|
-| **MVP** | See my schedule | Create + assign shifts | Core scheduling exists |
+| **MVP** | See my schedule, clock in/out | Create + assign shifts, track attendance | Core scheduling + attendance |
 | **Phase A** | Pick my shifts, export to calendar | Self-service reduces admin work | 50% less manager time |
-| **Phase B** | Clock in from anywhere | Know who actually showed up | Payroll accuracy |
+| **Phase B** | Break tracking, mobile | Live attendance view | Labor law compliance |
 | **Phase C** | See my hours | Reports, payroll export | Compliance + payroll |
 | **Phase D** | — | Enterprise scale | Revenue growth |
 
@@ -698,6 +734,10 @@ After product-market fit, these unlock larger customers.
 - [ ] Manager can publish the schedule
 - [ ] Employee can log in and see their assigned shifts on a week calendar
 - [ ] Employee receives an email when assigned to a shift
+- [ ] Employee can clock in to an assigned shift
+- [ ] Employee can clock out, recording actual end time
+- [ ] Employee can see clock status (clocked in/out) on their schedule
+- [ ] Manager can view clock entries for their team members
 - [ ] Company admin can edit company settings
 - [ ] All state changes are recorded in the audit log (no UI needed)
 - [ ] Session persists across page reloads
@@ -715,22 +755,23 @@ After product-market fit, these unlock larger customers.
 | Shift expansion + publish | 2 | 1 | Core schedule logic |
 | Assignments | 1 | 1 | Assign modal + backend |
 | Schedule calendar view | 1 | 4 | Week grid most complex UI |
+| Clock in/out | 1.5 | 2 | Clock in/out endpoints, timer UI, clock status on schedule |
 | Dashboard | 0.5 | 2 | Upcoming shifts, quick links |
 | Emails | 1 | 0 | Template + send logic |
 | Audit log | 1 | 0 | DB triggers only |
 | Company settings | 0.5 | 0.5 | Form + API |
 | Infrastructure | 2 | 1 | Deployment, DB, CI, env |
-| **Total** | **16** | **15.5** | **~31 days / 6 weeks** |
+| **Total** | **17.5** | **17.5** | **~35 days / 7 weeks** |
 
 ---
 
 ## MVP Delivery Milestone
 
 ```
-Week 1-2: Auth, Teams, People (infrastructure + foundation)
-Week 3-4: Templates, RRULE, Shifts, Assignments (core scheduling)
-Week 5:   Calendar view, Dashboard, Emails (employee experience)
-Week 6:   Polish, bug fixes, deployment, internal dogfooding
+Week 1-2:   Auth, Teams, People (infrastructure + foundation)
+Week 3-4:   Templates, RRULE, Shifts, Assignments (core scheduling)
+Week 5:     Calendar view, Dashboard, Emails, Clock in/out (employee experience)
+Week 6-7:   Polish, bug fixes, deployment, internal dogfooding
 ```
 
-At week 6, the app is deployed with real data from 1–2 pilot companies. After validation, the MVP+ backlog (self-scheduling, clock, export) begins.
+At week 7, the app is deployed with real data from 1–2 pilot companies. After validation, the MVP+ backlog (self-scheduling, break tracking, export) begins.

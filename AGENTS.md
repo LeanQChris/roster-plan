@@ -26,7 +26,7 @@ Greenfield design/spec project. Nothing implemented. All `.md` (requirements, sp
 | **Auth** | Session tokens stored hashed (SHA256) in DB, not JWT. bcrypt cost 12. No refresh tokens for MVP (session lasts 7d, extended +7d on use within 24h of expiry) |
 | **RRULE** | RFC 5545 — store as string, expand on publish (not on read) |
 | **RBAC (MVP)** | 3 roles hardcoded in middleware: `company_admin`, `manager`, `employee`. No `role_permissions` join table. `super_admin` is DB-only, no UI |
-| **Clock entries** | Append-only enforced by triggers. `ON DELETE SET NULL` on person/assignment FKs to preserve records after GDPR erasure |
+| **Clock entries** | Append-only enforced by triggers. `ON DELETE SET NULL` on person/assignment FKs to preserve records after GDPR erasure. Included in MVP (basic clock in/out, no break tracking) |
 | **Data residency** | Regional sharding by company — `region_routing` table maps company to DB cluster (Phase D) |
 | **Text fields** | VARCHAR limits enforced at DB level, never trust client-side validation |
 | **Expand-on-publish** | Schedule is materialized into concrete shift rows on publish, not computed on read |
@@ -36,10 +36,10 @@ Greenfield design/spec project. Nothing implemented. All `.md` (requirements, sp
 The full MVP scope, deferred features, schema simplifications, UI screens, and effort estimate are defined **once** in `docs/04-mvp-plan.md`. That document is the single source of truth. Key highlights:
 
 ### What's IN (MVP)
-Multi-tenant auth (register, login, logout), company settings, teams CRUD, people CRUD + email invite, shift templates + RRULE, shift publish (expand templates → instances), manager assigns people to shifts, basic week calendar view (read-only for employees), 1 notification email (shift assigned), role gating (3 roles, hardcoded middleware).
+Multi-tenant auth (register, login, logout), company settings, teams CRUD, people CRUD + email invite, shift templates + RRULE, shift publish (expand templates → instances), manager assigns people to shifts, basic week calendar view (read-only for employees), clock in/out, 1 notification email (shift assigned), role gating (3 roles, hardcoded middleware).
 
 ### What's DEFERRED (MVP+)
-Self-scheduling, clock in/out, time-off requests, shift swaps, positions CRUD, skills/certifications, locations/sites, attendance reports, calendar export (iCal/webcal), notification upgrades (reminders, digest, preferences, Slack/Teams), integrations, timezone toggle, coverage heatmap, conflict detection UI, audit log UI, compliance UI, password reset, rate limiting, webcal.
+Self-scheduling, break tracking, time-off requests, shift swaps, positions CRUD, skills/certifications, locations/sites, attendance reports, calendar export (iCal/webcal), notification upgrades (reminders, digest, preferences, Slack/Teams), integrations, timezone toggle, coverage heatmap, conflict detection UI, audit log UI, compliance UI, password reset, rate limiting, webcal.
 
 ### MVP Auth Details
 - Session tokens stored in DB (SHA256 hash), not JWT
@@ -57,7 +57,7 @@ Permissions hardcoded in middleware, no join table.
 ### MVP Schema Simplifications
 See `docs/04-mvp-plan.md §Schema Simplifications` for authoritative list. Note: the full schema (`db/02-schema.sql`) defines all tables/columns for forward-compat — MVP simply ignores deferred columns (they're nullable/unused, not dropped).
 
-### MVP UI Screens (13)
+### MVP UI Screens (13 — no new pages, clock integrated into Dashboard + My Schedule)
 Login, Signup, Company Setup, Dashboard, My Schedule, Team Schedule, Assign Shift (modal), Shift Templates, Template Form, Team People, Invite People, Company Settings, Employees List.
 
 ### MVP API Endpoints (subset of spec/01-api-spec.md)
@@ -69,17 +69,18 @@ NOTE: All endpoints use the `/api/v1` prefix. Full details in `spec/01-api-spec.
 **Shift Templates**: `GET /api/v1/teams/:tid/shift-templates`, `POST /api/v1/teams/:tid/shift-templates`, `PATCH /api/v1/shift-templates/:id`, `DELETE /api/v1/shift-templates/:id`
 **Shifts**: `GET /api/v1/shifts`, `GET /api/v1/shifts/:id`, `POST /api/v1/shifts`, `PATCH /api/v1/shifts/:id`, `DELETE /api/v1/shifts/:id`, `POST /api/v1/shift-templates/:tid/expand`, `POST /api/v1/teams/:tid/schedules/publish`
 **Assignments**: `POST /api/v1/shifts/:sid/assign`, `DELETE /api/v1/shift-assignments/:id`, `GET /api/v1/shifts/:sid/assignments`
+**Clock**: `POST /api/v1/clock/clock-in`, `POST /api/v1/clock/:cid/clock-out`, `GET /api/v1/people/:pid/clock-entries`
 **Calendar**: `GET /api/v1/me/schedule`, `GET /api/v1/teams/:tid/schedule`
 
 ### MVP Effort Estimate
-~31 days / 6 weeks (16 backend, 15.5 frontend)
+~35 days / 7 weeks (17.5 backend, 17.5 frontend)
 
 ## Post-MVP Phases
 
 | Phase | What ships |
 |-------|-----------|
 | **Phase A** — Before the shift | Self-scheduling, calendar export (iCal/webcal), notification upgrades (reminders, digest, change alerts) |
-| **Phase B** — During the shift | Clock in/out + break tracking, mobile/PWA, real-time coverage view |
+| **Phase B** — During the shift | Break tracking (meal/rest), mobile/PWA, real-time attendance view |
 | **Phase C** — After the shift | Reports (attendance, overtime, coverage), payroll export, audit + compliance UI |
 | **Phase D** — Scale & enterprise | Multi-region data residency, SSO/SAML/OIDC, billing/plans, public API |
 

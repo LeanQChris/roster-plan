@@ -72,17 +72,18 @@ This document breaks every feature into atomic units and organizes them into imp
 - [ ] Published schedule view (read-only for employees)
 - [ ] Re-publish triggers diff notification
 
----
-
-## Phase 3: Time Clock
-
-### P3.1 — Clock In/Out
+### P2.6 — Clock In/Out
 - [ ] Clock-in button on web UI (requires active shift assignment)
 - [ ] Clock-out button, records actual end time
 - [ ] Immutable clock_entries table (append-only)
 - [ ] Grace period / late clock-in handling
+- [ ] Clock status indicator on schedule view
 
-### P3.2 — Attendance Reports
+---
+
+## Phase 3: Reports
+
+### P3.1 — Attendance Reports
 - [ ] Actual vs scheduled delta per person per period
 - [ ] Missed clock-ins (scheduled shift with no clock entry)
 - [ ] Overtime calculation

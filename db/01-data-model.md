@@ -319,7 +319,7 @@ AuditEntry ──> polymorphic: resource_type + resource_id
 | created_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() | |
 | resolved_at | TIMESTAMPTZ | nullable | |
 
-### 2.18 clock_entries (Immutable, append-only)
+### 2.18 clock_entries (Immutable, append-only) — MVP
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | id | UUID | PK | |
