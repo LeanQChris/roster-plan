@@ -8,6 +8,66 @@ def readfile(path):
     with open(path) as f:
         return f.read()
 
+def parse_dbml(filepath):
+    """Parse a DBML file into tables and refs for Mermaid ERD generation."""
+    content = readfile(filepath)
+    tables = {}
+    # Match Table blocks: Table Name { ... }
+    table_pattern = re.compile(r'Table (\w+) \{(.*?)\n\}', re.DOTALL)
+    for m in table_pattern.finditer(content):
+        tname = m.group(1)
+        body = m.group(2)
+        cols = []
+        for line in body.split('\n'):
+            line = line.strip()
+            if not line or line.startswith('indexes') or line.startswith('Note:') or line.startswith('('):
+                continue
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            col_name = parts[0]
+            col_type = parts[1]
+            attr_match = re.search(r'\[(.+?)\]', line)
+            attrs = []
+            if attr_match:
+                attrs = [a.strip() for a in attr_match.group(1).split(',')]
+            is_pk = 'pk' in attrs
+            is_unique = 'unique' in attrs
+            is_fk = any(a.startswith('ref:') for a in attrs)
+            cols.append({'name': col_name, 'type': col_type, 'pk': is_pk, 'unique': is_unique, 'fk': is_fk})
+        tables[tname] = cols
+    # Parse Ref: lines at bottom
+    refs = []
+    for line in content.split('\n'):
+        if line.startswith('Ref:'):
+            rm = re.match(r'Ref:\s*(\w+)\.(\w+)\s*-\s*(\w+)\.(\w+)', line)
+            if rm:
+                from_t, from_c, to_t, to_c = rm.group(1), rm.group(2), rm.group(3), rm.group(4)
+                from_is_pk = any(c['pk'] for c in tables.get(from_t, []) if c['name'] == from_c)
+                refs.append({'from_table': from_t, 'from_col': from_c, 'to_table': to_t, 'to_col': to_c, 'from_is_pk': from_is_pk})
+    return tables, refs
+
+def mermaid_erd(tables, refs):
+    """Generate Mermaid.js ERD diagram syntax from parsed DBML."""
+    lines = ['erDiagram']
+    for tname in sorted(tables.keys()):
+        cols = tables[tname]
+        lines.append(f'    {tname} {{')
+        for c in cols:
+            ann = []
+            if c['pk']: ann.append('PK')
+            if c['fk']: ann.append('FK')
+            if c['unique'] and not c['pk']: ann.append('UK')
+            ann_str = f' {" ".join(ann)}' if ann else ''
+            lines.append(f'        {c["type"].lower()} {c["name"]}{ann_str}')
+        lines.append('    }')
+        lines.append('')
+    for ref in refs:
+        if ref['from_table'] in tables and ref['to_table'] in tables:
+            card = '||' if ref['from_is_pk'] else 'o{'
+            lines.append(f'    {ref["to_table"]} ||--{card} {ref["from_table"]} : ""')
+    return '\n'.join(lines)
+
 # Read all source files
 src = {}
 src['features'] = readfile(f"{ROOT}/docs/02-feature-breakdown.md")
@@ -15,6 +75,22 @@ src['stories'] = readfile(f"{ROOT}/docs/03-ux-user-stories.md")
 src['mvp_plan'] = readfile(f"{ROOT}/docs/04-mvp-plan.md")
 src['data_model'] = readfile(f"{ROOT}/db/01-data-model.md")
 src['schema_sql'] = readfile(f"{ROOT}/db/02-schema.sql")
+
+# Clean SQL for erd-editor (DDL only: CREATE TYPE + CREATE TABLE, no policies/indices/extensions)
+clean_sql_lines = []
+in_table = False
+for _line in src['schema_sql'].split('\n'):
+    s = _line.strip()
+    if not s or s.startswith('--') or s.startswith('CREATE EXTENSION') or s.startswith('CREATE POLICY') or s.startswith('CREATE INDEX') or s.startswith('ALTER'):
+        continue
+    if s.startswith('CREATE TYPE') or s.startswith('CREATE TABLE'):
+        in_table = s.startswith('CREATE TABLE')
+        clean_sql_lines.append(s)
+    elif in_table:
+        clean_sql_lines.append(s)
+        if s == ');':
+            in_table = False
+src['schema_sql_clean'] = '\n'.join(clean_sql_lines)
 src['rrule'] = readfile(f"{ROOT}/db/03-rrule-storage.md")
 src['api_spec'] = readfile(f"{ROOT}/spec/01-api-spec.md")
 src['pagination'] = readfile(f"{ROOT}/spec/04-pagination.md")
@@ -208,6 +284,14 @@ pages['mvp-plan'] = src['mvp_plan']
 # Database pages
 pages['db-data-model'] = src['data_model']
 pages['db-rrule'] = src['rrule']
+
+# ERD diagram page
+pages['db-erd'] = """<h1>Schema ERD</h1>
+<p>Entity-Relationship diagram generated from <code>er/roster.dbml</code>.</p>
+<div id="erd-wrap" style="position:relative;border:1px solid #ddd;border-radius:8px;min-height:700px;width:100%;overflow:hidden">
+  <erd-editor readonly style="position:absolute;inset:0;width:100%;height:100%;min-height:700px"></erd-editor>
+</div>
+<p style="font-size:.8125rem;color:#888;margin-top:0.5rem">Powered by <a href="https://erd-editor.io" target="_blank" rel="noopener">erd-editor</a>. Interactive — drag, zoom, and explore.</p>"""
 
 # API spec with MVP badges
 api_lines = src['api_spec'].split('\n')
@@ -427,6 +511,32 @@ output_parts.append("""<!DOCTYPE html>
 <title>Roster — Documentation Portal</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script type="module">
+  import 'https://cdn.jsdelivr.net/npm/@dineug/erd-editor@latest/+esm';
+
+  window.__initErdEditor = function(containerId) {
+    var wrap = document.getElementById(containerId);
+    if (!wrap) return;
+    var editor = wrap.querySelector('erd-editor');
+    if (!editor || editor.hasAttribute('data-loaded')) return;
+    editor.readonly = true;
+    editor.style.width = '100%';
+    editor.style.height = '100%';
+
+    function applySchema(attempt) {
+      try {
+        editor.setSchemaSQL(window.__SCHEMA_SQL || '');
+        editor.setAttribute('data-loaded', '');
+      } catch(e) {
+        console.error('erd-editor attempt ' + attempt + ':', e);
+        if (attempt < 5) {
+          requestAnimationFrame(function() { applySchema(attempt + 1); });
+        }
+      }
+    }
+    requestAnimationFrame(function() { applySchema(0); });
+  };
+</script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 *,:after,:before{margin:0;padding:0;box-sizing:border-box}
@@ -599,10 +709,15 @@ const SCHEMA_TABLES = """)
 output_parts.append(schema_json)
 output_parts.append(""";
 
+window.__SCHEMA_SQL = """)
+schema_sql_json = json.dumps(src['schema_sql_clean'], ensure_ascii=False)
+output_parts.append(schema_sql_json)
+output_parts.append(""";
+
 const NAV = [
   {label:'Overview',icon:'fa-house',pages:[{id:'overview',label:'Welcome / Overview'},{id:'glossary',label:'Glossary'}]},
   {label:'Product',icon:'fa-cube',pages:[{id:'product-features',label:'Feature Breakdown'},{id:'product-stories',label:'UX User Stories'},{id:'mvp-plan',label:'MVP Plan'}]},
-  {label:'Database',icon:'fa-database',pages:[{id:'db-data-model',label:'Data Model'},{id:'db-schema',label:'Schema Reference'},{id:'db-rrule',label:'RRULE Storage'}]},
+  {label:'Database',icon:'fa-database',pages:[{id:'db-data-model',label:'Data Model'},{id:'db-schema',label:'Schema Reference'},{id:'db-erd',label:'Schema ERD'},{id:'db-rrule',label:'RRULE Storage'}]},
   {label:'Architecture Decisions',icon:'fa-book',pages:[{id:'adr-001',label:'ADR 1: PostgreSQL RLS'},{id:'adr-002',label:'ADR 2: Expand on Publish'},{id:'adr-003',label:'ADR 3: Session Tokens (No JWT)'},{id:'adr-004',label:'ADR 4: HMAC Audit Chain'},{id:'adr-005',label:'ADR 5: RRULE Storage'}]},
 {label:'RBAC',icon:'fa-lock',pages:[{id:'rbac-matrix',label:'Permissions Matrix'},{id:'rbac-super-admin',label:'Role: super_admin',mvp:false},{id:'rbac-company-admin',label:'Role: company_admin',mvp:true},{id:'rbac-manager',label:'Role: manager',mvp:true},{id:'rbac-employee',label:'Role: employee',mvp:true},{id:'rbac-viewer',label:'Role: viewer',mvp:false}]},
   {label:'API & Integration',icon:'fa-plug',pages:[{id:'api-spec',label:'API Reference'},{id:'api-pagination',label:'Pagination'},{id:'api-webhooks',label:'Webhooks'}]},
@@ -787,6 +902,11 @@ function renderPage(id){
   
   // Copy buttons
   addCopyButtons(el)
+  
+  // Initialize erd-editor on the ERD page
+  if(id === 'db-erd' && typeof window.__initErdEditor === 'function'){
+    window.__initErdEditor('erd-wrap')
+  }
 }
 
 /* ─── Build PAGES from base data ─── */
