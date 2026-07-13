@@ -2,13 +2,15 @@
 
 ## 1. Roles
 
-| Role | Scope | Description |
-|---|---|---|
-| `super_admin` | Global (all tenants) | Platform operations, all companies |
-| `company_admin` | Single company | Company settings, all teams, all people, audit log, compliance, integrations |
-| `manager` | Single team(s) | Team schedule, shift templates, approvals, team roster, reports |
-| `employee` | Self | Own schedule, self-scheduling requests, clock in/out, time-off requests |
-| `viewer` | Single team(s) (read-only) | HR, payroll, auditing — can view but not edit |
+| Role | Scope | Description | MVP? |
+|---|---|---|---|
+| `super_admin` | Global (all tenants) | Platform operations, all companies | ✅ DB-level only, no UI |
+| `company_admin` | Single company | Company settings, all teams, all people, audit log, compliance, integrations | ✅ |
+| `manager` | Single team(s) | Team schedule, shift templates, approvals, team roster, reports | ✅ |
+| `employee` | Self | Own schedule, self-scheduling requests, clock in/out, time-off requests | ✅ |
+| `viewer` | Single team(s) (read-only) | HR, payroll, auditing — can view but not edit | ❌ MVP+ |
+
+MVP uses 3 roles: `company_admin`, `manager`, `employee`. `super_admin` exists in DB but has no UI. `viewer` is post-MVP only. See `docs/04-mvp-plan.md` for details.
 
 ## 2. Permission Definitions
 
@@ -87,6 +89,8 @@ Each permission is a string `resource:action` where resource is a domain entity 
 | `mfa.enforce` | Require MFA for other users |
 
 ## 3. Role → Permission Mapping
+
+For MVP, only a subset of these permissions is enforced. Permissions for clock, swap, time-off, positions, skills, locations, integrations, holidays, reports, notification preferences, and MFA are defined here for forward-planning but are **not implemented in MVP middleware**. See `docs/04-mvp-plan.md` for the exact MVP endpoint list.
 
 ### super_admin
 | Permission | Granted |
@@ -177,32 +181,32 @@ Each permission is a string `resource:action` where resource is a domain entity 
 | `mfa.enroll` | ✅ |
 
 ### Employee
-| Permission | Granted |
-|---|---|
-| `company.read` | ✅ (own, read-only) |
-| `position.read` | ✅ |
-| `skill.read` | ✅ |
-| `team.read` | ✅ (own team, read-only) |
-| `person.read` | ✅ (self only) |
-| `person.update` | ✅ (own timezone, phone only) |
-| `shift_template.read` | ✅ (own team) |
-| `shift.read` | ✅ (own + own team published) |
-| `shift.request` | ✅ (self-scheduling) |
-| `shift.swap` | ✅ (request swap from manager) |
-| `clock.clock_in` | ✅ |
-| `clock.clock_out` | ✅ |
-| `clock.break_in` | ✅ |
-| `clock.break_out` | ✅ |
-| `clock.read` | ✅ (self only) |
-| `time_off.create` | ✅ |
-| `time_off.read` | ✅ (self only) |
-| `time_off.update` | ✅ (own pending only) |
-| `time_off.delete` | ✅ (own pending only) |
-| `holiday.read` | ✅ |
-| `notification.read` | ✅ |
-| `notification.update` | ✅ |
-| `notification.manage_preferences` | ✅ |
-| `mfa.enroll` | ✅ |
+| Permission | Granted | MVP? |
+|---|---|---|
+| `company.read` | ✅ (own, read-only) | ✅ |
+| `position.read` | ✅ | ❌ MVP+ (positions deferred) |
+| `skill.read` | ✅ | ❌ MVP+ (skills deferred) |
+| `team.read` | ✅ (own team, read-only) | ✅ |
+| `person.read` | ✅ (self only) | ✅ |
+| `person.update` | ✅ (own timezone, phone only) | ✅ |
+| `shift_template.read` | ✅ (own team) | ✅ |
+| `shift.read` | ✅ (own + own team published) | ✅ |
+| `shift.request` | ✅ (self-scheduling) | ❌ MVP+ |
+| `shift.swap` | ✅ (request swap from manager) | ❌ MVP+ |
+| `clock.clock_in` | ✅ | ❌ Phase B |
+| `clock.clock_out` | ✅ | ❌ Phase B |
+| `clock.break_in` | ✅ | ❌ Phase B |
+| `clock.break_out` | ✅ | ❌ Phase B |
+| `clock.read` | ✅ (self only) | ❌ Phase B |
+| `time_off.create` | ✅ | ❌ MVP+ |
+| `time_off.read` | ✅ (self only) | ❌ MVP+ |
+| `time_off.update` | ✅ (own pending only) | ❌ MVP+ |
+| `time_off.delete` | ✅ (own pending only) | ❌ MVP+ |
+| `holiday.read` | ✅ | ❌ MVP+ (holidays deferred) |
+| `notification.read` | ✅ | ✅ |
+| `notification.update` | ✅ | ✅ |
+| `notification.manage_preferences` | ✅ | ❌ MVP+ |
+| `mfa.enroll` | ✅ | ❌ MVP+ |
 
 ### Viewer (Read-only)
 | Permission | Granted |

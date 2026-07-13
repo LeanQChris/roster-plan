@@ -27,7 +27,8 @@ Create a new company + initial company admin account.
 → `200` → `{ "session_token", "user", "company" }`
 Note: `refresh_token` is not included in MVP. Session sliding extension (7d +7d) replaces refresh token rotation for MVP.
 
-### POST /api/v1/auth/refresh (MVP+)
+### POST /api/v1/auth/refresh
+> **MVP+**: Not available in MVP. Session sliding extension replaces this.
 ```json
 { "refresh_token": "..." }
 ```
@@ -128,6 +129,8 @@ Bulk CSV import for people or shifts.
 
 ## 3. Locations
 
+> **⚠ MVP STATUS**: Locations CRUD is deferred. MVP assumes single-site per company (no locations).
+
 ### GET /api/v1/locations
 List locations. `?is_active=true`.
 → `200` → `{ "locations": [{ id, name, address, city, state_province, country, timezone }] }`
@@ -148,6 +151,8 @@ List locations. `?is_active=true`.
 
 ## 4. Positions
 
+> **⚠ MVP STATUS**: Positions CRUD is deferred to MVP+. Shifts work without positions in MVP.
+
 ### GET /api/v1/positions
 List positions. `?is_active=true`.
 → `200` → `{ "positions": [{ id, name, description, pay_rate }] }`
@@ -167,6 +172,8 @@ List positions. `?is_active=true`.
 ---
 
 ## 5. Skills
+
+> **⚠ MVP STATUS**: Skills CRUD is deferred to MVP+. No qualification validation in MVP.
 
 ### GET /api/v1/skills
 List skills. `?is_active=true`.
@@ -379,7 +386,9 @@ Remove assignment. → `200`
 
 ---
 
-## 11. Shift Swaps (MVP+)
+## 11. Shift Swaps
+
+> **⚠ MVP STATUS**: Shift swaps are deferred to MVP+. Do not implement during MVP.
 
 ### POST /api/v1/shift-assignments/:assignmentId/swap-request
 Request a swap.
@@ -406,6 +415,8 @@ List pending swap requests for a team.
 ---
 
 ## 12. Clock Entries
+
+> **⚠ MVP STATUS**: Clock in/out is deferred to Phase B. Do not implement during MVP.
 
 ### POST /api/v1/clock/clock-in
 ```json
@@ -442,6 +453,8 @@ Query: `?date=2026-07-13`.
 ---
 
 ## 13. Time-Off Requests
+
+> **⚠ MVP STATUS**: Time-off requests are deferred to MVP+. Do not implement during MVP.
 
 ### GET /api/v1/people/:personId/time-off
 List time-off for a person. `?status=approved&from=DATE&to=DATE`.
@@ -481,6 +494,8 @@ View all time-off for a team, filter by status/date.
 ---
 
 ## 14. Holidays
+
+> **⚠ MVP STATUS**: Holidays CRUD is deferred to MVP+. No holiday exclusion during expansion in MVP.
 
 ### GET /api/v1/holidays
 List company holidays. `?year=2026`.
@@ -522,7 +537,9 @@ PDF printable weekly schedule.
 
 ---
 
-## 16. Reports (MVP+)
+## 16. Reports
+
+> **⚠ MVP STATUS**: Reports are deferred to Phase C. Do not implement during MVP.
 
 ### GET /api/v1/reports/attendance
 `?team_id=X&from=DATE&to=DATE&person_id=Y`.
@@ -543,6 +560,8 @@ PDF printable weekly schedule.
 ---
 
 ## 17. Integrations (Company Admin)
+
+> **⚠ MVP STATUS**: Integrations (Slack, Teams, Google Calendar) are deferred to Phase B+. Do not implement during MVP.
 
 ### GET /api/v1/integrations
 List configured integrations.
@@ -591,6 +610,8 @@ Get current user's notification preferences.
 ---
 
 ## 19. Audit Log
+
+> **⚠ MVP STATUS**: Audit log API endpoint is write-only for MVP (DB triggers capture changes). The GET endpoint is deferred — no query UI in MVP. See `docs/04-mvp-plan.md`.
 
 ### GET /api/v1/audit-log
 Company-scoped audit log (inferred from session). Query: `?actor_id=X&resource_type=shift&action=create&from=DATE&to=DATE&page=1`.

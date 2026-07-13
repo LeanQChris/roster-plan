@@ -1,0 +1,4 @@
+#!/bin/sh
+echo "Running generate.py before commit..."
+python3 generate.py
+git add index.html

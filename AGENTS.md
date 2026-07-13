@@ -33,6 +33,8 @@ Greenfield design/spec project. Nothing implemented. All `.md` (requirements, sp
 
 ## MVP Scope (from docs/04-mvp-plan.md)
 
+The full MVP scope, deferred features, schema simplifications, UI screens, and effort estimate are defined **once** in `docs/04-mvp-plan.md`. That document is the single source of truth. Key highlights:
+
 ### What's IN (MVP)
 Multi-tenant auth (register, login, logout), company settings, teams CRUD, people CRUD + email invite, shift templates + RRULE, shift publish (expand templates → instances), manager assigns people to shifts, basic week calendar view (read-only for employees), 1 notification email (shift assigned), role gating (3 roles, hardcoded middleware).
 
@@ -53,24 +55,21 @@ const roleHierarchy = { employee: 0, manager: 1, company_admin: 2 };
 Permissions hardcoded in middleware, no join table.
 
 ### MVP Schema Simplifications
-- `shift_assignments`: no `status` column (always `approved`), no `requested_at`, no `approved_by`
-- `shifts`: no `draft` enum value (default `published`, immediately visible)
-- `notifications`: `email` channel only (no `slack`, `teams`, `webhook`, `push`)
-- `people`: drop `subscription_token`, `data_exported_at`
-- `team_memberships`: not needed (single primary team per person)
+See `docs/04-mvp-plan.md §Schema Simplifications` for authoritative list. Note: the full schema (`db/02-schema.sql`) defines all tables/columns for forward-compat — MVP simply ignores deferred columns (they're nullable/unused, not dropped).
 
 ### MVP UI Screens (13)
 Login, Signup, Company Setup, Dashboard, My Schedule, Team Schedule, Assign Shift (modal), Shift Templates, Template Form, Team People, Invite People, Company Settings, Employees List.
 
 ### MVP API Endpoints (subset of spec/01-api-spec.md)
-**Public**: `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`
-**Companies**: `GET /companies/:id`, `PATCH /companies/:id`
-**Teams**: `GET /teams`, `POST /teams`, `PATCH /teams/:id`, `DELETE /teams/:id`
-**People**: `GET /people`, `POST /people`, `GET /people/:id`, `PATCH /people/:id`, `DELETE /people/:id`, `POST /people/:id/invite`
-**Shift Templates**: `GET /teams/:tid/shift-templates`, `POST /teams/:tid/shift-templates`, `PATCH /shift-templates/:id`, `DELETE /shift-templates/:id`
-**Shifts**: `GET /shifts`, `GET /shifts/:id`, `POST /shifts`, `PATCH /shifts/:id`, `DELETE /shifts/:id`, `POST /shift-templates/:tid/expand`, `POST /teams/:tid/schedules/publish`
-**Assignments**: `POST /shifts/:sid/assign`, `DELETE /shift-assignments/:id`, `GET /shifts/:sid/assignments`
-**Calendar**: `GET /me/schedule`, `GET /teams/:tid/schedule`
+NOTE: All endpoints use the `/api/v1` prefix. Full details in `spec/01-api-spec.md`.
+**Public**: `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`
+**Companies**: `GET /api/v1/companies/:id`, `PATCH /api/v1/companies/:id`
+**Teams**: `GET /api/v1/teams`, `POST /api/v1/teams`, `PATCH /api/v1/teams/:id`, `DELETE /api/v1/teams/:id`
+**People**: `GET /api/v1/people`, `POST /api/v1/people`, `GET /api/v1/people/:id`, `PATCH /api/v1/people/:id`, `DELETE /api/v1/people/:id`, `POST /api/v1/people/:id/invite`
+**Shift Templates**: `GET /api/v1/teams/:tid/shift-templates`, `POST /api/v1/teams/:tid/shift-templates`, `PATCH /api/v1/shift-templates/:id`, `DELETE /api/v1/shift-templates/:id`
+**Shifts**: `GET /api/v1/shifts`, `GET /api/v1/shifts/:id`, `POST /api/v1/shifts`, `PATCH /api/v1/shifts/:id`, `DELETE /api/v1/shifts/:id`, `POST /api/v1/shift-templates/:tid/expand`, `POST /api/v1/teams/:tid/schedules/publish`
+**Assignments**: `POST /api/v1/shifts/:sid/assign`, `DELETE /api/v1/shift-assignments/:id`, `GET /api/v1/shifts/:sid/assignments`
+**Calendar**: `GET /api/v1/me/schedule`, `GET /api/v1/teams/:tid/schedule`
 
 ### MVP Effort Estimate
 ~31 days / 6 weeks (16 backend, 15.5 frontend)

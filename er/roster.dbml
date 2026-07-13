@@ -6,6 +6,101 @@ Project roster_db {
   '''
 }
 
+Enum company_status {
+  active
+  suspended
+  deleted
+}
+
+Enum person_role {
+  company_admin
+  manager
+  employee
+  super_admin
+  viewer
+}
+
+Enum person_status {
+  active
+  inactive
+  invited
+  deleted
+}
+
+Enum team_membership_role {
+  manager
+  employee
+}
+
+Enum shift_status {
+  draft
+  published
+  cancelled
+}
+
+Enum assignment_status {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+Enum time_off_type {
+  vacation
+  sick
+  personal
+  bereavement
+  other
+}
+
+Enum time_off_status {
+  pending
+  approved
+  denied
+  cancelled
+}
+
+Enum swap_status {
+  pending
+  accepted
+  rejected
+  cancelled
+}
+
+Enum notification_channel {
+  email
+  slack
+  teams
+  webhook
+  push
+}
+
+Enum notification_status {
+  pending
+  sent
+  delivered
+  bounced
+  failed
+}
+
+Enum violation_type {
+  missed_meal_break
+  missed_rest_break
+  late_clock_in
+  early_clock_out
+  no_clock_in
+  overtime_exceeded
+  min_rest_violation
+  predictive_scheduling_violation
+}
+
+Enum violation_status {
+  open
+  acknowledged
+  resolved
+  dismissed
+}
+
 Table companies {
   id UUID [pk, default: `gen_random_uuid()`]
   name VARCHAR(255) [not null]

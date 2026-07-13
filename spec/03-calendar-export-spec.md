@@ -1,5 +1,7 @@
 # Calendar & Export Specification
 
+> **⚠ MVP STATUS**: The entire calendar export feature (iCal, webcal, Google Calendar sync, PDF) is **deferred to MVP+**. Read this spec for forward-planning but do NOT implement during MVP. See `docs/04-mvp-plan.md` for the MVP scope.
+
 ## 1. iCal (.ics) Export
 
 ### 1.1 Standard Compliance

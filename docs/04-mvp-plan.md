@@ -97,7 +97,7 @@ ALTER TABLE shift_assignments DROP COLUMN IF EXISTS approved_by;
 -- Drop 'draft' from the enum, default to 'published'.
 
 -- notifications: only email channel for MVP.
--- Remove 'in_app' from notification_channel enum.
+-- Ignore 'slack','teams','webhook','push' enum values (post-MVP).
 
 -- people: remove subscription_token, data_exported_at for MVP.
 ```

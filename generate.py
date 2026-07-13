@@ -12,6 +12,7 @@ def readfile(path):
 src = {}
 src['features'] = readfile(f"{ROOT}/docs/02-feature-breakdown.md")
 src['stories'] = readfile(f"{ROOT}/docs/03-ux-user-stories.md")
+src['mvp_plan'] = readfile(f"{ROOT}/docs/04-mvp-plan.md")
 src['data_model'] = readfile(f"{ROOT}/db/01-data-model.md")
 src['schema_sql'] = readfile(f"{ROOT}/db/02-schema.sql")
 src['rrule'] = readfile(f"{ROOT}/db/03-rrule-storage.md")
@@ -25,6 +26,7 @@ src['email'] = readfile(f"{ROOT}/spec/08-email-templates.md")
 src['audit'] = readfile(f"{ROOT}/spec/09-audit-events.md")
 src['testing'] = readfile(f"{ROOT}/spec/10-testing-strategy.md")
 src['rbac'] = readfile(f"{ROOT}/spec/02-rbac-matrix.md")
+src['glossary'] = readfile(f"{ROOT}/docs/05-glossary.md")
 
 # Read ADR files
 adr_files = {
@@ -201,6 +203,8 @@ pages['product-stories'] = r"""<h1>UX Flow &amp; User Stories</h1>
 <p class="status-warning" style="margin-bottom:1rem"><strong>Note:</strong> These user stories cover the full product vision. The MVP implements a subset — see docs/04-mvp-plan.md for the exact scope.</p>
 """ + src['stories']
 
+pages['mvp-plan'] = src['mvp_plan']
+
 # Database pages
 pages['db-data-model'] = src['data_model']
 pages['db-rrule'] = src['rrule']
@@ -223,6 +227,8 @@ for line in api_lines:
             continue
     result.append(line)
 pages['api-spec'] = '\n'.join(result)
+
+pages['glossary'] = src['glossary']
 
 pages['api-pagination'] = src['pagination']
 pages['api-webhooks'] = src['webhooks']
@@ -594,8 +600,8 @@ output_parts.append(schema_json)
 output_parts.append(""";
 
 const NAV = [
-  {label:'Overview',icon:'fa-house',pages:[{id:'overview',label:'Welcome / Overview'}]},
-  {label:'Product',icon:'fa-cube',pages:[{id:'product-features',label:'Feature Breakdown'},{id:'product-stories',label:'UX User Stories'}]},
+  {label:'Overview',icon:'fa-house',pages:[{id:'overview',label:'Welcome / Overview'},{id:'glossary',label:'Glossary'}]},
+  {label:'Product',icon:'fa-cube',pages:[{id:'product-features',label:'Feature Breakdown'},{id:'product-stories',label:'UX User Stories'},{id:'mvp-plan',label:'MVP Plan'}]},
   {label:'Database',icon:'fa-database',pages:[{id:'db-data-model',label:'Data Model'},{id:'db-schema',label:'Schema Reference'},{id:'db-rrule',label:'RRULE Storage'}]},
   {label:'Architecture Decisions',icon:'fa-book',pages:[{id:'adr-001',label:'ADR 1: PostgreSQL RLS'},{id:'adr-002',label:'ADR 2: Expand on Publish'},{id:'adr-003',label:'ADR 3: Session Tokens (No JWT)'},{id:'adr-004',label:'ADR 4: HMAC Audit Chain'},{id:'adr-005',label:'ADR 5: RRULE Storage'}]},
 {label:'RBAC',icon:'fa-lock',pages:[{id:'rbac-matrix',label:'Permissions Matrix'},{id:'rbac-super-admin',label:'Role: super_admin',mvp:false},{id:'rbac-company-admin',label:'Role: company_admin',mvp:true},{id:'rbac-manager',label:'Role: manager',mvp:true},{id:'rbac-employee',label:'Role: employee',mvp:true},{id:'rbac-viewer',label:'Role: viewer',mvp:false}]},
@@ -864,7 +870,7 @@ window.addEventListener('DOMContentLoaded',function(){
 </html>""")
 
 output = ''.join(output_parts)
-with open(f'{ROOT}/docs-site/index.html', 'w') as f:
+with open(f'{ROOT}/index.html', 'w') as f:
     f.write(output)
 
 print(f"Generated {len(output)} bytes, {len(output.split(chr(10)))} lines")

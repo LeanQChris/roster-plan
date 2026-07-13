@@ -48,7 +48,7 @@ Company
 
 ### 4.3 Authentication & Authorization
 - Email + password authentication (bcrypt hashing)
-- Session-based auth with refresh tokens
+- Session-based auth (MVP: no refresh tokens — 7d sliding sessions; MVP+ adds refresh token rotation)
 - Row-Level Security (RLS) enforced at database level for multi-tenant isolation
 - Roles with granular permissions (see RBAC matrix)
 - **Passwordless magic link** login (MVP+, post-v1)

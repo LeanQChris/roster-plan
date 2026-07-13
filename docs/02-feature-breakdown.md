@@ -20,11 +20,9 @@ This document breaks every feature into atomic units and organizes them into imp
 - [ ] Per-company configuration (timezone, locale, branding)
 - [ ] Soft-delete with 30-day retention window
 
-### P1.3 — Authentication & Password Management
+### P1.3 — Authentication & Session Management
 - [ ] User registration with email + hashed password (bcrypt, cost 12)
-- [ ] Login with session token + refresh token rotation
-- [ ] Password reset flow (email with reset link, 15-min expiry)
-- [ ] Rate limiting on auth endpoints (5 attempts per minute per IP)
+- [ ] Login with session token (no refresh tokens for MVP — 7d sliding session)
 - [ ] Session invalidation on logout
 
 ### P1.4 — RBAC Foundation
@@ -172,6 +170,16 @@ This document breaks every feature into atomic units and organizes them into imp
 ### P7.3 — Multi-Region Data Residency (see compliance/06-data-residency.md)
 
 ---
+
+## Phase 7.5: MVP+ (Deferred from Phase 1)
+
+The following are deferred from Foundation/Phase 1 to reduce MVP scope. See `docs/04-mvp-plan.md` for the full deferral rationale.
+
+| Feature | Original Phase | Notes |
+|---|---|---|
+| Password reset flow (email with reset link, 15-min expiry) | P1.3 | Deferred: admin resets via direct support in MVP |
+| Rate limiting on auth endpoints | P1.3 | Deferred to hardening phase |
+| Refresh token rotation | P1.3 | 7d sliding sessions replace refresh tokens for MVP |
 
 ## Phase 8: Post-v1 (Future)
 

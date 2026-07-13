@@ -1,6 +1,33 @@
 -- ==========================================================
 -- Roster Application — PostgreSQL Schema v2 (Full)
 -- ==========================================================
+--
+-- IMPORTANT: MVP vs Full Schema
+-- This schema defines ALL tables and columns for the full product.
+-- For MVP, certain tables/columns are excluded or simplified:
+--
+-- MVP tables to SKIP (create but don't use):
+--   - team_memberships (single team per person in MVP)
+--   - shift_swap_requests (no swap workflow in MVP)
+--   - time_off_requests (deferred)
+--   - clock_entries (deferred)
+--   - integrations (deferred)
+--   - compliance_violations (deferred)
+--   - region_routing (Phase D)
+--   - consent_records (Phase C)
+--
+-- MVP columns present but UNUSED (keep for forward-compat, ignore during MVP):
+--   - shift_assignments.status (always 'approved' in MVP)
+--   - shift_assignments.requested_at (not used)
+--   - shift_assignments.approved_by (not used)
+--   - shift_assignments.confirmed_at (not used)
+--   - shifts.status → 'draft' enum value (default 'published' in MVP)
+--   - notifications.channel → 'slack','teams','webhook','push' (email-only in MVP)
+--   - people.subscription_token (webcal deferred)
+--   - people.data_exported_at (GDPR export deferred)
+--
+-- See docs/04-mvp-plan.md §Schema Simplifications for details.
+-- ==========================================================
 
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";   -- gen_random_uuid()
