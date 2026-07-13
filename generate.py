@@ -26,6 +26,17 @@ src['audit'] = readfile(f"{ROOT}/spec/09-audit-events.md")
 src['testing'] = readfile(f"{ROOT}/spec/10-testing-strategy.md")
 src['rbac'] = readfile(f"{ROOT}/spec/02-rbac-matrix.md")
 
+# Read ADR files
+adr_files = {
+    'adr-001': '001-use-postgresql-rls.md',
+    'adr-002': '002-expand-on-publish.md',
+    'adr-003': '003-session-tokens-not-jwt.md',
+    'adr-004': '004-hmac-audit-chain.md',
+    'adr-005': '005-rrule-storage-strategy.md'
+}
+for key, filename in adr_files.items():
+    src[key] = readfile(f"{ROOT}/docs/adr/{filename}")
+
 compliance_docs = {
     'gdpr': '01-GDPR.md', 'ccpa': '02-CCPA.md', 'soc2': '03-SOC2.md', 'hipaa': '04-HIPAA.md',
     'security': '05-security.md', 'residency': '06-data-residency.md',
@@ -102,6 +113,10 @@ for ep in mvp_endpoints:
 
 # Build all page content - store as JSON (safe, no escaping issues)
 pages = {}
+
+# ADR pages (markdown, rendered by marked.js)
+for key in adr_files:
+    pages[key] = src[key]
 
 # Overview page
 inconsistencies = r"""<div class="status-warning">
@@ -582,7 +597,8 @@ const NAV = [
   {label:'Overview',icon:'fa-house',pages:[{id:'overview',label:'Welcome / Overview'}]},
   {label:'Product',icon:'fa-cube',pages:[{id:'product-features',label:'Feature Breakdown'},{id:'product-stories',label:'UX User Stories'}]},
   {label:'Database',icon:'fa-database',pages:[{id:'db-data-model',label:'Data Model'},{id:'db-schema',label:'Schema Reference'},{id:'db-rrule',label:'RRULE Storage'}]},
-  {label:'RBAC',icon:'fa-lock',pages:[{id:'rbac-matrix',label:'Permissions Matrix'},{id:'rbac-super-admin',label:'Role: super_admin',mvp:false},{id:'rbac-company-admin',label:'Role: company_admin',mvp:true},{id:'rbac-manager',label:'Role: manager',mvp:true},{id:'rbac-employee',label:'Role: employee',mvp:true},{id:'rbac-viewer',label:'Role: viewer',mvp:false}]},
+  {label:'Architecture Decisions',icon:'fa-book',pages:[{id:'adr-001',label:'ADR 1: PostgreSQL RLS'},{id:'adr-002',label:'ADR 2: Expand on Publish'},{id:'adr-003',label:'ADR 3: Session Tokens (No JWT)'},{id:'adr-004',label:'ADR 4: HMAC Audit Chain'},{id:'adr-005',label:'ADR 5: RRULE Storage'}]},
+{label:'RBAC',icon:'fa-lock',pages:[{id:'rbac-matrix',label:'Permissions Matrix'},{id:'rbac-super-admin',label:'Role: super_admin',mvp:false},{id:'rbac-company-admin',label:'Role: company_admin',mvp:true},{id:'rbac-manager',label:'Role: manager',mvp:true},{id:'rbac-employee',label:'Role: employee',mvp:true},{id:'rbac-viewer',label:'Role: viewer',mvp:false}]},
   {label:'API & Integration',icon:'fa-plug',pages:[{id:'api-spec',label:'API Reference'},{id:'api-pagination',label:'Pagination'},{id:'api-webhooks',label:'Webhooks'}]},
   {label:'Platform Specs',icon:'fa-gear',pages:[{id:'spec-sessions',label:'Session Management'},{id:'spec-calendar',label:'Calendar Export'},{id:'spec-architecture',label:'Architecture'},{id:'spec-email',label:'Email Templates'},{id:'spec-audit',label:'Audit Events'},{id:'spec-testing',label:'Testing Strategy'}]},
   {label:'Compliance',icon:'fa-shield',pages:[{id:'compliance-gdpr',label:'GDPR'},{id:'compliance-ccpa',label:'CCPA / CPRA'},{id:'compliance-soc2',label:'SOC 2'},{id:'compliance-hipaa',label:'HIPAA'},{id:'compliance-security',label:'Security'},{id:'compliance-residency',label:'Data Residency'},{id:'compliance-incident',label:'Incident Response'},{id:'compliance-australia',label:'Australia (APPs)'}]}
