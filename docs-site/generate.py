@@ -360,12 +360,13 @@ for r in rbac_roles_list:
     perms = [p for p in rbac_perms if p['perm'] in role_map.get(r, [])]
     desc = full_roles.get(r, '')
     is_mvp = r in ('company_admin', 'manager', 'employee')
+    version_badge = '<span class="mvp-scope-badge in-mvp">MVP</span>' if is_mvp else '<span class="mvp-scope-badge post-mvp">Full Spec</span>'
     mvp_note = '' if is_mvp else r"""<div class="status-warning">
 <strong><i class="fas fa-info-circle"></i> Not in MVP</strong>
 <p style="margin-top:0.25rem">This role is part of the full specification but is <strong>not</strong> included in the MVP implementation.</p>
 </div>"""
     
-    html = f"""<h1>Role: {r}</h1>
+    html = f"""<h1>Role: {r} {version_badge}</h1>
 <p>{desc}</p>
 {mvp_note}
 <h2>Permissions ({len(perms)})</h2>
@@ -388,7 +389,7 @@ for r in rbac_roles_list:
     if r in ('company_admin', 'manager'):
         html += '<li><a href="#spec-audit">Audit Events</a> — audit_log.read permission</li>'
     html += '</ul>'
-    pages[f'rbac-{r}'] = html
+    pages[f'rbac-{r.replace("_", "-")}'] = html
 
 # Encode all content as JSON
 pages_json = json.dumps(pages, ensure_ascii=False)
@@ -581,7 +582,7 @@ const NAV = [
   {label:'Overview',icon:'fa-house',pages:[{id:'overview',label:'Welcome / Overview'}]},
   {label:'Product',icon:'fa-cube',pages:[{id:'product-features',label:'Feature Breakdown'},{id:'product-stories',label:'UX User Stories'}]},
   {label:'Database',icon:'fa-database',pages:[{id:'db-data-model',label:'Data Model'},{id:'db-schema',label:'Schema Reference'},{id:'db-rrule',label:'RRULE Storage'}]},
-  {label:'RBAC',icon:'fa-lock',pages:[{id:'rbac-matrix',label:'Permissions Matrix'},{id:'rbac-super-admin',label:'Role: super_admin'},{id:'rbac-company-admin',label:'Role: company_admin'},{id:'rbac-manager',label:'Role: manager'},{id:'rbac-employee',label:'Role: employee'},{id:'rbac-viewer',label:'Role: viewer'}]},
+  {label:'RBAC',icon:'fa-lock',pages:[{id:'rbac-matrix',label:'Permissions Matrix'},{id:'rbac-super-admin',label:'Role: super_admin',mvp:false},{id:'rbac-company-admin',label:'Role: company_admin',mvp:true},{id:'rbac-manager',label:'Role: manager',mvp:true},{id:'rbac-employee',label:'Role: employee',mvp:true},{id:'rbac-viewer',label:'Role: viewer',mvp:false}]},
   {label:'API & Integration',icon:'fa-plug',pages:[{id:'api-spec',label:'API Reference'},{id:'api-pagination',label:'Pagination'},{id:'api-webhooks',label:'Webhooks'}]},
   {label:'Platform Specs',icon:'fa-gear',pages:[{id:'spec-sessions',label:'Session Management'},{id:'spec-calendar',label:'Calendar Export'},{id:'spec-architecture',label:'Architecture'},{id:'spec-email',label:'Email Templates'},{id:'spec-audit',label:'Audit Events'},{id:'spec-testing',label:'Testing Strategy'}]},
   {label:'Compliance',icon:'fa-shield',pages:[{id:'compliance-gdpr',label:'GDPR'},{id:'compliance-ccpa',label:'CCPA / CPRA'},{id:'compliance-soc2',label:'SOC 2'},{id:'compliance-hipaa',label:'HIPAA'},{id:'compliance-security',label:'Security'},{id:'compliance-residency',label:'Data Residency'},{id:'compliance-incident',label:'Incident Response'},{id:'compliance-australia',label:'Australia (APPs)'}]}
@@ -684,7 +685,7 @@ function renderNav(){
     +'<span><i class="fas '+g.icon+'" style="width:1rem"></i> '+g.label+'</span>'
     +'<span class="chevron"><i class="fas fa-chevron-right"></i></span></div>'
     +'<div class="nav-links open">'
-    +g.pages.map(function(p){return'<a class="nav-link" href="#'+p.id+'" onclick="navigate(&apos;'+p.id+'&apos;)" data-page="'+p.id+'">'+escHtml(p.label)+'</a>'}).join('')
+    +g.pages.map(function(p){var badge=p.mvp!==undefined?(p.mvp?'<span class="mvp-scope-badge in-mvp" style="float:right;margin-top:1px">MVP</span>':'<span class="mvp-scope-badge post-mvp" style="float:right;margin-top:1px">Full</span>'):'';return'<a class="nav-link" href="#'+p.id+'" onclick="navigate(&apos;'+p.id+'&apos;)" data-page="'+p.id+'">'+escHtml(p.label)+badge+'</a>'}).join('')
     +'</div></div>'}).join('')
 }
 function updateActiveNav(id){
@@ -741,7 +742,7 @@ function renderPage(id){
   var el=document.getElementById('page-content')
   var html=''
   if(typeof PAGES[id]==='function'){PAGES[id](el);return}
-  if(typeof PAGES[id]==='string'){html=PAGES[id]}else{html='<h1>Page not found</h1><p>Page "'+id+'" doesn\'t exist.</p>'}
+  if(typeof PAGES[id]==='string'){html=PAGES[id]}else{html='<h1>Page not found</h1><p>Page "'+id+'" doesn\\'t exist.</p>'}
   
   // Breadcrumb
   var bc=getBreadcrumb(id)
