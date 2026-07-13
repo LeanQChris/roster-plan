@@ -132,14 +132,14 @@ Clock entries themselves are immutable. The audit log records the *act* of clock
 | `create` | Integration configured (Slack/Teams/etc.) |
 | `update` | Integration config changed |
 | `delete` | Integration removed |
-| `test` | Test notification sent | `new_values` = `{ success }` |
+| `test` | Test notification sent — `new_values` = `{ success }` |
 
 ### 2.14 Notifications
 
 | Action | When |
 |--------|------|
-| `send` | Notification sent | `new_values` = `{ type, channel, status }` |
-| `bounce` | Email bounced | `new_values` = `{ status: 'bounced', error }` |
+| `send` | Notification sent — `new_values` = `{ type, channel, status }` |
+| `bounce` | Email bounced — `new_values` = `{ status: 'bounced', error }` |
 
 ## 3. Retention Policy
 

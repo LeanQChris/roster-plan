@@ -62,7 +62,7 @@ Sign up company → Add teams → Invite employees
 Only these tables are needed for MVP. The full schema in `db/02-schema.sql` has more; MVP uses a flattened subset.
 
 | Table | MVP? | Notes |
-|---|---|---|---|
+|---|---|---|
 | `companies` | ✅ | Full as designed |
 | `company_settings` | ✅ | Required |
 | `teams` | ✅ | Full |

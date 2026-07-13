@@ -151,4 +151,4 @@ The library must:
 | Template modified after publish | Published instances stay unchanged; next publish re-expands |
 | Holiday falls on weekend | Holiday date is the observed date (e.g., Dec 25 always generates); observances pre-computed by company |
 | Person assigned to shift on holiday | Assignment still valid — holiday exclusion only affects generation, not existing assignments |
-| Time-off approved after assignment | **Existing assignments are not auto-cancelled.** Manager must handle conflict manually or via a "sub alerts" system
+| Time-off approved after assignment | **Existing assignments are not auto-cancelled.** Manager must handle conflict manually or via a "sub alerts" system |

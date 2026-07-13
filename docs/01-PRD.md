@@ -158,4 +158,4 @@ Company
 | Payroll integration (Gusto, ADP) | Depends on stable clock data; Phase C |
 | Shift differential / pay rate engine | Cost tracking feature; Phase D |
 | AI/ML auto-scheduling | Requires historical data volume; post-v1 |
-| SCIM provisioning | Enterprise SSO feature; Phase D
+| SCIM provisioning | Enterprise SSO feature; Phase D |

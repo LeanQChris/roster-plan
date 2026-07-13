@@ -59,7 +59,7 @@ Each region has a full, independent PostgreSQL instance (or cluster):
 
 ### 4.1 Rules
 | Company HQ / Declaration | Assigned Region |
-|---|---|---|
+|---|---|
 | EU/EEA/UK | `eu-west-1` |
 | US + any HIPAA company | `us-east-1` |
 | Australia | `ap-southeast-2` (AWS Sydney) |
