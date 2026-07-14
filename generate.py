@@ -259,7 +259,7 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <table>
 <thead><tr><th>Directory</th><th>Contents</th></tr></thead>
 <tbody>
-<tr><td>/ (root)</td><td>AGENTS.md (architecture ground truths), understand-it.md, prototype.html</td></tr>
+<tr><td>/ (root)</td><td>AGENTS.md (architecture ground truths), prototype.html</td></tr>
 <tr><td>docs/</td><td>PRD, feature breakdown, UX stories, MVP plan</td></tr>
 <tr><td>db/</td><td>Data model doc, full SQL schema (30 tables), RRULE storage strategy</td></tr>
 <tr><td>spec/</td><td>API spec, RBAC matrix, calendar export, pagination, webhooks, session management, architecture, email templates, audit events, testing strategy</td></tr>
