@@ -200,8 +200,8 @@ for key in adr_files:
 inconsistencies = r"""<div class="status-warning">
 <strong>Document Inconsistencies Noted</strong>
 <ul style="margin-top:0.5rem">
-<li><strong>Role count mismatch:</strong> AGENTS.md and docs/04-mvp-plan.md say 3 MVP roles (company_admin, manager, employee). handoff.md says 4 roles (+ viewer) in full spec. spec/02-rbac-matrix.md defines 5 roles including super_admin and viewer. The SQL schema's person_role enum has company_admin, manager, employee and adds super_admin via ALTER TYPE. viewer is not in the DB enum at all — it exists only in the RBAC spec as a read-only role intended for UI-level enforcement.</li>
-<li><strong>Session token length:</strong> spec/06-session-management.md says "64-char random base64url" from crypto.randomBytes(48) (48 bytes = 64 base64url chars). handoff.md says "64-char random base64url". Consistent.</li>
+<li><strong>Role count mismatch:</strong> AGENTS.md and docs/04-mvp-plan.md say 3 MVP roles (company_admin, manager, employee). spec/02-rbac-matrix.md defines 5 roles including super_admin and viewer. The SQL schema's person_role enum has company_admin, manager, employee and adds super_admin via ALTER TYPE. viewer is not in the DB enum at all — it exists only in the RBAC spec as a read-only role intended for UI-level enforcement.</li>
+<li><strong>Session token length:</strong> spec/06-session-management.md says "64-char random base64url" from crypto.randomBytes(48) (48 bytes = 64 base64url chars). Consistent.</li>
 <li><strong>MVP endpoint list:</strong> docs/04-mvp-plan.md lists 26 MVP endpoints. spec/01-api-spec.md has ~60+ total (full spec). The MVP doc does NOT include POST /api/v1/auth/refresh, POST /api/v1/auth/forgot-password, or POST /api/v1/auth/reset-password — these exist only in the full spec. The handoff explicitly says "No password reset for MVP."</li>
 <li><strong>shift_assignments.status MVP simplification:</strong> docs/04-mvp-plan.md says "status is always approved for MVP" and to drop the status column. But db/02-schema.sql has the full assignment_status enum with pending/approved/rejected/cancelled. The data model doc also shows the full design. These simplifications are noted in the MVP doc but the SQL schema is "implementation-ready" per AGENTS.md — the implementer is expected to apply simplifications.</li>
 <li><strong>people.subscription_token and data_exported_at:</strong> docs/04-mvp-plan.md says to remove these for MVP. Both columns exist in db/02-schema.sql. Implementer should drop them for MVP.</li>
@@ -259,7 +259,7 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <table>
 <thead><tr><th>Directory</th><th>Contents</th></tr></thead>
 <tbody>
-<tr><td>/ (root)</td><td>AGENTS.md (architecture ground truths), handoff.md, understand-it.md, prototype.html</td></tr>
+<tr><td>/ (root)</td><td>AGENTS.md (architecture ground truths), understand-it.md, prototype.html</td></tr>
 <tr><td>docs/</td><td>PRD, feature breakdown, UX stories, MVP plan</td></tr>
 <tr><td>db/</td><td>Data model doc, full SQL schema (30 tables), RRULE storage strategy</td></tr>
 <tr><td>spec/</td><td>API spec, RBAC matrix, calendar export, pagination, webhooks, session management, architecture, email templates, audit events, testing strategy</td></tr>
