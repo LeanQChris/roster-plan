@@ -213,15 +213,77 @@ const NAV = [
   {label:'Compliance',icon:'fa-shield',pages:[{id:'compliance-gdpr',label:'GDPR'},{id:'compliance-ccpa',label:'CCPA / CPRA'},{id:'compliance-soc2',label:'SOC 2'},{id:'compliance-hipaa',label:'HIPAA'},{id:'compliance-security',label:'Security'},{id:'compliance-residency',label:'Data Residency'},{id:'compliance-incident',label:'Incident Response'},{id:'compliance-australia',label:'Australia (APPs)'}]}
 ];
 
+const MD_TO_PAGE = {
+  // Compliance (bare)
+  '01-GDPR.md':'compliance-gdpr','02-CCPA.md':'compliance-ccpa','03-SOC2.md':'compliance-soc2',
+  '04-HIPAA.md':'compliance-hipaa','05-security.md':'compliance-security','06-data-residency.md':'compliance-residency',
+  '07-incident-response-plan.md':'compliance-incident','08-Australia.md':'compliance-australia',
+  // Compliance (full path)
+  'compliance/01-GDPR.md':'compliance-gdpr','compliance/02-CCPA.md':'compliance-ccpa',
+  'compliance/03-SOC2.md':'compliance-soc2','compliance/04-HIPAA.md':'compliance-hipaa',
+  'compliance/05-security.md':'compliance-security','compliance/06-data-residency.md':'compliance-residency',
+  'compliance/07-incident-response-plan.md':'compliance-incident','compliance/08-Australia.md':'compliance-australia',
+  // Spec (bare)
+  '01-api-spec.md':'api-spec','02-rbac-matrix.md':'rbac-matrix','03-calendar-export-spec.md':'spec-calendar',
+  '04-pagination.md':'api-pagination','05-webhooks.md':'api-webhooks','06-session-management.md':'spec-sessions',
+  '07-architecture.md':'spec-architecture','08-email-templates.md':'spec-email',
+  '09-audit-events.md':'spec-audit','10-testing-strategy.md':'spec-testing',
+  // Spec (full path)
+  'spec/01-api-spec.md':'api-spec','spec/02-rbac-matrix.md':'rbac-matrix',
+  'spec/03-calendar-export-spec.md':'spec-calendar','spec/04-pagination.md':'api-pagination',
+  'spec/05-webhooks.md':'api-webhooks','spec/06-session-management.md':'spec-sessions',
+  'spec/07-architecture.md':'spec-architecture','spec/08-email-templates.md':'spec-email',
+  'spec/09-audit-events.md':'spec-audit','spec/10-testing-strategy.md':'spec-testing',
+  // Docs (bare)
+  '01-PRD.md':'overview','02-feature-breakdown.md':'product-features',
+  '03-ux-user-stories.md':'product-stories','04-mvp-plan.md':'mvp-plan','05-glossary.md':'glossary',
+  // Docs (full path)
+  'docs/01-PRD.md':'overview','docs/02-feature-breakdown.md':'product-features',
+  'docs/03-ux-user-stories.md':'product-stories','docs/04-mvp-plan.md':'mvp-plan',
+  'docs/05-glossary.md':'glossary',
+  // DB (bare)
+  '01-data-model.md':'db-data-model','02-schema.sql':'db-schema','03-rrule-storage.md':'db-rrule',
+  // DB (full path)
+  'db/01-data-model.md':'db-data-model','db/02-schema.sql':'db-schema','db/03-rrule-storage.md':'db-rrule',
+  // ADR
+  'docs/adr/001-use-postgresql-rls.md':'adr-001','docs/adr/002-expand-on-publish.md':'adr-002',
+  'docs/adr/003-session-tokens-not-jwt.md':'adr-003','docs/adr/004-hmac-audit-chain.md':'adr-004',
+  'docs/adr/005-rrule-storage-strategy.md':'adr-005'
+};
+
 let searchIndex = [];
 let currentPage = 'overview';
 let currentToc = [];
+let skipHashChange = false;
 
 /* ─── Utilities ─── */
 function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
-/* ─── Marked config ─── */
-function md(s){return marked.parse(s,{breaks:true})}
+/* ─── Marked config + cross-reference link conversion ─── */
+function md(s){
+  var html = marked.parse(s, {breaks: true});
+  var anchorMap = {};
+  var aidx = 0;
+  html = html.replace(/<a[^>]*>[\s\S]*?<\/a>/g, function(m) {
+    var k = ' A' + (aidx++) + ' ';
+    anchorMap[k] = m;
+    return k;
+  });
+  html = html.replace(/<code[^>]*>([a-zA-Z0-9_\/.-]+\.(?:md|sql))<\/code>/g, function(m, fp) {
+    var pid = MD_TO_PAGE[fp];
+    if (!pid) return m;
+    return '<a href="#' + pid + '">' + fp + '</a>';
+  });
+  html = html.replace(/([a-zA-Z0-9_\/.-]+\.(?:md|sql))/g, function(m, fp) {
+    var pid = MD_TO_PAGE[fp];
+    if (!pid) return m;
+    return '<a href="#' + pid + '">' + fp + '</a>';
+  });
+  for (var k in anchorMap) {
+    html = html.split(k).join(anchorMap[k]);
+  }
+  return html;
+}
 
 /* ─── Heading anchors (post-process) ─── */
 function addHeadingAnchors(root){
@@ -318,14 +380,30 @@ function updateActiveNav(id){
 }
 
 /* ─── Navigation ─── */
-function navigate(id){
+function navigate(ref){
+  var parts=ref.split('#')
+  var id=parts[0]
+  var anchor=parts[1]||null
   currentPage=id
-  window.location.hash='#'+id
+  skipHashChange=true
+  window.location.hash='#'+ref
+  skipHashChange=false
   updateActiveNav(id)
   renderPage(id)
+  if(anchor){
+    setTimeout(function(){
+      var el=document.getElementById(anchor)
+      if(el)el.scrollIntoView({behavior:'smooth',block:'start'})
+    },150)
+  }
   document.getElementById('search-input').value=''
   if(window.innerWidth<=768){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
 }
+window.addEventListener('hashchange',function(){
+  if(skipHashChange)return
+  var hash=window.location.hash.slice(1)||'overview'
+  navigate(hash)
+})
 function toggleSidebar(){
   document.getElementById('sidebar').classList.toggle('open')
   document.getElementById('overlay').classList.toggle('show')
