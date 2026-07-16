@@ -259,7 +259,7 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <table>
 <thead><tr><th>Directory</th><th>Contents</th></tr></thead>
 <tbody>
-<tr><td>/ (root)</td><td>AGENTS.md (architecture ground truths), prototype.html</td></tr>
+<tr><td>/ (root)</td><td>AGENTS.md (architecture ground truths), prototype.html (high-fidelity), wireframes.html (low-fidelity block-frame diagrams)</td></tr>
 <tr><td>docs/</td><td>PRD, feature breakdown, UX stories, MVP plan</td></tr>
 <tr><td>db/</td><td>Data model doc, full SQL schema (30 tables), RRULE storage strategy</td></tr>
 <tr><td>spec/</td><td>API spec, RBAC matrix, calendar export, pagination, webhooks, session management, architecture, email templates, audit events, testing strategy</td></tr>
@@ -268,6 +268,44 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 </table>
 <h2>Prototype</h2>
 <p>The interactive UI prototype is available at <code>prototype.html</code> in the project root — a single-file HTML/CSS mockup using Tailwind CSS via CDN. Open it directly in a browser to explore the screen designs.</p>
+<p><a href="prototype.html" target="_blank" style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:.875rem" onmouseover="this.style.background=\'#333\'" onmouseout="this.style.background=\'#000\'"><i class="fas fa-eye"></i> Open Interactive Prototype</a></p>
+<h2>Wireframes</h2>
+<p>The full set of wireframe mockups is available at <code>wireframes.html</code> — a comprehensive layout reference covering all 14 MVP screens and all post-MVP screens, rendered as low-fidelity block-frame diagrams.</p>
+<p><a href="wireframes.html" target="_blank" style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:.875rem" onmouseover="this.style.background=\'#333\'" onmouseout="this.style.background=\'#000\'"><i class="fas fa-pencil-ruler"></i> Open Wireframes</a></p>
+"""
+
+# Wireframes page
+pages['wireframes'] = r"""<h1>Wireframes</h1>
+<p>Full set of UI wireframes for the Roster application, covering all MVP screens (14 screens) and post-MVP screens (self-scheduling, time-off, swap, etc.).</p>
+<p>These are low-fidelity block-frame diagrams rendered directly in the browser via a single-file HTML mockup at <code>wireframes.html</code> in the project root. Each screen is represented as a labeled panel with placeholder layout blocks — not pixel-perfect, but sufficient to validate flow and layout before implementation.</p>
+<h2>MVP Screens</h2>
+<table>
+<thead><tr><th>#</th><th>Screen</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Login</td><td>Email + password form with company slug field</td></tr>
+<tr><td>2</td><td>Signup</td><td>Registration form for new company admin</td></tr>
+<tr><td>3</td><td>Company Setup</td><td>Onboarding wizard after first login</td></tr>
+<tr><td>4</td><td>Dashboard</td><td>Main overview with upcoming shifts, quick actions, clock status</td></tr>
+<tr><td>5</td><td>My Schedule</td><td>Employee's week calendar view (read-only)</td></tr>
+<tr><td>6</td><td>Team Schedule</td><td>Manager's full team calendar with drag-to-assign</td></tr>
+<tr><td>7</td><td>Assign Shift (modal)</td><td>Modal for assigning people to a shift</td></tr>
+<tr><td>8</td><td>Shift Templates</td><td>List of recurring shift patterns with RRULE info</td></tr>
+<tr><td>9</td><td>Template Form</td><td>Create/edit a shift template with recurrence rule builder</td></tr>
+<tr><td>10</td><td>Team People</td><td>Team roster view — list of members with roles</td></tr>
+<tr><td>11</td><td>Invite People</td><td>Invite form to add people via email</td></tr>
+<tr><td>12</td><td>Company Settings</td><td>Timezone, locale, branding settings</td></tr>
+<tr><td>13</td><td>Employees List</td><td>Company-wide people directory for company_admin</td></tr>
+<tr><td>14</td><td>Admin Dashboard</td><td>Super admin: list companies, suspend/activate, platform audit</td></tr>
+</tbody>
+</table>
+<p><a href="wireframes.html" target="_blank" style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:.875rem" onmouseover="this.style.background=\'#333\'" onmouseout="this.style.background=\'#000\'"><i class="fas fa-pencil-ruler"></i> Open Full Wireframes</a></p>
+"""
+
+# Prototype page
+pages['prototype'] = r"""<h1>Interactive Prototype</h1>
+<p>The interactive UI prototype is a single-file HTML/CSS mockup using Tailwind CSS via CDN — <code>prototype.html</code> in the project root.</p>
+<p>This prototype demonstrates the look and feel of key screens with clickable flows, form inputs, and navigation mockups. Unlike the wireframes (which are block-frame diagrams), this is a higher-fidelity visual mockup with styling approximating the final design.</p>
+<p><a href="prototype.html" target="_blank" style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:.875rem" onmouseover="this.style.background=\'#333\'" onmouseout="this.style.background=\'#000\'"><i class="fas fa-eye"></i> Open Prototype</a></p>
 """
 
 # Product pages
@@ -721,6 +759,7 @@ const NAV = [
   {label:'Architecture Decisions',icon:'fa-book',pages:[{id:'adr-001',label:'ADR 1: PostgreSQL RLS'},{id:'adr-002',label:'ADR 2: Expand on Publish'},{id:'adr-003',label:'ADR 3: Session Tokens (No JWT)'},{id:'adr-004',label:'ADR 4: HMAC Audit Chain'},{id:'adr-005',label:'ADR 5: RRULE Storage'}]},
 {label:'RBAC',icon:'fa-lock',pages:[{id:'rbac-matrix',label:'Permissions Matrix'},{id:'rbac-super-admin',label:'Role: super_admin',mvp:false},{id:'rbac-company-admin',label:'Role: company_admin',mvp:true},{id:'rbac-manager',label:'Role: manager',mvp:true},{id:'rbac-employee',label:'Role: employee',mvp:true},{id:'rbac-viewer',label:'Role: viewer',mvp:false}]},
   {label:'API & Integration',icon:'fa-plug',pages:[{id:'api-spec',label:'API Reference'},{id:'api-pagination',label:'Pagination'},{id:'api-webhooks',label:'Webhooks'}]},
+  {label:'Design',icon:'fa-pencil-ruler',pages:[{id:'wireframes',label:'Wireframes'},{id:'prototype',label:'Interactive Prototype'}]},
   {label:'Platform Specs',icon:'fa-gear',pages:[{id:'spec-sessions',label:'Session Management'},{id:'spec-calendar',label:'Calendar Export'},{id:'spec-architecture',label:'Architecture'},{id:'spec-email',label:'Email Templates'},{id:'spec-audit',label:'Audit Events'},{id:'spec-testing',label:'Testing Strategy'}]},
   {label:'Compliance',icon:'fa-shield',pages:[{id:'compliance-gdpr',label:'GDPR'},{id:'compliance-ccpa',label:'CCPA / CPRA'},{id:'compliance-soc2',label:'SOC 2'},{id:'compliance-hipaa',label:'HIPAA'},{id:'compliance-security',label:'Security'},{id:'compliance-residency',label:'Data Residency'},{id:'compliance-incident',label:'Incident Response'},{id:'compliance-australia',label:'Australia (APPs)'}]}
 ];
