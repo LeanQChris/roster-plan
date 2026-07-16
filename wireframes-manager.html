@@ -74,6 +74,7 @@
     <!-- M1. DASHBOARD (Manager) -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-mvp">MVP</span> Screen M1 · /dashboard — Manager</div>
+      <p class="text-xs text-gray-500 mb-2">Overview with team coverage heatmap and quick links to templates, people, and pending requests.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
           <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gray-300 border-2 border-gray-400 flex items-center justify-center text-xs font-bold text-gray-600">R</div><div class="font-bold text-gray-800 text-sm">Roster</div></div>
@@ -107,6 +108,7 @@
     <!-- M2. TEAM SCHEDULE -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-mvp">MVP</span> Screen M2 · /teams/:id/schedule</div>
+      <p class="text-xs text-gray-500 mb-2">Team-wide weekly schedule showing assigned staff and coverage gaps per time slot.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
           <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gray-300 border-2 border-gray-400 flex items-center justify-center text-xs font-bold text-gray-600">R</div><div class="font-bold text-gray-800 text-sm">Roster</div></div>
@@ -137,6 +139,7 @@
     <!-- M3. ASSIGN SHIFT MODAL -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-mvp">MVP</span> Screen M3 · Assign Shift Modal</div>
+      <p class="text-xs text-gray-500 mb-2">Assigns a person to a shift slot with optional force-assign to bypass conflict checks.</p>
       <div class="wf p-0 overflow-hidden relative" style="min-height:240px;">
         <div class="p-4 opacity-30"><div class="text-sm font-semibold">Schedule (bg)</div></div>
         <div class="wf-modal-overlay">
@@ -155,6 +158,7 @@
     <!-- M4. SHIFT TEMPLATES -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-mvp">MVP</span> Screen M4 · /teams/:id/templates</div>
+      <p class="text-xs text-gray-500 mb-2">Lists recurring shift templates with RRULE patterns for one-click schedule generation.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
           <div class="flex items-center gap-2"><span class="font-bold text-gray-800 text-sm">Roster</span></div>
@@ -174,6 +178,7 @@
     <!-- M5. TEMPLATE FORM -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-mvp">MVP</span> Screen M5 · Template Form</div>
+      <p class="text-xs text-gray-500 mb-2">Creates or edits a template: title, time window, duration, staff count, RRULE, and position.</p>
       <div class="wf p-0 overflow-hidden relative" style="min-height:340px;">
         <div class="p-4 opacity-30"><div class="text-sm font-semibold">Templates (bg)</div></div>
         <div class="wf-modal-overlay">
@@ -196,6 +201,7 @@
     <!-- M6. TEAM PEOPLE -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-mvp">MVP</span> Screen M6 · /teams/:id/people</div>
+      <p class="text-xs text-gray-500 mb-2">Team roster showing members, roles, status badges, and remove actions.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
           <div class="flex items-center gap-2"><span class="font-bold text-gray-800 text-sm">Roster</span></div>
@@ -218,6 +224,7 @@
     <!-- M7. SHIFT REQUESTS (approvals) -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post">Post-MVP</span> Screen M7 · /teams/:id/requests — Phase A</div>
+      <p class="text-xs text-gray-500 mb-2">Approves or denies employee requests to pick up specific published shifts.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
           <div class="flex items-center gap-2"><span class="font-bold text-gray-800 text-sm">Roster</span></div>
@@ -255,6 +262,7 @@
     <!-- M8. TIME-OFF APPROVALS -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post">Post-MVP</span> Screen M8 · /teams/:id/time-off — Phase A</div>
+      <p class="text-xs text-gray-500 mb-2">Approves or denies time-off requests with coverage impact preview for the affected dates.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="p-4">
           <div class="flex items-center justify-between mb-3"><div class="wf-title">Time-Off Requests <span class="wf-badge bg-yellow-100 text-yellow-700">2 pending</span></div></div>
@@ -276,6 +284,7 @@
     <!-- M9. SWAP REQUESTS -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post">Post-MVP</span> Screen M9 · Swap Requests — Phase A</div>
+      <p class="text-xs text-gray-500 mb-2">Approves or denies proposed shift swaps between team members.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="p-4">
           <div class="wf-title mb-3">Swap Requests <span class="wf-badge bg-yellow-100 text-yellow-700">1 pending</span></div>
@@ -294,6 +303,7 @@
     <!-- M10. ATTENDANCE LIVE VIEW -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post">Post-MVP</span> Screen M10 · /teams/:id/attendance — Phase B</div>
+      <p class="text-xs text-gray-500 mb-2">Real-time attendance board showing who is on time, late, on break, or no-show.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="p-4">
           <div class="flex items-center justify-between mb-3"><div class="wf-title">Live Attendance</div><span class="text-xs text-gray-500">Today, Jul 14</span></div>
@@ -313,6 +323,7 @@
     <!-- M11. ATTENDANCE REPORT -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post">Post-MVP</span> Screen M11 · /reports/attendance — Phase C</div>
+      <p class="text-xs text-gray-500 mb-2">Historical attendance report with scheduled versus actual hours, lateness, and no-show counts.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="p-4">
           <div class="flex items-center justify-between mb-3"><div class="wf-title">Attendance Report</div><button class="wf-btn wf-btn-sm">CSV</button></div>
@@ -333,6 +344,7 @@
     <!-- M12. OVERTIME REPORT -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post">Post-MVP</span> Screen M12 · /reports/overtime — Phase C</div>
+      <p class="text-xs text-gray-500 mb-2">Overtime tracking per person against a configurable weekly threshold limit.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="p-4">
           <div class="flex items-center justify-between mb-3"><div class="wf-title">Overtime Report</div><span class="text-xs text-gray-500">Threshold: 40h/week</span></div>
@@ -351,6 +363,7 @@
     <!-- M13. COVERAGE REPORT -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post">Post-MVP</span> Screen M13 · /reports/coverage — Phase C</div>
+      <p class="text-xs text-gray-500 mb-2">Shift coverage analysis with fill rate percentages and gap identification by date.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="p-4">
           <div class="wf-title mb-3">Coverage Report</div>
@@ -370,6 +383,7 @@
     <!-- M14. COMPLIANCE REPORT -->
     <div class="screen-card">
       <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post">Post-MVP</span> Screen M14 · /reports/compliance — Phase C</div>
+      <p class="text-xs text-gray-500 mb-2">Compliance violations tracking for missed breaks, late clock-ins, and overtime breaches.</p>
       <div class="wf p-0 overflow-hidden">
         <div class="p-4">
           <div class="wf-title mb-3">Compliance Violations <span class="wf-badge bg-red-100 text-red-700">4 open</span></div>
