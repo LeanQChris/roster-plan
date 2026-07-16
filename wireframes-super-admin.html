@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roster — Super Admin Wireframes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .wf { border: 2px dashed #9ca3af; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .wf-label { font-size: 11px; font-weight: 600; color: #6b7280; letter-spacing: .03em; text-transform: uppercase; }
+    .wf-title { font-size: 14px; font-weight: 700; color: #1f2937; }
+    .wf-sub { font-size: 12px; color: #6b7280; }
+    .wf-btn { border: 2px solid #9ca3af; border-radius: 6px; padding: 6px 16px; font-size: 13px; font-weight: 600; color: #374151; background: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+    .wf-btn-primary { background: #374151; border-color: #374151; color: #fff; }
+    .wf-btn-sm { padding: 4px 10px; font-size: 11px; }
+    .wf-btn-danger { border-color: #fca5a5; color: #dc2626; }
+    .wf-input { border: 2px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #374151; background: #fff; }
+    .wf-input::placeholder { color: #c4c8cf; }
+    .wf-select { border: 2px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #374151; background: #fff; appearance: none; }
+    .wf-tag { display: inline-flex; align-items: center; gap: 4px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #374151; }
+    .wf-badge { display: inline-flex; align-items: center; background: #e5e7eb; border-radius: 999px; padding: 2px 10px; font-size: 11px; font-weight: 600; color: #374151; }
+    .wf-avatar { width: 28px; height: 28px; border-radius: 999px; background: #d1d5db; border: 2px solid #9ca3af; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #6b7280; flex-shrink:0; }
+    .wf-cell { border: 1px solid #d1d5db; padding: 6px 8px; font-size: 11px; color: #374151; }
+    .wf-cell-header { background: #f3f4f6; font-weight: 600; }
+    .wf-modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.15); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .wf-modal { background: #fff; border: 2px solid #6b7280; border-radius: 10px; padding: 20px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+    .wf-line { height: 2px; background: #e5e7eb; margin: 6px 0; }
+    .wf-icon-box { width: 36px; height: 36px; border: 2px solid #d1d5db; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #9ca3af; }
+    .wf-shift-block { border-left: 4px solid #6b7280; background: #f9fafb; border-radius: 4px; padding: 4px 8px; font-size: 11px; margin-bottom: 2px; }
+    .wf-shift-block.clocked-in { border-left-color: #22c55e; }
+    .wf-shift-block.clocked-out { border-left-color: #3b82f6; }
+    .wf-shift-block.missed { border-left-color: #ef4444; }
+    .wf-nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #6b7280; }
+    .wf-nav-item.active { background: #e5e7eb; color: #1f2937; font-weight: 600; }
+    .wf-tab { padding: 6px 14px; font-size: 12px; font-weight: 600; color: #6b7280; border-bottom: 2px solid transparent; cursor: default; white-space:nowrap; }
+    .wf-tab.active { color: #1f2937; border-bottom-color: #374151; }
+    .wf-cal-grid { display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 1px; background: #d1d5db; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; }
+    .wf-cal-cell { background: #fff; padding: 4px; min-height: 60px; }
+    .wf-cal-cell-header { background: #f3f4f6; padding: 6px; font-size: 11px; font-weight: 600; text-align: center; }
+    .wf-time-label { background: #fff; padding: 4px; font-size: 10px; color: #6b7280; text-align: right; }
+    .wf-coverage-green { background: #dcfce7; }
+    .wf-coverage-yellow { background: #fef9c3; }
+    .wf-coverage-red { background: #fee2e2; }
+    .role-header { position:sticky; top:0; z-index:10; background:#f3f4f6; padding:12px 0 8px; border-bottom:3px solid #000; margin-bottom:20px; }
+    .role-header .phase-mvp { background:#000; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; letter-spacing:.03em; }
+    .role-header .phase-post { background:#9ca3af; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; }
+    .screen-grid { display:flex; flex-direction:column; gap:16px; }
+    .screen-card { break-inside:avoid; }
+    .wf-tabs { display:flex; gap:0; border-bottom:2px solid #d1d5db; }
+    .wf-table { width:100%; border-collapse:collapse; font-size:11px; }
+    .wf-table th { background:#f3f4f6; font-weight:600; padding:6px 8px; text-align:left; border:1px solid #d1d5db; }
+    .wf-table td { padding:6px 8px; border:1px solid #d1d5db; }
+    .wf-progress-bar { height:6px; border-radius:3px; background:#e5e7eb; overflow:hidden; }
+    .wf-progress-fill { height:100%; background:#374151; border-radius:3px; }
+  </style>
+</head>
+
+<div class="max-w-[1600px] mx-auto px-4 py-6">
+  <div class="text-center mb-8">
+    <h1 class="text-2xl font-bold text-gray-800">Roster — Super Admin Wireframes</h1>
+    <p class="text-sm text-gray-500 mt-1">All screens · all roles · all phases</p>
+    <div class="flex gap-3 justify-center mt-3 text-xs">
+      <span class="phase-mvp" style="background:#000;color:#fff;padding:2px 8px;border-radius:4px">MVP</span>
+      <span class="phase-post" style="background:#9ca3af;color:#fff;padding:2px 8px;border-radius:4px">Post-MVP</span>
+    </div>
+  </div>
+  <div id="role-super-admin" class="role-header flex items-center gap-3 mt-10">
+    <div class="text-lg font-bold">Super Admin</div>
+    <div class="text-xs text-gray-500">4 screens</div>
+  </div>
+  <div class="screen-grid">
+
+    <!-- S1. ADMIN DASHBOARD -->
+    <div class="screen-card">
+      <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-mvp">MVP</span> Screen S1 · /admin</div>
+      <div class="wf p-0 overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200 bg-gray-800 text-white">
+          <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gray-600 border-2 border-gray-500 flex items-center justify-center text-xs font-bold">R</div><div class="font-bold text-sm">Roster Admin</div></div>
+          <div class="flex items-center gap-2"><span class="text-xs text-gray-400">Super admin</span><div class="wf-avatar bg-gray-600 border-gray-500" style="color:#ccc;">SA</div></div>
+        </div>
+        <div class="flex border-b-2 border-dashed border-gray-200 px-4">
+          <div class="wf-tab active">Companies</div>
+          <div class="wf-tab">Audit Log</div>
+        </div>
+        <div class="p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="wf-title">All Companies</div>
+            <div class="flex gap-1"><input class="wf-input w-32 wf-btn-sm" placeholder="Search..."><select class="wf-select wf-btn-sm"><option>All</option></select></div>
+          </div>
+          <table class="wf-table">
+            <thead><tr><th>Company</th><th>Slug</th><th>Members</th><th>Status</th><th>Created</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><span class="font-medium">Acme Corp</span></td><td>acme</td><td>8</td><td><span class="wf-badge bg-green-100 text-green-700">Active</span></td><td class="text-xs">Jun 1, 2026</td><td><button class="wf-btn wf-btn-sm text-xs text-orange-600 border-orange-300">Suspend</button></td></tr>
+              <tr><td><span class="font-medium">Globex Inc</span></td><td>globex</td><td>24</td><td><span class="wf-badge bg-green-100 text-green-700">Active</span></td><td class="text-xs">May 15, 2026</td><td><button class="wf-btn wf-btn-sm text-xs text-orange-600 border-orange-300">Suspend</button></td></tr>
+              <tr style="background:#f9f9f9;"><td><span class="font-medium">Initech</span></td><td>initech</td><td>12</td><td><span class="wf-badge bg-red-100 text-red-700">Suspended</span></td><td class="text-xs">Apr 20, 2026</td><td><button class="wf-btn wf-btn-sm text-xs">Activate</button></td></tr>
+              <tr><td><span class="font-medium">Cyberdyne</span></td><td>cyberdyne</td><td>3</td><td><span class="wf-badge bg-green-100 text-green-700">Active</span></td><td class="text-xs">Jul 10, 2026</td><td><button class="wf-btn wf-btn-sm text-xs text-orange-600 border-orange-300">Suspend</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- S2. COMPANY DETAIL -->
+    <div class="screen-card">
+      <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-mvp">MVP</span> Screen S2 · /admin/companies/:id</div>
+      <div class="wf p-0 overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200 bg-gray-800 text-white">
+          <div class="flex items-center gap-2"><span class="font-bold text-sm">Roster Admin</span></div>
+          <div class="wf-avatar bg-gray-600 border-gray-500" style="color:#ccc;">SA</div>
+        </div>
+        <div class="p-4">
+          <div class="flex items-center gap-2 mb-4"><button class="wf-btn wf-btn-sm">← Back</button><div class="wf-title">Acme Corp</div></div>
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <div class="border-2 border-dashed border-gray-200 rounded p-2 text-center"><div class="text-sm font-bold">8</div><div class="text-xs text-gray-500">People</div></div>
+            <div class="border-2 border-dashed border-gray-200 rounded p-2 text-center"><div class="text-sm font-bold">3</div><div class="text-xs text-gray-500">Teams</div></div>
+            <div class="border-2 border-dashed border-gray-200 rounded p-2 text-center"><div class="text-sm font-bold">acme</div><div class="text-xs text-gray-500">Slug</div></div>
+            <div class="border-2 border-dashed border-gray-200 rounded p-2 text-center"><div class="text-sm font-bold">Active</div><div class="text-xs text-gray-500">Since Jun 1</div></div>
+          </div>
+          <div class="flex gap-2">
+            <button class="wf-btn wf-btn-sm text-orange-600 border-orange-300">Suspend</button>
+            <button class="wf-btn wf-btn-sm wf-btn-danger">Force Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S3. PLATFORM AUDIT LOG -->
+    <div class="screen-card">
+      <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-mvp">MVP</span> Screen S3 · /admin/audit-log</div>
+      <div class="wf p-0 overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200 bg-gray-800 text-white">
+          <div class="flex items-center gap-2"><span class="font-bold text-sm">Roster Admin</span></div>
+          <div class="wf-avatar bg-gray-600 border-gray-500" style="color:#ccc;">SA</div>
+        </div>
+        <div class="flex border-b-2 border-dashed border-gray-200 px-4">
+          <div class="wf-tab">Companies</div>
+          <div class="wf-tab active">Audit Log</div>
+        </div>
+        <div class="p-4">
+          <div class="wf-title mb-3">Platform Audit Log</div>
+          <div class="flex gap-1 mb-2 flex-wrap">
+            <select class="wf-select wf-btn-sm"><option>All companies</option><option>Acme Corp</option></select>
+            <select class="wf-select wf-btn-sm"><option>All actions</option></select>
+            <input class="wf-input w-24 wf-btn-sm" placeholder="From">
+            <input class="wf-input w-24 wf-btn-sm" placeholder="To">
+          </div>
+          <table class="wf-table">
+            <thead><tr><th>Time</th><th>Company</th><th>Actor</th><th>Action</th><th>Resource</th></tr></thead>
+            <tbody>
+              <tr><td class="text-xs">Jul 14, 09:15</td><td>Acme Corp</td><td>jane@acme.com</td><td>shift.assigned</td><td class="text-xs">Bob → Morning Support</td></tr>
+              <tr><td class="text-xs">Jul 14, 09:10</td><td>Acme Corp</td><td>jane@acme.com</td><td>schedule.published</td><td class="text-xs">Engineering</td></tr>
+              <tr><td class="text-xs">Jul 14, 08:02</td><td>Globex Inc</td><td>alice@globex.com</td><td>user.clocked_in</td><td class="text-xs">Morning Support</td></tr>
+              <tr><td class="text-xs">Jul 13, 16:30</td><td>Acme Corp</td><td>admin@acme.com</td><td>user.invited</td><td class="text-xs">Bob Smith</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- S4. PLATFORM METRICS -->
+    <div class="screen-card">
+      <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post">Post-MVP</span> Screen S4 · /admin/metrics — Phase D</div>
+      <div class="wf p-0 overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200 bg-gray-800 text-white">
+          <div class="flex items-center gap-2"><span class="font-bold text-sm">Roster Admin</span></div>
+          <div class="wf-avatar bg-gray-600 border-gray-500" style="color:#ccc;">SA</div>
+        </div>
+        <div class="p-4">
+          <div class="wf-title mb-3">Platform Metrics</div>
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <div class="border-2 border-dashed border-gray-200 rounded p-3"><div class="text-lg font-bold">4</div><div class="text-xs text-gray-500">Companies</div></div>
+            <div class="border-2 border-dashed border-gray-200 rounded p-3"><div class="text-lg font-bold">47</div><div class="text-xs text-gray-500">Total people</div></div>
+            <div class="border-2 border-dashed border-gray-200 rounded p-3"><div class="text-lg font-bold">156</div><div class="text-xs text-gray-500">Active shifts</div></div>
+            <div class="border-2 border-dashed border-gray-200 rounded p-3"><div class="text-lg font-bold">3</div><div class="text-xs text-gray-500">Clock-ins today</div></div>
+          </div>
+          <div class="border-2 border-dashed border-gray-200 rounded-lg p-3">
+            <div class="text-sm font-semibold mb-2">Companies by status</div>
+            <div class="space-y-1 text-xs">
+              <div class="flex justify-between"><span>Active</span><span class="font-semibold">3</span></div>
+              <div class="flex justify-between"><span>Suspended</span><span class="font-semibold">1</span></div>
+              <div class="flex justify-between"><span>Deleted (grace)</span><span class="font-semibold">0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+</body>
+</html>
