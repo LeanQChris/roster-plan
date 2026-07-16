@@ -259,7 +259,8 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <table>
 <thead><tr><th>Directory</th><th>Contents</th></tr></thead>
 <tbody>
-<tr><td>/ (root)</td><td>AGENTS.md (architecture ground truths), prototype.html (high-fidelity), wireframes.html (low-fidelity block-frame diagrams)</td></tr>
+<tr><td>/ (root)</td><td>AGENTS.md (architecture ground truths), prototype.html (high-fidelity)</td></tr>
+<tr><td>wireframes/</td><td>wireframes.html and per-role wireframes (low-fidelity block-frame diagrams)</td></tr>
 <tr><td>docs/</td><td>PRD, feature breakdown, UX stories, MVP plan</td></tr>
 <tr><td>db/</td><td>Data model doc, full SQL schema (30 tables), RRULE storage strategy</td></tr>
 <tr><td>spec/</td><td>API spec, RBAC matrix, calendar export, pagination, webhooks, session management, architecture, email templates, audit events, testing strategy</td></tr>
@@ -312,11 +313,11 @@ pages['wireframes'] = r"""<h1>Wireframes Overview</h1>
 
 # Role-specific wireframe pages
 for wf_id, wf_label, wf_file in [
-    ('wf-auth', 'Auth / Public', 'wireframes-auth.html'),
-    ('wf-employee', 'Employee', 'wireframes-employee.html'),
-    ('wf-manager', 'Manager', 'wireframes-manager.html'),
-    ('wf-company-admin', 'Company Admin', 'wireframes-company-admin.html'),
-    ('wf-super-admin', 'Super Admin', 'wireframes-super-admin.html'),
+    ('wf-auth', 'Auth / Public', 'wireframes/wireframes-auth.html'),
+    ('wf-employee', 'Employee', 'wireframes/wireframes-employee.html'),
+    ('wf-manager', 'Manager', 'wireframes/wireframes-manager.html'),
+    ('wf-company-admin', 'Company Admin', 'wireframes/wireframes-company-admin.html'),
+    ('wf-super-admin', 'Super Admin', 'wireframes/wireframes-super-admin.html'),
 ]:
     pages[wf_id] = f"""<h1>Wireframes — {wf_label}</h1>
 <p>Low-fidelity block-frame diagrams for all {wf_label.lower()} screens.</p>
