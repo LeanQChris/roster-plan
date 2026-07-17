@@ -47,9 +47,9 @@ Company
 - **Skills/Certifications** — track qualifications per person (e.g. "Forklift Certified", "CPR"); shifts can require specific skills; system highlights unqualified assignments
 
 ### 4.3 Authentication & Authorization
-- Email + password authentication (bcrypt hashing)
+- Email + password authentication
 - Session-based auth (MVP: no refresh tokens — 7d sliding sessions; MVP+ adds refresh token rotation)
-- Row-Level Security (RLS) enforced at database level for multi-tenant isolation
+- Strict multi-tenant data isolation
 - Roles with granular permissions (see RBAC matrix)
 - **Passwordless magic link** login (MVP+, post-v1)
 - **Multi-factor authentication (TOTP)** — required in HIPAA mode, optional otherwise
@@ -65,16 +65,16 @@ Company
 - **Draft/published** workflow with version diff on re-publish
 
 ### 4.5 Time Clock
-- Employees clock in/out via web UI (**and mobile PWA**)
-- **GPS location capture** on clock-in (configurable per company, required for field workers)
-- **Break tracking**: clock out for meal break, clock back in; tracks meal break compliance against labor laws
+- Employees clock in/out via web UI (**and mobile PWA** — v1+)
+- **GPS location capture** on clock-in (v1+)
+- **Break tracking**: clock out for meal break, clock back in (v1+)
 - Tracks actual vs scheduled times
-- Clock data is append-only immutable (audit requirement)
-- Managers can view attendance reports
-- **Grace period** configurable per company (e.g. 5 min late window, no penalty)
-- **Early/late notifications**: alert manager if employee hasn't clocked in X minutes after shift start
+- Clock data is immutable (audit requirement)
+- Managers can view attendance reports (v1+)
+- **Grace period** configurable per company (v1+)
+- **Early/late notifications** (v1+)
 
-### 4.6 Time-Off & Leave Management
+### 4.6 Time-Off & Leave Management (v1+)
 - **Employee requests time off** (full day, partial day, hourly) with type (vacation, sick, personal, holiday)
 - **Manager approval workflow** with optional chain of approval
 - **Leave calendar** visible to team to prevent scheduling gaps
@@ -82,7 +82,7 @@ Company
 - **Accrual tracking** (optional): track PTO/sick leave balance per employee
 - **Company holiday calendar**: mark company-wide days off; no shifts generated on holidays
 
-### 4.7 Labor Law Compliance
+### 4.7 Labor Law Compliance (v1+)
 - **Automatic overtime detection**: configurable thresholds (daily > 8h, weekly > 40h, California daily > 12h)
 - **Meal break compliance**: trigger if shift > 5 hours and no break clocked (6h for CA)
 - **Rest break compliance**: trigger if shift > 4 hours without a rest period
@@ -90,7 +90,7 @@ Company
 - **Predictive scheduling laws** (future): post schedule N days in advance; penalty for last-minute changes
 - **Configurable per state/province**: rules vary by jurisdiction; companies configure where each location/team operates
 
-### 4.8 Calendar & Export
+### 4.8 Calendar & Export (v1+)
 - Month / Week / Day views with timezone‑aware rendering (viewer's local TZ or toggle to employee's TZ)
 - Individual "My Schedule" view with subscribe link
 - **iCal (.ics) export** for downloading schedules
@@ -98,7 +98,7 @@ Company
 - **Google Calendar direct sync** (2-way: push shifts to Google Calendar, pull external events as conflicts)
 - **PDF printable schedule** (weekly view for printing/postings where digital access is limited)
 
-### 4.9 Notifications
+### 4.9 Notifications (v1+)
 - **Transactional email**: Shift assignment, change, cancellation, clock reminders, time-off approvals
 - Configurable reminder lead time (e.g., 1 hour before, 1 day before)
 - Queue-based email delivery via transactional email provider (Resend / SendGrid / SES)
@@ -110,19 +110,17 @@ Company
 ### 4.10 Audit Log
 - Immutable, append-only log of all state changes
 - Records: actor, action, resource type, resource ID, old/new values, timestamp
-- Ships at database level via triggers
-- Tamper-evident via HMAC chain on log entries
-- **Audit log UI** with search, filters, date range, CSV export
+- **Audit log UI** with search, filters, date range, CSV export (v1+)
 
-### 4.11 Reporting
+### 4.11 Reporting (v1+)
 - **Attendance report**: scheduled vs actual hours, late count, no-show count, by person/team/date
 - **Overtime report**: who exceeded thresholds, by how much, cost impact
 - **Coverage report**: % shifts filled vs open, by team/position/week
 - **Labor cost report**: hours × pay rate (if rates configured per position/person)
-- **Compliance report**: missed breaks, late clock-ins, rest violations — backed by `compliance_violations` table
+- **Compliance report**: missed breaks, late clock-ins, rest violations
 - All reports exportable to CSV
 
-### 4.12 Compliance
+### 4.12 Compliance (v1+)
 - GDPR: right to access, rectification, erasure, data portability, consent records
 - CCPA: opt-out of sale (none sold), deletion requests, disclosure obligations
 - SOC 2: security, availability, processing integrity, confidentiality, privacy

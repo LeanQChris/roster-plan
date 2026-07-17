@@ -416,7 +416,7 @@ List pending swap requests for a team.
 
 ## 12. Clock Entries
 
-### POST /api/v1/clock/clock-in — MVP
+### POST /api/v1/clock/clock-in
 ```json
 { "shift_assignment_id": "uuid", "latitude": 45.5152, "longitude": -122.6784, "notes": "" }
 ```

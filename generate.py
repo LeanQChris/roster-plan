@@ -180,7 +180,9 @@ mvp_endpoints = [
     'GET /api/v1/shifts', 'GET /api/v1/shifts/:id', 'POST /api/v1/shifts', 'PATCH /api/v1/shifts/:id', 'DELETE /api/v1/shifts/:id',
     'POST /api/v1/shift-templates/:templateId/expand', 'POST /api/v1/teams/:teamId/schedules/publish',
     'POST /api/v1/shifts/:shiftId/assign', 'DELETE /api/v1/shift-assignments/:id', 'GET /api/v1/shifts/:shiftId/assignments',
-    'GET /api/v1/me/schedule', 'GET /api/v1/teams/:teamId/schedule'
+    'GET /api/v1/me/schedule', 'GET /api/v1/teams/:teamId/schedule',
+    'POST /api/v1/clock/clock-in', 'POST /api/v1/clock/:id/clock-out', 'GET /api/v1/people/:id/clock-entries',
+    'GET /api/v1/admin/companies', 'PATCH /api/v1/admin/companies/:id', 'GET /api/v1/admin/audit-log'
 ]
 
 # Normalize MVP endpoints for matching
