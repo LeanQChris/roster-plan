@@ -58,7 +58,7 @@ View your full schedule:
 — The Roster Team
 ```
 
-### 2.3 Shift Changed
+### 2.3 Shift Changed (MVP+)
 
 | Field | Value |
 |-------|-------|
@@ -80,7 +80,7 @@ View updated schedule: {schedule_link}
 — The Roster Team
 ```
 
-### 2.4 Shift Cancelled
+### 2.4 Shift Cancelled (MVP+)
 
 | Field | Value |
 |-------|-------|
@@ -102,7 +102,7 @@ Please check your schedule for any updates: {schedule_link}
 — The Roster Team
 ```
 
-### 2.5 Schedule Published
+### 2.5 Schedule Published (MVP+)
 
 | Field | Value |
 |-------|-------|

@@ -9,7 +9,7 @@ See `docs/04-mvp-plan.md` §Schema Simplifications.
 
 ### MVP Schema (subset of full)
 
-For MVP, apply these adjustments after running the full schema:
+Per `docs/04-mvp-plan.md` §Schema Simplifications, the full schema is kept intact — deferred columns remain nullable/unused rather than dropped. The adjustments below document what would change if you prefer to trim the schema, but the recommended approach is to **keep the full schema** and ignore unused columns.
 
 ```sql
 -- 1. shift_assignments: remove unused columns

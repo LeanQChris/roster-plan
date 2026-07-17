@@ -103,6 +103,7 @@ src['audit'] = readfile(f"{ROOT}/spec/09-audit-events.md")
 src['testing'] = readfile(f"{ROOT}/spec/10-testing-strategy.md")
 src['rbac'] = readfile(f"{ROOT}/spec/02-rbac-matrix.md")
 src['glossary'] = readfile(f"{ROOT}/docs/05-glossary.md")
+src['dev_guide'] = readfile(f"{ROOT}/DEVELOPMENT.md")
 
 # Read ADR files
 adr_files = {
@@ -200,7 +201,7 @@ for key in adr_files:
 inconsistencies = r"""<div class="status-warning">
 <strong>Document Inconsistencies Noted</strong>
 <ul style="margin-top:0.5rem">
-<li><strong>Role count mismatch:</strong> AGENTS.md and docs/04-mvp-plan.md say 3 MVP roles (company_admin, manager, employee). spec/02-rbac-matrix.md defines 5 roles including super_admin and viewer. The SQL schema's person_role enum has company_admin, manager, employee and adds super_admin via ALTER TYPE. viewer is not in the DB enum at all — it exists only in the RBAC spec as a read-only role intended for UI-level enforcement.</li>
+<li><strong>Role count reconciled:</strong> 4 MVP roles agreed: company_admin, manager, employee, super_admin. docs/04-mvp-plan.md previously said "3 roles" — super_admin is now included as MVP (DB-seeded, same login flow). viewer role remains in the full spec (RBAC matrix + schema enum) but is <strong>not</strong> in MVP and has no documented use case — needs definition or removal pre-implementation.</li>
 <li><strong>Session token length:</strong> spec/06-session-management.md says "64-char random base64url" from crypto.randomBytes(48) (48 bytes = 64 base64url chars). Consistent.</li>
 <li><strong>MVP endpoint list:</strong> docs/04-mvp-plan.md lists 26 MVP endpoints. spec/01-api-spec.md has ~60+ total (full spec). The MVP doc does NOT include POST /api/v1/auth/refresh, POST /api/v1/auth/forgot-password, or POST /api/v1/auth/reset-password — these exist only in the full spec. The handoff explicitly says "No password reset for MVP."</li>
 <li><strong>shift_assignments.status MVP simplification:</strong> docs/04-mvp-plan.md says "status is always approved for MVP" and to drop the status column. But db/02-schema.sql has the full assignment_status enum with pending/approved/rejected/cancelled. The data model doc also shows the full design. These simplifications are noted in the MVP doc but the SQL schema is "implementation-ready" per AGENTS.md — the implementer is expected to apply simplifications.</li>
@@ -212,7 +213,7 @@ inconsistencies = r"""<div class="status-warning">
 pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <h2>What Is This?</h2>
 <p>A multi-tenant, web-based roster application for globally distributed teams to manage employee scheduling across time zones. Each company operates as an isolated tenant with their own teams, people, schedules, and shift rules.</p>
-<p>This is a <strong>greenfield design and specification project</strong> — nothing is implemented yet. All files are requirements documents, specifications, compliance research, one SQL schema, and an HTML prototype.</p>
+<p>This is a <strong>greenfield design and specification project</strong> — nothing is implemented yet. All files are requirements documents, specifications, compliance research, one SQL schema, and HTML wireframes.</p>
 <h2>Architecture Ground Truths</h2>
 <table>
 <thead><tr><th>Decision</th><th>Detail</th></tr></thead>
@@ -223,14 +224,14 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <tr><td><strong>Audit log</strong></td><td>HMAC-SHA256 chained, append-only triggers prevent UPDATE/DELETE — audit_entries and clock_entries</td></tr>
 <tr><td><strong>Auth</strong></td><td>Session tokens stored hashed (SHA256) in DB, not JWT. bcrypt cost 12. No refresh tokens for MVP.</td></tr>
 <tr><td><strong>RRULE</strong></td><td>RFC 5545 recurrence — store as string, expand on publish (not on read). One recurrence_rules row per shift_template.</td></tr>
-<tr><td><strong>RBAC (MVP)</strong></td><td>3 roles hardcoded in middleware — company_admin, manager, employee. No role_permissions join table yet. super_admin is DB-only, no UI.</td></tr>
+<tr><td><strong>RBAC (MVP)</strong></td><td>4 roles hardcoded in middleware — company_admin, manager, employee, super_admin. No role_permissions join table yet.</td></tr>
 <tr><td><strong>Clock entries</strong></td><td>Append-only enforced by triggers. ON DELETE SET NULL on person/assignment FKs to preserve records after GDPR erasure.</td></tr>
 <tr><td><strong>Data residency</strong></td><td>Regional sharding by company — region_routing table maps company to geographic DB cluster.</td></tr>
 <tr><td><strong>Text fields</strong></td><td>VARCHAR limits enforced at DB level, never trust client-side validation.</td></tr>
 </tbody>
 </table>
 <h2>MVP vs Post-MVP</h2>
-<p>The <strong>Minimum Viable Product</strong> delivers the core scheduling loop: manager creates shifts with recurrence, assigns people, employees view schedule. Estimated at <strong>~31 days / 6 weeks</strong> (16 backend + 15.5 frontend).</p>
+<p>The <strong>Minimum Viable Product</strong> delivers the core scheduling loop: manager creates shifts with recurrence, assigns people, employees view schedule and clock in/out. Estimated at <strong>~38.5 days / 8 weeks</strong> (19 backend + 19.5 frontend).</p>
 <h3>MVP Features</h3>
 <ul>
 <li>Multi-tenant auth (register, login, logout)</li>
@@ -241,15 +242,17 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <li>Shift publish (expand templates into instances)</li>
 <li>Manager assigns people to shifts</li>
 <li>Basic week calendar view (read-only for employees)</li>
+<li>Clock in / out</li>
 <li>1 notification email (shift assigned)</li>
-<li>Role gating (3 roles, hardcoded middleware)</li>
+<li>Role gating (4 roles, hardcoded middleware)</li>
+<li>Super admin module (list companies, suspend/activate, platform audit)</li>
 </ul>
 <h3>Post-MVP Phases</h3>
 <table>
 <thead><tr><th>Phase</th><th>What Ships</th></tr></thead>
 <tbody>
 <tr><td><strong>Phase A</strong> Before the shift</td><td>Self-scheduling, calendar export (iCal/webcal), notification upgrades (reminders, digest, change alerts)</td></tr>
-<tr><td><strong>Phase B</strong> During the shift</td><td>Clock in/out + break tracking, mobile/PWA, real-time coverage view</td></tr>
+<tr><td><strong>Phase B</strong> During the shift</td><td>Break tracking (meal/rest), mobile/PWA, real-time attendance view</td></tr>
 <tr><td><strong>Phase C</strong> After the shift</td><td>Reports (attendance, overtime, coverage), payroll export, audit + compliance UI</td></tr>
 <tr><td><strong>Phase D</strong> Scale and enterprise</td><td>Multi-region data residency, SSO/SAML/OIDC, billing/plans, public API</td></tr>
 </tbody>
@@ -259,7 +262,7 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <table>
 <thead><tr><th>Directory</th><th>Contents</th></tr></thead>
 <tbody>
-<tr><td>/ (root)</td><td>AGENTS.md (architecture ground truths), prototype.html (high-fidelity)</td></tr>
+<tr><td>/ (root)</td><td>AGENTS.md (architecture ground truths), roster-story.html (MVP walkthrough), DEVELOPMENT.md (local setup guide)</td></tr>
 <tr><td>wireframes/</td><td>wireframes.html and per-role wireframes (low-fidelity block-frame diagrams)</td></tr>
 <tr><td>docs/</td><td>PRD, feature breakdown, UX stories, MVP plan</td></tr>
 <tr><td>db/</td><td>Data model doc, full SQL schema (30 tables), RRULE storage strategy</td></tr>
@@ -267,9 +270,9 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <tr><td>compliance/</td><td>GDPR, CCPA, SOC2, HIPAA, security, data residency, incident response, Australia</td></tr>
 </tbody>
 </table>
-<h2>Prototype</h2>
-<p>The interactive UI prototype is available at <code>prototype.html</code> in the project root — a single-file HTML/CSS mockup using Tailwind CSS via CDN. Open it directly in a browser to explore the screen designs.</p>
-<p><a href="prototype.html" target="_blank" style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:.875rem" onmouseover="this.style.background=\'#333\'" onmouseout="this.style.background=\'#000\'"><i class="fas fa-eye"></i> Open Interactive Prototype</a></p>
+<h2>MVP Story Walkthrough</h2>
+<p>The complete start-to-finish narrative walkthrough of the Roster MVP is available as an interactive HTML document. It follows four characters through 10 acts covering the entire MVP flow.</p>
+<p><a href="roster-story.html" target="_blank" style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:.875rem" onmouseover="this.style.background=\'#333\'" onmouseout="this.style.background=\'#000\'"><i class="fas fa-eye"></i> Open MVP Story Walkthrough</a></p>
 <h2>Wireframes</h2>
 <p>The full set of wireframe mockups is available in the dedicated <a href="#wireframes">Wireframes page</a> — a comprehensive layout reference covering all 14 MVP screens and all post-MVP screens, rendered as low-fidelity block-frame diagrams.</p>
 """
@@ -324,11 +327,12 @@ for wf_id, wf_label, wf_file in [
 <iframe src="{wf_file}" style="width:100%;height:calc(100vh - 200px);border:1px solid #ddd;border-radius:8px;margin:1rem 0" title="{wf_label} Wireframes"></iframe>
 """
 
-# Prototype page
-pages['prototype'] = r"""<h1>Interactive Prototype</h1>
-<p>The interactive UI prototype is a single-file HTML/CSS mockup using Tailwind CSS via CDN — <code>prototype.html</code> in the project root.</p>
-<p>This prototype demonstrates the look and feel of key screens with clickable flows, form inputs, and navigation mockups. Unlike the wireframes (which are block-frame diagrams), this is a higher-fidelity visual mockup with styling approximating the final design.</p>
-<p><a href="prototype.html" target="_blank" style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:.875rem" onmouseover="this.style.background=\'#333\'" onmouseout="this.style.background=\'#000\'"><i class="fas fa-eye"></i> Open Prototype</a></p>
+# MVP Story page
+pages['mvp-story'] = r"""<h1>MVP Story — Walkthrough with Wireframes</h1>
+<p>A complete start-to-finish narrative walkthrough of the Roster MVP, told through the eyes of four characters: Alex (Super Admin), Sarah (Company Admin), James (Manager), and Maya (Employee). Each act includes embedded wireframe mockups showing exactly what each user sees.</p>
+<p>Also covers the full post-MVP roadmap across Phases A–D (self-scheduling, break tracking, reports, enterprise features).</p>
+<p><a href="roster-story.html" target="_blank" style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:.875rem" onmouseover="this.style.background=\'#333\'" onmouseout="this.style.background=\'#000\'"><i class="fas fa-eye"></i> Open MVP Story</a></p>
+<iframe src="roster-story.html" style="width:100%;height:calc(100vh - 200px);border:1px solid #ddd;border-radius:8px;margin:1rem 0" title="MVP Story"></iframe>
 """
 
 # Product pages
@@ -374,6 +378,9 @@ for line in api_lines:
 pages['api-spec'] = '\n'.join(result)
 
 pages['glossary'] = src['glossary']
+
+pages['dev-guide'] = r"""<h1>Development Guide</h1>
+""" + src['dev_guide']
 
 pages['api-pagination'] = src['pagination']
 pages['api-webhooks'] = src['webhooks']
@@ -525,7 +532,7 @@ pages['rbac-matrix'] = f"""<h1>RBAC Permissions Matrix</h1>
 for r in rbac_roles_list:
     perms = [p for p in rbac_perms if p['perm'] in role_map.get(r, [])]
     desc = full_roles.get(r, '')
-    is_mvp = r in ('company_admin', 'manager', 'employee')
+    is_mvp = r in ('company_admin', 'manager', 'employee', 'super_admin')
     version_badge = '<span class="mvp-scope-badge in-mvp">MVP</span>' if is_mvp else '<span class="mvp-scope-badge post-mvp">Full Spec</span>'
     mvp_note = '' if is_mvp else r"""<div class="status-warning">
 <strong><i class="fas fa-info-circle"></i> Not in MVP</strong>
@@ -776,14 +783,14 @@ output_parts.append(schema_sql_json)
 output_parts.append(""";
 
 const NAV = [
-  {label:'Overview',icon:'fa-house',pages:[{id:'overview',label:'Welcome / Overview'},{id:'glossary',label:'Glossary'}]},
-  {label:'Product',icon:'fa-cube',pages:[{id:'product-features',label:'Feature Breakdown'},{id:'product-stories',label:'UX User Stories'},{id:'mvp-plan',label:'MVP Plan'}]},
+  {label:'Overview',icon:'fa-house',pages:[{id:'overview',label:'Welcome / Overview'},{id:'mvp-plan',label:'MVP Plan',mvp:true},{id:'glossary',label:'Glossary'},{id:'mvp-story',label:'MVP Story Walkthrough',mvp:true}]},
+  {label:'Product Requirements',icon:'fa-cube',pages:[{id:'product-features',label:'Feature Breakdown'},{id:'product-stories',label:'UX User Stories'}]},
+  {label:'Architecture',icon:'fa-sitemap',pages:[{id:'spec-architecture',label:'Architecture Overview'},{id:'adr-001',label:'ADR 1: PostgreSQL RLS'},{id:'adr-002',label:'ADR 2: Expand on Publish'},{id:'adr-003',label:'ADR 3: Session Tokens (No JWT)'},{id:'adr-004',label:'ADR 4: HMAC Audit Chain'},{id:'adr-005',label:'ADR 5: RRULE Storage'},{id:'spec-sessions',label:'Session Management'}]},
   {label:'Database',icon:'fa-database',pages:[{id:'db-data-model',label:'Data Model'},{id:'db-schema',label:'Schema Reference'},{id:'db-erd',label:'Schema ERD'},{id:'db-rrule',label:'RRULE Storage'}]},
-  {label:'Architecture Decisions',icon:'fa-book',pages:[{id:'adr-001',label:'ADR 1: PostgreSQL RLS'},{id:'adr-002',label:'ADR 2: Expand on Publish'},{id:'adr-003',label:'ADR 3: Session Tokens (No JWT)'},{id:'adr-004',label:'ADR 4: HMAC Audit Chain'},{id:'adr-005',label:'ADR 5: RRULE Storage'}]},
-{label:'RBAC',icon:'fa-lock',pages:[{id:'rbac-matrix',label:'Permissions Matrix'},{id:'rbac-super-admin',label:'Role: super_admin',mvp:false},{id:'rbac-company-admin',label:'Role: company_admin',mvp:true},{id:'rbac-manager',label:'Role: manager',mvp:true},{id:'rbac-employee',label:'Role: employee',mvp:true},{id:'rbac-viewer',label:'Role: viewer',mvp:false}]},
-  {label:'API & Integration',icon:'fa-plug',pages:[{id:'api-spec',label:'API Reference'},{id:'api-pagination',label:'Pagination'},{id:'api-webhooks',label:'Webhooks'}]},
-  {label:'Design',icon:'fa-pencil-ruler',pages:[{id:'wireframes',label:'Wireframes Overview'},{id:'wf-auth',label:'Auth / Public',mvp:true},{id:'wf-employee',label:'Employee',mvp:true},{id:'wf-manager',label:'Manager',mvp:true},{id:'wf-company-admin',label:'Company Admin',mvp:true},{id:'wf-super-admin',label:'Super Admin',mvp:true},{id:'prototype',label:'Interactive Prototype'}]},
-  {label:'Platform Specs',icon:'fa-gear',pages:[{id:'spec-sessions',label:'Session Management'},{id:'spec-calendar',label:'Calendar Export'},{id:'spec-architecture',label:'Architecture'},{id:'spec-email',label:'Email Templates'},{id:'spec-audit',label:'Audit Events'},{id:'spec-testing',label:'Testing Strategy'}]},
+  {label:'API Reference',icon:'fa-plug',pages:[{id:'api-spec',label:'API Specification'},{id:'api-pagination',label:'Pagination'},{id:'api-webhooks',label:'Webhooks'},{id:'spec-calendar',label:'Calendar Export'}]},
+  {label:'Security & RBAC',icon:'fa-lock',pages:[{id:'rbac-matrix',label:'Permissions Matrix'},{id:'rbac-super-admin',label:'Role: super_admin',mvp:true},{id:'rbac-company-admin',label:'Role: company_admin',mvp:true},{id:'rbac-manager',label:'Role: manager',mvp:true},{id:'rbac-employee',label:'Role: employee',mvp:true},{id:'rbac-viewer',label:'Role: viewer',mvp:false}]},
+  {label:'Operations',icon:'fa-gear',pages:[{id:'spec-testing',label:'Testing Strategy'},{id:'spec-email',label:'Email Templates'},{id:'spec-audit',label:'Audit Events'},{id:'dev-guide',label:'Development Guide'}]},
+  {label:'Design',icon:'fa-pencil-ruler',pages:[{id:'wireframes',label:'Wireframes Overview'},{id:'wf-auth',label:'Auth / Public',mvp:true},{id:'wf-employee',label:'Employee',mvp:true},{id:'wf-manager',label:'Manager',mvp:true},{id:'wf-company-admin',label:'Company Admin',mvp:true},{id:'wf-super-admin',label:'Super Admin',mvp:true}]},
   {label:'Compliance',icon:'fa-shield',pages:[{id:'compliance-gdpr',label:'GDPR'},{id:'compliance-ccpa',label:'CCPA / CPRA'},{id:'compliance-soc2',label:'SOC 2'},{id:'compliance-hipaa',label:'HIPAA'},{id:'compliance-security',label:'Security'},{id:'compliance-residency',label:'Data Residency'},{id:'compliance-incident',label:'Incident Response'},{id:'compliance-australia',label:'Australia (APPs)'}]}
 ];
 

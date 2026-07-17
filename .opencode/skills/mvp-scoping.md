@@ -22,22 +22,26 @@ Load this skill when evaluating feature requests against MVP scope, planning imp
 | Shift instances + publish | Core value — making schedule live |
 | Manager assigns shifts | Core value — who works when |
 | Basic calendar view | Core value — see the schedule |
+| Clock in/out | Core value — track actual hours |
 | 1 notification email | Essential feedback loop (shift assigned) |
-| Role gating (admin/manager/employee) | Security, but simplified |
+| Role gating (4 roles) | Security, with super admin oversight |
+| Super admin module | Platform management |
 
 ### What's deferred (MVP+)
-Self-scheduling, clock in/out, attendance reports, calendar export, timezone toggle, coverage heatmap, conflict detection UI, audit log UI, compliance UI, password reset, rate limiting, webcal
+Self-scheduling, attendance reports, calendar export, timezone toggle, coverage heatmap, conflict detection UI, audit log UI, compliance UI, password reset, rate limiting, webcal, break tracking, time-off requests, shift swaps
 
 ### Schema simplifications for MVP
-- `shift_assignments`: no status column (always `approved`), no `requested_at`, no `approved_by`
-- `shifts`: no `draft` status (default `published`, immediately visible)
-- `notifications`: `email` channel only (no `in_app`, `slack`, etc.)
-- `people`: drop `subscription_token`, `data_exported_at`
+Per `docs/04-mvp-plan.md` §Schema Simplifications: the full schema is kept intact — deferred columns remain nullable/unused rather than dropped.
+- `shift_assignments`: no approval workflow (status always `approved` after manager assign), `requested_at`/`approved_by` unused
+- `shifts`: no `draft`/`published` workflow (status always `published` after expand)
+- `notifications`: `email` channel only (no `slack`, `teams`, `webhook`, `push`)
+- `people`: `subscription_token`, `data_exported_at` unused
 - `team_memberships`: not needed (single primary team per person)
 
 ### RBAC simplification
-- 3 roles only: `company_admin`, `manager`, `employee`
-- No `viewer` or `super_admin` UI
+- 4 roles in MVP: `company_admin`, `manager`, `employee`, `super_admin`
+- `viewer` role exists in schema (not in MVP)
+- `super_admin` is seeded in DB (no signup), has dedicated admin UI
 - Permissions hardcoded in middleware (no join table)
 - Role hierarchy with level numbers for comparison
 
@@ -45,7 +49,7 @@ Self-scheduling, clock in/out, attendance reports, calendar export, timezone tog
 - Week view only (no month/day toggle)
 - Single company timezone (no per-user toggle)
 - Read-only for employees (no edit/delete)
-- 13 screens total (see MVP plan for exact list)
+- 14 screens total (see MVP plan for exact list)
 
 ## Implementation phases
 
@@ -53,11 +57,12 @@ Self-scheduling, clock in/out, attendance reports, calendar export, timezone tog
 ```
 Week 1-2: Auth, Teams, People (foundation)
 Week 3-4: Templates, RRULE, Shifts, Assignments (core scheduling)
-Week 5:   Calendar view, Dashboard, Emails (employee experience)
-Week 6:   Polish, bug fixes, deployment, dogfooding
+Week 5-6: Calendar view, Clock, Dashboard, Emails (employee experience)
+Week 7:   Super admin module, Admin UI
+Week 8:   Polish, bug fixes, deployment, dogfooding
 ```
 
-Total: ~31 days / 6 weeks (16 backend + 15.5 frontend)
+Total: ~38.5 days / 8 weeks (19 backend + 19.5 frontend)
 
 ### Key architectual decisions to honor
 - Session tokens stored in DB (not JWT) — allows invalidation
@@ -87,7 +92,7 @@ Total: ~31 days / 6 weeks (16 backend + 15.5 frontend)
 Self-scheduling → Calendar export → Notifications upgrade
 
 ### Phase B: During the shift
-Clock in/out → Mobile (PWA) → Real-time coverage view
+Break tracking → Mobile (PWA) → Real-time attendance view
 
 ### Phase C: After the shift
 Reports & analytics → Payroll export → Audit & compliance UI

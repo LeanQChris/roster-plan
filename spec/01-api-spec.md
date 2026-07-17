@@ -363,13 +363,13 @@ Expand all active templates for a team and date range, create shifts.
 List all people assigned to this shift.
 → `200` → `{ "assignments": [{ person_id, person_name, status, requested_at, skills_match: true }] }`
 
-### POST /api/v1/shifts/:shiftId/assignments (Employee — Self-Scheduling)
+### POST /api/v1/shifts/:shiftId/assignments (Employee — Self-Scheduling) (MVP+)
 ```json
 { "person_id": "uuid" }
 ```
 → `201` → status = `pending` (needs manager approval)
 
-### POST /api/v1/shifts/:shiftId/assign (Manager)
+### POST /api/v1/shifts/:shiftId/assign (Manager) — MVP
 ```json
 { "person_id": "uuid", "force": false }
 ```
@@ -416,10 +416,11 @@ List pending swap requests for a team.
 
 ## 12. Clock Entries
 
-### POST /api/v1/clock/clock-in
+### POST /api/v1/clock/clock-in — MVP
 ```json
 { "shift_assignment_id": "uuid", "latitude": 45.5152, "longitude": -122.6784, "notes": "" }
 ```
+> `latitude`/`longitude` (GPS) are MVP+; clock-in in MVP sends `shift_assignment_id` and `notes` only.
 → `201` → `{ "id", "clock_in_at", "latitude", "longitude", "status": "active" }`
 
 ### POST /api/v1/clock/:clockEntryId/clock-out
@@ -512,6 +513,8 @@ List company holidays. `?year=2026`.
 
 ## 15. Calendar / Export
 
+> **⚠ MVP STATUS**: `GET /api/v1/me/schedule` and `GET /api/v1/teams/:teamId/schedule` are in MVP (read-only week calendar view). iCal export, webcal, and PDF are deferred to MVP+.
+
 ### GET /api/v1/me/schedule
 Current user's personal schedule. `?start=ISO&end=ISO`.
 → `200` → shifts with assigned status, clock status, timezone info
@@ -584,6 +587,8 @@ Send a test notification.
 ---
 
 ## 18. Notifications
+
+> **⚠ MVP STATUS**: Only `shift_assigned` and invite emails are sent in MVP. Notification read/preferences endpoints and other notification types are MVP+.
 
 ### GET /api/v1/notifications
 List notifications for the current user. `?unread_only=true&type=shift_reminder`.

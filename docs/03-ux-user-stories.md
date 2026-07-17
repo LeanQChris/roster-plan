@@ -1,5 +1,437 @@
 # UX Flow & User Stories
 
+## 0. MVP Role-Based Story
+
+A complete walkthrough of the MVP from the perspective of all four roles — from platform seeding to clock-out.
+
+### Characters
+
+| Role | Name | Description |
+|------|------|-------------|
+| **Super Admin** | Alex | Platform operator — manages all tenants, seeded by the dev team |
+| **Company Admin** | Sarah | Owns "GreenLeaf Cafe" — sets up the company, invites managers |
+| **Manager** | James | Runs the kitchen team — creates templates, publishes schedules, assigns shifts |
+| **Employee** | Maya | Line cook — views her schedule, clocks in and out |
+
+---
+
+### Act 1: Platform Seed — Alex (Super Admin)
+
+Alex deploys the app for the first time. A seed script creates their super admin account directly in the database — no signup page for this role.
+
+```
+DB seed: INSERT INTO people (email, role, company_id) VALUES ('alex@rosterops.com', 'super_admin', ...)
+```
+
+Alex logs in at `/login` using the same form everyone else uses. The RBAC middleware detects `role = super_admin` and redirects to `/admin` instead of `/dashboard`.
+
+**Admin Dashboard** — Alex sees an empty table:
+
+```
+┌────────────────────────────────────────────────────────┐
+│  All Companies                                         │
+│                                                        │
+│  No companies yet.                                     │
+│                                                        │
+│  [Audit Log]  [Platform Stats]                         │
+└────────────────────────────────────────────────────────┘
+```
+
+There's nothing to manage yet. Alex logs out.
+
+---
+
+### Act 2: Company Signup — Sarah (Company Admin)
+
+Sarah visits the app for the first time. She lands on `/login` and clicks "Create one" to go to `/signup`.
+
+```
+┌──────────────────────────────────────┐
+│  Create Your Company                  │
+│                                       │
+│  Company name  [GreenLeaf Cafe     ] │
+│  Your email    [sarah@greenleaf.io ] │
+│  Password      [•••••••••••••••••] │
+│  Confirm       [•••••••••••••••••] │
+│                                       │
+│  [Create Account]                     │
+└──────────────────────────────────────┘
+```
+
+She fills it out and clicks **Create Account**.
+
+**Behind the scenes:**
+```
+POST /api/v1/auth/register
+  → Creates company row (id = uuid)
+  → Creates company_settings row with defaults
+  → Creates Sarah's person record with role = 'company_admin'
+  → Creates a session, returns session_token
+  → Onboarded.
+```
+
+Sarah is auto-logged in and redirected to `/company/setup`.
+
+```
+┌──────────────────────────────────────┐
+│  Set Up Your Company                  │
+│                                       │
+│  Timezone  [America/New_York    ▼]   │
+│                                       │
+│  First Team Name  [Kitchen        ]  │
+│                                       │
+│  [Continue to Dashboard]              │
+└──────────────────────────────────────┘
+```
+
+She picks a timezone and creates her first team. She lands on the **Dashboard**.
+
+**Dashboard (company admin view):**
+```
+┌────────────────────────────────────────────────────────┐
+│  Dashboard                    [Sarah ▼]                 │
+├────────────────────────────────────────────────────────┤
+│  Quick Links:                                           │
+│  • Team People — invite your team                        │
+│  • Company Settings                                     │
+│                                                         │
+│  Your Teams:                                            │
+│  Kitchen  [People]  [Schedule]  [Templates]             │
+│    → 0 members — invite people to get started           │
+└────────────────────────────────────────────────────────┘
+```
+
+Sarah clicks **Kitchen → People**, then **Invite People**.
+
+---
+
+### Act 3: Invite the Manager — Sarah (Company Admin)
+
+On the Invite page, Sarah enters James's email:
+
+```
+┌──────────────────────────────────────┐
+│  Invite People — Kitchen              │
+│                                       │
+│  Email                    Role        │
+│  [james@greenleaf.io   ]  [Manager ▼]│
+│  [_____________________]  [Employee ▼]│
+│  [_____________________]  [Employee ▼]│
+│                                       │
+│  [Send Invites]                       │
+└──────────────────────────────────────┘
+```
+
+She sets James as **Manager** and clicks **Send Invites**.
+
+```
+POST /api/v1/people
+  → Creates James's person record (status = 'invited', role = 'manager')
+  → Sends email with invite link
+```
+
+---
+
+### Act 4: Accept Invite — James (Manager)
+
+James receives an email:
+
+```
+From: GreenLeaf Cafe <no-reply@rosterapp.com>
+Subject: You've been invited to join GreenLeaf Cafe
+
+James,
+
+Sarah has invited you to join GreenLeaf Cafe on Roster.
+
+[Accept Invite →]
+
+This link expires in 7 days.
+```
+
+He clicks the link, lands on `/accept-invite?token=abc123`, sets his password, and logs in.
+
+**Dashboard (manager view):**
+```
+┌────────────────────────────────────────────────────────┐
+│  Dashboard                    [James ▼]                 │
+├────────────────────────────────────────────────────────┤
+│  Quick Links:                                           │
+│  • Kitchen Schedule                                     │
+│  • Kitchen Templates                                    │
+│  • Kitchen People                                       │
+│                                                         │
+│  Your Team: Kitchen                                     │
+│    No shifts published yet.                             │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Act 5: Create Shift Templates — James (Manager)
+
+James goes to **Kitchen → Templates**. He sees an empty list and clicks **Create Template**.
+
+```
+┌──────────────────────────────────────┐
+│  New Shift Template — Kitchen         │
+│                                       │
+│  Title       [Morning Line Prep    ] │
+│  Start Time  [06:00                ] │
+│  Duration    [8 hours              ] │
+│  Staff Needed [2                   ] │
+│                                       │
+│  Recurrence:                          │
+│  [Every weekday (Mon-Fri)         ▼] │
+│  Or custom RRULE:                     │
+│  [FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR] │
+│                                       │
+│  Active from [Jul 13, 2026       ]   │
+│  Active until [optional           ]  │
+│                                       │
+│  [Create Template]                    │
+└──────────────────────────────────────┘
+```
+
+He creates two templates:
+
+1. **Morning Line Prep** — 06:00–14:00, 2 staff, Mon-Fri
+2. **Evening Cleanup** — 14:00–22:00, 1 staff, Mon-Fri
+
+```
+POST /api/v1/teams/:teamId/shift-templates
+  → Creates shift_template row
+  → Creates recurrence_rules row with rrule_string
+```
+
+---
+
+### Act 6: Invite Employees — James (Manager)
+
+James goes to **Kitchen → People**, clicks **Invite People**, enters Maya's email with role **Employee**, and sends.
+
+Maya receives the invite email, clicks the link, sets her password, and logs in.
+
+**Dashboard (employee view):**
+```
+┌────────────────────────────────────────────────────────┐
+│  Dashboard                    [Maya ▼]                  │
+├────────────────────────────────────────────────────────┤
+│  Your Upcoming Shifts:                                  │
+│                                                         │
+│  No upcoming shifts. Your manager hasn't published      │
+│  the schedule yet.                                      │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Act 7: Publish the Schedule — James (Manager)
+
+James goes to **Kitchen → Schedule**, selects the week of **Jul 13–19**, and clicks **Publish**.
+
+```
+POST /api/v1/teams/:teamId/schedules/publish
+  For each active template:
+    1. Read RRULE: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+    2. Expand for Jul 13–19 → 5 dates per template
+    3. Skip dates already in shifts table
+    4. INSERT 10 shift rows (5 morning + 5 evening)
+```
+
+The schedule grid appears:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Kitchen Schedule          Week of Jul 13, 2026               │
+│ [< Prev]  [Next >]                         America/New_York │
+├──────────┬────────┬────────┬────────┬────────┬──────────────┤
+│          │ Mon 13 │ Tue 14 │ Wed 15 │ Thu 16 │ Fri 17       │
+├──────────┼────────┼────────┼────────┼────────┼──────────────┤
+│ 06:00    │ Morning│ Morning│ Morning│ Morning│ Morning       │
+│          │ [2/2]  │ [0/2]  │ [0/2]  │ [0/2]  │ [0/2]        │
+├──────────┼────────┼────────┼────────┼────────┼──────────────┤
+│ 14:00    │ Evening│ Evening│ Evening│ Evening│ Evening       │
+│          │ [0/1]  │ [0/1]  │ [0/1]  │ [0/1]  │ [0/1]        │
+└──────────┴────────┴────────┴────────┴────────┴──────────────┘
+```
+
+---
+
+### Act 8: Assign People — James (Manager)
+
+James clicks the **Mon 13 Morning** slot. A modal opens:
+
+```
+┌──────────────────────────────────┐
+│ Assign Person — Mon Jul 13       │
+│ 06:00 – 14:00  Morning Line Prep │
+│                                  │
+│ Select person:                   │
+│ ○ Maya Johnson (Line Cook)      │
+│ ○ [unassigned slot]             │
+│ ○ [unassigned slot]             │
+│                                  │
+│ [Assign]  [Cancel]              │
+└──────────────────────────────────┘
+```
+
+He assigns Maya to Monday and Tuesday morning. He assigns another employee (invited earlier) to the remaining slots.
+
+```
+POST /api/v1/shifts/:shiftId/assign
+  → Creates shift_assignment row (status = 'approved')
+  → Audit entry logged
+  → Email sent to Maya: "You've been assigned to Morning Line Prep on Mon, Jul 13"
+```
+
+---
+
+### Act 9: View Schedule — Maya (Employee)
+
+Maya logs in and sees her dashboard:
+
+```
+┌────────────────────────────────────────────────────────┐
+│  Dashboard                    [Maya ▼]                  │
+├────────────────────────────────────────────────────────┤
+│  Your Upcoming Shifts:                                  │
+│                                                         │
+│  Today, Jul 13                                          │
+│   06:00–14:00  Morning Line Prep    [Clock In]          │
+│               Kitchen                                    │
+│                                                         │
+│  Tomorrow, Jul 14                                       │
+│   06:00–14:00  Morning Line Prep                        │
+│               Kitchen                                    │
+│                                                         │
+│  [View Full Schedule →]                                 │
+└────────────────────────────────────────────────────────┘
+```
+
+She clicks **View Full Schedule** to see `/me/schedule`:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  My Schedule                Week of Jul 13, 2026             │
+│ [< Prev]  [Next >]        America/New_York                  │
+├──────────┬────────┬────────┬────────┬────────┬──────────────┤
+│          │ Mon 13 │ Tue 14 │ Wed 15 │ Thu 16 │ Fri 17       │
+├──────────┼────────┼────────┼────────┼────────┼──────────────┤
+│ 06:00    │ ██████ │ ██████ │        │        │              │
+│          │ Morning│ Morning│        │        │              │
+│          │ ⏱ Ready│        │        │        │              │
+└──────────┴────────┴────────┴────────┴────────┴──────────────┘
+```
+
+The Monday shift shows a **Clock In** button because it's the current shift.
+
+---
+
+### Act 10: Clock In & Out — Maya (Employee)
+
+It's 5:55 AM on Monday, July 13. Maya logs in and sees the **Clock In** button on her dashboard. She clicks it.
+
+```
+POST /api/v1/clock/clock-in
+  → Verifies Maya has an active shift_assignment for now
+  → Creates clock_entry row (clock_in_at = now)
+  → Audit entry logged (action = 'clock_in')
+  → Returns clock_entry_id
+```
+
+The dashboard changes:
+
+```
+┌────────────────────────────────────────────────────────┐
+│  ⏱  You're clocked in.                                 │
+│  Morning Line Prep — 06:00 to 14:00                     │
+│                                                         │
+│  Elapsed: 0h 05m                                        │
+│                                                         │
+│  [Clock Out]                                            │
+└────────────────────────────────────────────────────────┘
+```
+
+Maya works her shift. At 14:00, she clicks **Clock Out**:
+
+```
+POST /api/v1/clock/:clockEntryId/clock-out
+  → Sets clock_out_at = now
+  → Auto-calculates duration = 8h 00m
+  → Audit entry logged (action = 'clock_out')
+```
+
+---
+
+### Act 11: Super Admin Oversight — Alex
+
+Meanwhile, Alex (super admin) logs in and checks `/admin`. Now there's a company:
+
+```
+┌────────────────────────────────────────────────────────────┐
+│  All Companies                                     [Alex] │
+│                                                            │
+│  ┌───────┬──────────┬───────┬────────┬──────────────────┐ │
+│  │ Name  │ Slug     │ Members│ Status │ Created          │ │
+│  ├───────┼──────────┼───────┼────────┼──────────────────┤ │
+│  │GreenLeaf│greenleaf│ 3     │ Active │ Jul 13, 2026     │ │
+│  └───────┴──────────┴───────┴────────┴──────────────────┘ │
+│                                                            │
+│  [Audit Log]  [2 Active Companies]                         │
+└────────────────────────────────────────────────────────────┘
+```
+
+Alex clicks the **Audit Log** tab and sees the full chain:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Platform Audit Log                                          │
+│ ┌────────┬──────────┬──────────────┬──────────────────────┐ │
+│ │ Time   │ Actor    │ Action       │ Details               │ │
+│ ├────────┼──────────┼──────────────┼──────────────────────┤ │
+│ │ 13:00  │ Sarah    │ company.create│ GreenLeaf Cafe        │ │
+│ │ 13:01  │ Sarah    │ team.create   │ Kitchen               │ │
+│ │ 13:05  │ Sarah    │ person.create │ James (manager)       │ │
+│ │ 13:10  │ Sarah    │ person.invite │ James invited         │ │
+│ │ 13:20  │ James    │ person.update │ status → active       │ │
+│ │ 13:25  │ James    │ person.create │ Maya (employee)       │ │
+│ │ 13:30  │ James    │ template.create│ Morning Line Prep    │ │
+│ │ 13:31  │ James    │ template.create│ Evening Cleanup      │ │
+│ │ 13:35  │ James    │ schedule.publish│ Kitchen Jul 13-19   │ │
+│ │ 13:40  │ James    │ shift.assign   │ Maya → Mon Morning   │ │
+│ │ 14:00  │ Maya     │ clock.clock_in │ Morning Line Prep    │ │
+│ │ 14:00  │ Maya     │ clock.clock_out│ 8h 00m               │ │
+│ └────────┴──────────┴──────────────┴──────────────────────┘ │
+│                                                            │
+│  [Page 1 of 1]  [Verify HMAC Chain]                        │
+└────────────────────────────────────────────────────────────┘
+```
+
+Everything is logged, immutable, and HMAC-chained. Alex can sleep soundly.
+
+---
+
+### Summary: The MVP Loop
+
+```
+Alex (super admin) seeds platform
+  └─ Sarah (company admin) signs up → invites James
+       └─ James (manager) creates templates → publishes schedule → assigns Maya
+            └─ Maya (employee) views schedule → clocks in → clocks out
+                 └─ Alex (super admin) monitors all tenants + audit log
+```
+
+Each role has a clear boundary:
+
+| Role | Sees | Can Do |
+|------|------|--------|
+| Employee | Own shifts, own profile | View schedule, clock in/out, update own profile |
+| Manager | Team schedule, team people, all templates | Create/assign/publish shifts, invite employees, manage templates |
+| Company Admin | All teams, all people, company settings | Everything manager can + edit company, manage all people, delete teams |
+| Super Admin | All companies, platform audit log | Suspend/activate companies, view any tenant's audit log |
+
+
 ## 1. User Flows
 
 ### 1.1 Company Signup Flow
@@ -26,7 +458,7 @@ Invite Email → Click "Accept Invite"
   → Dashboard (shows "No upcoming shifts")
 ```
 
-### 1.3 Self-Scheduling Flow (Employee)
+### 1.3 Self-Scheduling Flow (Employee) — MVP+
 
 Allows employees to browse available shifts and request the ones they want. Managers review and approve/reject requests. This reduces manual assignment work and gives employees flexibility in choosing their hours.
 
@@ -51,7 +483,7 @@ Dashboard → "Schedule" → Select Week
   → All assigned employees receive email
 ```
 
-### 1.5 Shift Swap Flow (Manager-Approved Model)
+### 1.5 Shift Swap Flow (Manager-Approved Model) — MVP+
 
 Lets an employee request to swap a shift with a coworker. The manager must approve before the swap takes effect, ensuring adequate coverage and preventing unauthorized changes.
 
@@ -75,7 +507,7 @@ Dashboard → "Clock In" button (visible during shift window)
   → Entry recorded as immutable audit event
 ```
 
-### 1.7 Calendar Export Flow
+### 1.7 Calendar Export Flow — MVP+
 
 Syncs scheduled shifts to external calendars (Google Calendar, Outlook, Apple Calendar) via .ics download or live webcal subscription. Keeps employees' personal calendars in sync without manual entry.
 
@@ -118,7 +550,7 @@ Covers account creation, login, invite acceptance, and password recovery — all
 - As an **employee**, I want to receive an invite link so I can join my company's roster.
 - As an **employee**, I want to set my timezone during onboarding so my schedule displays correctly.
 - As a **returning user**, I want to log in with my email and password so I can access my schedule.
-- As a **user**, I want to reset my password via email if I forget it.
+- As a **user**, I want to reset my password via email if I forget it. (MVP+: admin resets via direct support in MVP)
 
 ### 3.2 Scheduling
 

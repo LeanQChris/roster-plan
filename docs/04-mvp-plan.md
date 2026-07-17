@@ -293,7 +293,7 @@ The full API spec has more; here is the exact MVP endpoint list.
 - Super admin is created via DB seed and uses the same login flow.
 
 ### RBAC (Simplified for MVP)
-- 3 roles: `company_admin`, `manager`, `employee`.
+- 4 roles: `company_admin`, `manager`, `employee`, `super_admin`.
 - `super_admin` is seeded in DB (no signup), has dedicated admin UI.
 - Permission check is a simple middleware: `requireRole('manager')`.
 - No `role_permissions` join table for MVP — permissions are hardcoded by role in middleware.

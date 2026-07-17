@@ -54,7 +54,7 @@ Company
 - **Passwordless magic link** login (MVP+, post-v1)
 - **Multi-factor authentication (TOTP)** — required in HIPAA mode, optional otherwise
 
-### 4.4 Shift Scheduling (Self-Scheduling Model)
+### 4.4 Shift Scheduling (Manager-Driven with Self-Scheduling Path)
 - Manager defines shift templates: title, duration, position, **required skills**, required count, recurrence
 - Employees view available shifts and request assignments
 - Manager reviews and publishes finalized schedules

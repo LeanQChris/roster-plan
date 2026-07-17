@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roster — MVP Story</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .wf { border: 2px dashed #9ca3af; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .wf-label { font-size: 11px; font-weight: 600; color: #6b7280; letter-spacing: .03em; text-transform: uppercase; }
+    .wf-title { font-size: 14px; font-weight: 700; color: #1f2937; }
+    .wf-sub { font-size: 12px; color: #6b7280; }
+    .wf-btn { border: 2px solid #9ca3af; border-radius: 6px; padding: 6px 16px; font-size: 13px; font-weight: 600; color: #374151; background: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+    .wf-btn-primary { background: #374151; border-color: #374151; color: #fff; }
+    .wf-btn-sm { padding: 4px 10px; font-size: 11px; }
+    .wf-btn-danger { border-color: #fca5a5; color: #dc2626; }
+    .wf-input { border: 2px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #374151; background: #fff; }
+    .wf-input::placeholder { color: #c4c8cf; }
+    .wf-select { border: 2px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 13px; color: #374151; background: #fff; appearance: none; }
+    .wf-tag { display: inline-flex; align-items: center; gap: 4px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #374151; }
+    .wf-badge { display: inline-flex; align-items: center; background: #e5e7eb; border-radius: 999px; padding: 2px 10px; font-size: 11px; font-weight: 600; color: #374151; }
+    .wf-avatar { width: 28px; height: 28px; border-radius: 999px; background: #d1d5db; border: 2px solid #9ca3af; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #6b7280; flex-shrink:0; }
+    .wf-cell { border: 1px solid #d1d5db; padding: 6px 8px; font-size: 11px; color: #374151; }
+    .wf-cell-header { background: #f3f4f6; font-weight: 600; }
+    .wf-modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.15); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .wf-modal { background: #fff; border: 2px solid #6b7280; border-radius: 10px; padding: 20px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+    .wf-line { height: 2px; background: #e5e7eb; margin: 6px 0; }
+    .wf-icon-box { width: 36px; height: 36px; border: 2px solid #d1d5db; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #9ca3af; }
+    .wf-shift-block { border-left: 4px solid #6b7280; background: #f9fafb; border-radius: 4px; padding: 4px 8px; font-size: 11px; margin-bottom: 2px; }
+    .wf-shift-block.clocked-in { border-left-color: #22c55e; }
+    .wf-shift-block.clocked-out { border-left-color: #3b82f6; }
+    .wf-shift-block.missed { border-left-color: #ef4444; }
+    .wf-nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #6b7280; }
+    .wf-nav-item.active { background: #e5e7eb; color: #1f2937; font-weight: 600; }
+    .wf-tab { padding: 6px 14px; font-size: 12px; font-weight: 600; color: #6b7280; border-bottom: 2px solid transparent; cursor: default; white-space:nowrap; }
+    .wf-tab.active { color: #1f2937; border-bottom-color: #374151; }
+    .wf-cal-grid { display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 1px; background: #d1d5db; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; }
+    .wf-cal-cell { background: #fff; padding: 4px; min-height: 60px; }
+    .wf-cal-cell-header { background: #f3f4f6; padding: 6px; font-size: 11px; font-weight: 600; text-align: center; }
+    .wf-time-label { background: #fff; padding: 4px; font-size: 10px; color: #6b7280; text-align: right; }
+    .wf-table { width:100%; border-collapse:collapse; font-size:11px; }
+    .wf-table th { background:#f3f4f6; font-weight:600; padding:6px 8px; text-align:left; border:1px solid #d1d5db; }
+    .wf-table td { padding:6px 8px; border:1px solid #d1d5db; }
+  </style>
+</head>
+<body class="font-sans antialiased">
+
+<div class="max-w-7xl mx-auto px-6 py-12">
+
+  <!-- Title -->
+  <div class="text-center mb-10">
+    <h1 class="text-4xl font-bold tracking-tight text-gray-900 mb-2">Roster</h1>
+    <p class="text-gray-500">How the MVP works — from start to finish</p>
+  </div>
+
+  <!-- Characters -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-10">
+    <h2 class="text-lg font-semibold mb-4">The Cast</h2>
+    <div class="grid md:grid-cols-4 gap-4 text-sm">
+      <div class="bg-purple-50 rounded-lg p-3 text-center">
+        <div class="text-2xl mb-1">👑</div>
+        <div class="font-semibold">Alex</div>
+        <div class="text-purple-600 text-xs">Super Admin</div>
+        <div class="text-gray-400 text-xs mt-1">Runs the platform</div>
+      </div>
+      <div class="bg-blue-50 rounded-lg p-3 text-center">
+        <div class="text-2xl mb-1">👩‍💼</div>
+        <div class="font-semibold">Sarah</div>
+        <div class="text-blue-600 text-xs">Company Admin</div>
+        <div class="text-gray-400 text-xs mt-1">Owns GreenLeaf Cafe</div>
+      </div>
+      <div class="bg-green-50 rounded-lg p-3 text-center">
+        <div class="text-2xl mb-1">👨‍🍳</div>
+        <div class="font-semibold">James</div>
+        <div class="text-green-600 text-xs">Manager</div>
+        <div class="text-gray-400 text-xs mt-1">Runs the kitchen</div>
+      </div>
+      <div class="bg-orange-50 rounded-lg p-3 text-center">
+        <div class="text-2xl mb-1">👩‍🍳</div>
+        <div class="font-semibold">Maya</div>
+        <div class="text-orange-600 text-xs">Employee</div>
+        <div class="text-gray-400 text-xs mt-1">Line cook</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 1 ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="bg-purple-100 text-purple-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">1</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2"><span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Alex — Super Admin</span></div>
+        <h3 class="text-lg font-semibold mb-2">Alex seeds the platform</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">Alex works at RosterOps. Before anyone can use the app, they run a script that creates a super admin account directly in the database — super admins can't sign up, they're added by the engineering team.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">Alex logs in on the same login page everyone uses. The system sees they're a super admin and sends them straight to the admin dashboard. It's empty — no companies yet. Alex logs out and waits.</p>
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="screen-card max-w-xs mx-auto w-full">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /login</div>
+            <div class="wf p-6 flex flex-col items-center">
+              <div class="mb-5 text-center">
+                <div class="w-10 h-10 mx-auto mb-1 rounded-xl bg-gray-300 border-2 border-gray-400 flex items-center justify-center text-lg font-bold text-gray-600">R</div>
+                <div class="text-base font-bold">Roster</div>
+              </div>
+              <div class="w-full space-y-3">
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Email</div><input class="wf-input w-full" value="alex@rosterops.com"></div>
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Password</div><input class="wf-input w-full" type="password" value="········"></div>
+                <button class="wf-btn w-full wf-btn-primary">Log In</button>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /admin (empty state)</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200 bg-gray-800 text-white">
+                <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gray-600 border-2 border-gray-500 flex items-center justify-center text-xs font-bold">R</div><div class="font-bold text-sm">Roster Admin</div></div>
+                <div class="flex items-center gap-2"><span class="text-xs text-gray-400">Alex</span><div class="wf-avatar bg-gray-600 border-gray-500" style="color:#ccc;">AL</div></div>
+              </div>
+              <div class="p-4 text-center py-10">
+                <div class="text-gray-400 text-sm">No companies yet.</div>
+                <div class="text-gray-400 text-xs mt-1">Waiting for the first signup...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 2 ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="bg-blue-100 text-blue-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">2</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2"><span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Sarah — Company Admin</span></div>
+        <h3 class="text-lg font-semibold mb-2">Sarah creates GreenLeaf Cafe</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">Sarah owns a small cafe. She lands on the login page, clicks "Create one", and fills out a simple form — company name, her email, and a password. She clicks <strong>Create Account</strong>.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">Behind the scenes, the system creates her company, sets up default settings, and marks her as the company admin. She's automatically logged in.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">Sarah lands on a setup page where she picks her timezone and names her first team. She types <strong>"Kitchen"</strong> and clicks continue. Now she's on her dashboard with one team and zero people.</p>
+        <div class="grid md:grid-cols-3 gap-4 mt-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /signup</div>
+            <div class="wf p-6 max-w-xs mx-auto">
+              <div class="text-center mb-4"><div class="wf-title text-base">Create Your Company</div><div class="wf-sub mt-1">Get started with Roster</div></div>
+              <div class="space-y-3">
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Company name</div><input class="wf-input w-full" value="GreenLeaf Cafe"></div>
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Your email</div><input class="wf-input w-full" value="sarah@greenleaf.io"></div>
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Password</div><input class="wf-input w-full" type="password" value="········"></div>
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Confirm password</div><input class="wf-input w-full" type="password" value="········"></div>
+                <button class="wf-btn w-full wf-btn-primary">Create Account</button>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /company/setup</div>
+            <div class="wf p-6 max-w-xs mx-auto">
+              <div class="text-center mb-4"><div class="wf-title text-base">Set Up Your Company</div><div class="wf-sub">Just a few more details</div></div>
+              <div class="space-y-3">
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Timezone</div><select class="wf-select w-full"><option>America/New_York (UTC-5)</option></select></div>
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Date format</div><select class="wf-select w-full"><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select></div>
+                <div><div class="text-xs font-medium text-gray-600 mb-1">First team name</div><input class="wf-input w-full" value="Kitchen"></div>
+                <button class="wf-btn w-full wf-btn-primary">Continue to Dashboard</button>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /dashboard — Company Admin</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
+                <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gray-300 border-2 border-gray-400 flex items-center justify-center text-xs font-bold text-gray-600">R</div><div class="font-bold text-gray-800 text-sm">Roster</div></div>
+                <div class="wf-avatar">SJ</div>
+              </div>
+              <div class="p-4">
+                <div class="wf-title mb-3">Admin Dashboard</div>
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center"><div class="text-lg font-bold">0</div><div class="text-xs text-gray-500">People</div></div>
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center"><div class="text-lg font-bold">1</div><div class="text-xs text-gray-500">Teams</div></div>
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center"><div class="text-lg font-bold">0</div><div class="text-xs text-gray-500">Active shifts</div></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-2 text-center"><div class="text-xs font-medium">&#9881;&#65039; Settings</div></div>
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-2 text-center"><div class="text-xs font-medium">&#128101; All People</div></div>
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-2 text-center"><div class="text-xs font-medium">&#128203; Teams</div></div>
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-2 text-center"><div class="text-xs font-medium">&#128202; Reports</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 3 ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="bg-blue-100 text-blue-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">3</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2"><span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Sarah — Company Admin</span></div>
+        <h3 class="text-lg font-semibold mb-2">Sarah invites James as manager</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">Sarah clicks into her Kitchen team and presses <strong>Invite People</strong>. She enters James's email and sets his role to <strong>Manager</strong>. She clicks send.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">James gets an email: <em>"Sarah has invited you to join GreenLeaf Cafe on Roster."</em> with a big Accept Invite button. He clicks it, sets a password, and logs in.</p>
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /invite</div>
+            <div class="wf p-6 max-w-sm mx-auto">
+              <div class="text-center mb-4"><div class="wf-title text-base">Invite Your Team</div><div class="wf-sub">Send invitations to join your company</div></div>
+              <div class="space-y-3">
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Email addresses</div><textarea class="wf-input w-full h-16" placeholder="alice@acme.com, bob@acme.com">james@greenleaf.io</textarea><div class="text-xs text-gray-400 mt-1">One per line, or comma-separated</div></div>
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Team</div><select class="wf-select w-full"><option>Kitchen</option></select></div>
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Role</div><select class="wf-select w-full"><option>Employee</option><option selected>Manager</option></select></div>
+                <button class="wf-btn w-full wf-btn-primary">Send Invitations</button>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /accept-invite</div>
+            <div class="wf p-6 max-w-xs mx-auto">
+              <div class="text-center mb-4">
+                <div class="wf-icon-box mx-auto mb-2">&#9993;&#65039;</div>
+                <div class="wf-title text-base">Join GreenLeaf Cafe</div>
+                <div class="wf-sub mt-1">You've been invited to join Kitchen</div>
+              </div>
+              <div class="space-y-3">
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Full name</div><input class="wf-input w-full" value="James"></div>
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Set password</div><input class="wf-input w-full" type="password" placeholder="Min. 8 characters"></div>
+                <div><div class="text-xs font-medium text-gray-600 mb-1">Your timezone</div><select class="wf-select w-full"><option selected>America/New_York (UTC-5)</option></select></div>
+                <button class="wf-btn w-full wf-btn-primary">Accept &amp; Join</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 4 ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="bg-green-100 text-green-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">4</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2"><span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">James — Manager</span></div>
+        <h3 class="text-lg font-semibold mb-2">James creates shift templates</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">James is the kitchen manager. He goes to <strong>Templates</strong> and creates his first recurring shift pattern. He calls it <strong>"Morning Line Prep"</strong> — starts at 6 AM, runs 8 hours, needs 2 people. He selects <strong>"Every weekday (Mon-Fri)"</strong> from the dropdown.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">He creates a second template: <strong>"Evening Cleanup"</strong> — 2 PM to 10 PM, needs 1 person, also Mon-Fri. These template definitions sit in the database, waiting to be used. No shifts exist yet — just the recipe for creating them.</p>
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /teams/:id/templates</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
+                <div class="flex items-center gap-2"><span class="font-bold text-gray-800 text-sm">Roster</span></div>
+                <div class="flex items-center gap-2"><span class="text-xs text-gray-500">Kitchen</span><div class="wf-avatar">JM</div></div>
+              </div>
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-3"><div class="wf-title">Shift Templates</div><button class="wf-btn wf-btn-sm wf-btn-primary">+ New</button></div>
+                <div class="space-y-2">
+                  <div class="border-2 border-gray-200 rounded-lg p-3"><div class="flex justify-between"><div><div class="text-sm font-semibold">Morning Line Prep</div><div class="text-xs text-gray-500 mt-1">06–14 &#183; 2 people &#183; RRULE: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR</div></div><div class="flex gap-1"><button class="wf-btn wf-btn-sm">Edit</button><button class="wf-btn wf-btn-sm">Expand</button></div></div></div>
+                  <div class="border-2 border-gray-200 rounded-lg p-3"><div class="flex justify-between"><div><div class="text-sm font-semibold">Evening Cleanup</div><div class="text-xs text-gray-500 mt-1">14–22 &#183; 1 person &#183; RRULE: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR</div></div><div class="flex gap-1"><button class="wf-btn wf-btn-sm">Edit</button><button class="wf-btn wf-btn-sm">Expand</button></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> Template Form</div>
+            <div class="wf p-0 relative" style="min-height:340px;">
+              <div class="p-4 opacity-30 pointer-events-none"><div class="text-sm font-semibold">Templates (bg)</div></div>
+              <div class="wf-modal-overlay">
+                <div class="wf-modal" style="width:320px;">
+                  <div class="text-sm font-bold mb-3">Create Shift Template</div>
+                  <div class="space-y-2">
+                    <div><div class="text-xs font-medium text-gray-600 mb-1">Title</div><input class="wf-input w-full" value="Morning Line Prep"></div>
+                    <div class="flex gap-2"><div class="flex-1"><div class="text-xs font-medium text-gray-600 mb-1">Start</div><input class="wf-input w-full" value="06:00"></div><div class="flex-1"><div class="text-xs font-medium text-gray-600 mb-1">Duration</div><select class="wf-select w-full"><option>8h</option></select></div></div>
+                    <div><div class="text-xs font-medium text-gray-600 mb-1">Staff required</div><input class="wf-input w-full" value="2"></div>
+                    <div><div class="text-xs font-medium text-gray-600 mb-1">RRULE</div><input class="wf-input w-full" value="FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"></div>
+                    <div class="flex items-center gap-2"><div class="w-4 h-4 border-2 border-gray-400 rounded bg-gray-700"></div><span class="text-xs text-gray-600">Active</span></div>
+                  </div>
+                  <div class="flex justify-end gap-2 mt-3"><button class="wf-btn wf-btn-sm">Cancel</button><button class="wf-btn wf-btn-sm wf-btn-primary">Save</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 5 ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="bg-green-100 text-green-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">5</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2"><span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">James — Manager</span></div>
+        <h3 class="text-lg font-semibold mb-2">James invites Maya the line cook</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">James goes to the Kitchen people page and invites Maya as an <strong>Employee</strong>. Maya gets an email, clicks the link, sets her password, and logs in. Her dashboard is empty — no shifts yet.</p>
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /teams/:id/people</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
+                <div class="flex items-center gap-2"><span class="font-bold text-gray-800 text-sm">Roster</span></div>
+                <div class="flex items-center gap-2"><span class="text-xs text-gray-500">Kitchen</span><div class="wf-avatar">JM</div></div>
+              </div>
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-3"><div class="wf-title">Team People <span class="wf-sub">&#183; 1</span></div><button class="wf-btn wf-btn-sm wf-btn-primary">+ Invite</button></div>
+                <table class="wf-table">
+                  <thead><tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead>
+                  <tbody>
+                    <tr><td><span class="font-medium">Maya Johnson</span><br><span class="text-xs text-gray-500">maya@greenleaf.io</span></td><td><span class="wf-badge">Employee</span></td><td><span class="wf-badge bg-yellow-100 text-yellow-700">Invited</span></td><td><button class="wf-btn wf-btn-sm text-xs">Remove</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /dashboard — Employee (empty)</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
+                <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gray-300 border-2 border-gray-400 flex items-center justify-center text-xs font-bold text-gray-600">R</div><div class="font-bold text-gray-800 text-sm">Roster</div></div>
+                <div class="flex items-center gap-2"><div class="text-xs text-gray-500">Kitchen</div><div class="wf-avatar">MJ</div></div>
+              </div>
+              <div class="p-4">
+                <div class="wf-title mb-3">Dashboard</div>
+                <div class="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
+                  <div class="text-gray-400 text-sm">No upcoming shifts.</div>
+                  <div class="text-gray-400 text-xs mt-1">Your manager hasn't published the schedule yet.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 6 ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="bg-green-100 text-green-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">6</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2"><span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">James — Manager</span></div>
+        <h3 class="text-lg font-semibold mb-2">James publishes the schedule</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">James opens the Kitchen schedule for the week of July 13. He clicks <strong>Publish</strong>. This is where the magic happens — the system reads his two templates, takes the RRULE (Mon-Fri), and generates 10 concrete shifts for the week: 5 morning shifts and 5 evening shifts, each with their own date and time.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">A grid appears on screen showing the whole week: Monday through Friday, morning and evening slots, all ready to be filled.</p>
+        <div class="mt-4">
+          <div class="screen-card max-w-2xl mx-auto">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /teams/:id/schedule</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
+                <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gray-300 border-2 border-gray-400 flex items-center justify-center text-xs font-bold text-gray-600">R</div><div class="font-bold text-gray-800 text-sm">Roster</div></div>
+                <div class="flex items-center gap-2"><select class="wf-select wf-btn-sm"><option>Kitchen</option></select><div class="wf-avatar">JM</div></div>
+              </div>
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <div><div class="wf-title">Schedule</div><div class="wf-sub">Week of Jul 13</div></div>
+                  <div class="flex gap-1"><button class="wf-btn wf-btn-sm">&#8592;</button><button class="wf-btn wf-btn-sm">&#8594;</button><button class="wf-btn wf-btn-sm wf-btn-primary">Publish</button></div>
+                </div>
+                <div class="wf-cal-grid">
+                  <div class="wf-cal-cell-header"></div><div class="wf-cal-cell-header">Mon 13</div><div class="wf-cal-cell-header">Tue 14</div><div class="wf-cal-cell-header">Wed 15</div><div class="wf-cal-cell-header">Thu 16</div><div class="wf-cal-cell-header">Fri 17</div><div class="wf-cal-cell-header">Sat 18</div><div class="wf-cal-cell-header">Sun 19</div>
+                  <div class="wf-time-label">06:00</div>
+                  <div class="wf-cal-cell wf-coverage-red"><div class="wf-shift-block"><div class="font-semibold">Morning</div><span class="text-gray-400 italic">Needs 2</span></div></div>
+                  <div class="wf-cal-cell wf-coverage-red"><div class="wf-shift-block"><div class="font-semibold">Morning</div><span class="text-gray-400 italic">Needs 2</span></div></div>
+                  <div class="wf-cal-cell wf-coverage-red"><div class="wf-shift-block"><div class="font-semibold">Morning</div><span class="text-gray-400 italic">Needs 2</span></div></div>
+                  <div class="wf-cal-cell wf-coverage-red"><div class="wf-shift-block"><div class="font-semibold">Morning</div><span class="text-gray-400 italic">Needs 2</span></div></div>
+                  <div class="wf-cal-cell wf-coverage-red"><div class="wf-shift-block"><div class="font-semibold">Morning</div><span class="text-gray-400 italic">Needs 2</span></div></div>
+                  <div class="wf-cal-cell"></div><div class="wf-cal-cell"></div>
+                  <div class="wf-time-label">14:00</div>
+                  <div class="wf-cal-cell wf-coverage-red"><div class="wf-shift-block"><div class="font-semibold">Evening</div><span class="text-gray-400 italic">Needs 1</span></div></div>
+                  <div class="wf-cal-cell wf-coverage-red"><div class="wf-shift-block"><div class="font-semibold">Evening</div><span class="text-gray-400 italic">Needs 1</span></div></div>
+                  <div class="wf-cal-cell wf-coverage-red"><div class="wf-shift-block"><div class="font-semibold">Evening</div><span class="text-gray-400 italic">Needs 1</span></div></div>
+                  <div class="wf-cal-cell wf-coverage-red"><div class="wf-shift-block"><div class="font-semibold">Evening</div><span class="text-gray-400 italic">Needs 1</span></div></div>
+                  <div class="wf-cal-cell wf-coverage-red"><div class="wf-shift-block"><div class="font-semibold">Evening</div><span class="text-gray-400 italic">Needs 1</span></div></div>
+                  <div class="wf-cal-cell"></div><div class="wf-cal-cell"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 7 ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="bg-green-100 text-green-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">7</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2"><span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">James — Manager</span></div>
+        <h3 class="text-lg font-semibold mb-2">James assigns Maya to shifts</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">James clicks the Monday morning slot. A popup opens that lets him pick from his team members. He selects Maya and clicks <strong>Assign</strong>. He does the same for Tuesday morning.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">Maya gets an email: <em>"You've been assigned to Morning Line Prep on Monday, July 13, 6 AM to 2 PM."</em></p>
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> Assign Shift Modal</div>
+            <div class="wf p-0 relative" style="min-height:220px;">
+              <div class="p-4 opacity-30 pointer-events-none"><div class="text-sm font-semibold">Schedule (bg)</div></div>
+              <div class="wf-modal-overlay">
+                <div class="wf-modal" style="width:280px;">
+                  <div class="text-sm font-bold mb-2">Assign to Shift</div>
+                  <div class="text-xs text-gray-600 mb-2">Morning Line Prep &#183; Mon, Jul 13 &#183; 06–14</div>
+                  <div class="text-xs font-medium text-gray-600 mb-1">Person</div>
+                  <select class="wf-select w-full mb-3"><option>Maya Johnson</option><option>Bob Smith</option></select>
+                  <div class="flex justify-end gap-2"><button class="wf-btn wf-btn-sm">Cancel</button><button class="wf-btn wf-btn-sm wf-btn-primary">Assign</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> Schedule (after assign)</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-cal-grid" style="max-width:400px;">
+                  <div class="wf-cal-cell-header"></div><div class="wf-cal-cell-header">Mon 13</div><div class="wf-cal-cell-header">Tue 14</div>
+                  <div class="wf-time-label">06:00</div>
+                  <div class="wf-cal-cell wf-coverage-green"><div class="wf-shift-block"><div class="font-semibold">Morning</div>Maya</div></div>
+                  <div class="wf-cal-cell wf-coverage-green"><div class="wf-shift-block"><div class="font-semibold">Morning</div>Maya</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 8 ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="bg-orange-100 text-orange-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">8</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2"><span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Maya — Employee</span></div>
+        <h3 class="text-lg font-semibold mb-2">Maya sees her schedule</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">Maya logs in. Her dashboard now shows her upcoming shifts — Monday and Tuesday morning. She clicks <strong>"View Full Schedule"</strong> and sees a clean week calendar with her shifts highlighted. Monday's shift has a <strong>Clock In</strong> button because it's today.</p>
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /dashboard — Employee</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
+                <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gray-300 border-2 border-gray-400 flex items-center justify-center text-xs font-bold text-gray-600">R</div><div class="font-bold text-gray-800 text-sm">Roster</div></div>
+                <div class="flex items-center gap-2"><div class="text-xs text-gray-500">Kitchen</div><div class="wf-avatar">MJ</div></div>
+              </div>
+              <div class="p-4">
+                <div class="wf-title mb-3">Dashboard</div>
+                <div class="space-y-2">
+                  <div class="border-2 border-l-4 border-l-green-500 border-gray-200 rounded-lg p-3">
+                    <div class="flex justify-between items-start">
+                      <div><div class="text-xs font-bold text-gray-800">Today, Jul 13</div><div class="text-sm font-semibold text-gray-700 mt-1">Morning Line Prep</div><div class="text-xs text-gray-500">06:00 – 14:00 &#183; Kitchen</div></div>
+                      <button class="wf-btn wf-btn-primary wf-btn-sm">Clock In</button>
+                    </div>
+                  </div>
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-3">
+                    <div class="flex justify-between items-start">
+                      <div><div class="text-xs font-bold text-gray-800">Tomorrow, Jul 14</div><div class="text-sm font-semibold text-gray-700 mt-1">Morning Line Prep</div><div class="text-xs text-gray-500">06:00 – 14:00 &#183; Kitchen</div></div>
+                      <span class="wf-badge">Scheduled</span>
+                    </div>
+                  </div>
+                </div>
+                <a class="mt-3 inline-block text-xs font-semibold text-gray-700 underline underline-offset-2">View Full Schedule &#8594;</a>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /me/schedule</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
+                <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gray-300 border-2 border-gray-400 flex items-center justify-center text-xs font-bold text-gray-600">R</div><div class="font-bold text-gray-800 text-sm">Roster</div></div>
+                <div class="wf-avatar">MJ</div>
+              </div>
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <div><div class="wf-title">My Schedule</div><div class="wf-sub">Week of Jul 13 – 19, 2026</div></div>
+                  <div class="flex gap-1"><button class="wf-btn wf-btn-sm">&#8592;</button><button class="wf-btn wf-btn-sm">&#8594;</button></div>
+                </div>
+                <div class="wf-cal-grid">
+                  <div class="wf-cal-cell-header"></div><div class="wf-cal-cell-header">Mon<span class="font-normal text-gray-500 block">13</span></div><div class="wf-cal-cell-header">Tue<span class="font-normal text-gray-500 block">14</span></div><div class="wf-cal-cell-header">Wed<span class="font-normal text-gray-500 block">15</span></div><div class="wf-cal-cell-header">Thu<span class="font-normal text-gray-500 block">16</span></div><div class="wf-cal-cell-header">Fri<span class="font-normal text-gray-500 block">17</span></div><div class="wf-cal-cell-header">Sat<span class="font-normal text-gray-500 block">18</span></div><div class="wf-cal-cell-header">Sun<span class="font-normal text-gray-500 block">19</span></div>
+                  <div class="wf-time-label">06:00</div>
+                  <div class="wf-cal-cell"><div class="wf-shift-block clocked-in bg-green-50"><div class="font-semibold">Morning</div><div>06–14</div><span class="wf-tag text-green-700 bg-green-100">Clock In</span></div></div>
+                  <div class="wf-cal-cell"><div class="wf-shift-block"><div class="font-semibold">Morning</div><div>06–14</div></div></div>
+                  <div class="wf-cal-cell"></div><div class="wf-cal-cell"></div><div class="wf-cal-cell"></div><div class="wf-cal-cell"></div><div class="wf-cal-cell"></div>
+                  <div class="wf-time-label">14:00</div>
+                  <div class="wf-cal-cell"></div><div class="wf-cal-cell"></div><div class="wf-cal-cell"></div><div class="wf-cal-cell"></div><div class="wf-cal-cell"></div><div class="wf-cal-cell"></div><div class="wf-cal-cell"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 9 ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="bg-orange-100 text-orange-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">9</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2"><span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Maya — Employee</span></div>
+        <h3 class="text-lg font-semibold mb-2">Maya clocks in and out</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">It's 5:55 AM on Monday. Maya taps <strong>Clock In</strong>. The system records the exact time. Her dashboard now shows a running timer: "You're clocked in" with a Clock Out button.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">She works her morning shift. At 2 PM she taps <strong>Clock Out</strong>. The system records the end time and calculates she worked 8 hours. The entry is saved forever — nobody can edit or delete it.</p>
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /me/time (clock entries)</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
+                <div class="flex items-center gap-2"><span class="font-bold text-gray-800 text-sm">Roster</span></div>
+                <div class="wf-avatar">MJ</div>
+              </div>
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="wf-title">My Time</div>
+                  <div class="flex gap-1">
+                    <input class="wf-input w-24 wf-btn-sm" value="Jul 13">
+                    <input class="wf-input w-24 wf-btn-sm" value="Jul 19">
+                  </div>
+                </div>
+                <div class="text-xs text-gray-600 mb-2">Total: <strong>8h 00m</strong> actual &#183; 8h scheduled</div>
+                <table class="wf-table">
+                  <thead><tr><th>Date</th><th>Shift</th><th>In</th><th>Out</th><th>Hours</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td>Jul 13</td><td>Morning</td><td>05:58</td><td>14:02</td><td>8h 04m</td><td><span class="wf-badge bg-green-100 text-green-700">On time</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> dashboard (clocked in)</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="border-2 border-l-4 border-l-green-500 border-gray-200 rounded-lg p-4">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <div class="text-xs font-bold text-gray-800">Today, Jul 13</div>
+                      <div class="text-sm font-semibold text-gray-700 mt-1">Morning Line Prep</div>
+                      <div class="text-xs text-gray-500">06:00 – 14:00 &#183; Kitchen</div>
+                      <div class="mt-1"><span class="wf-badge bg-blue-100 text-blue-700">Clocked in &#183; 0h 05m</span></div>
+                    </div>
+                    <button class="wf-btn wf-btn-sm" style="color:#dc2626;border-color:#fca5a5;">Clock Out</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 10 ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="bg-purple-100 text-purple-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">10</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2"><span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Alex — Super Admin</span></div>
+        <h3 class="text-lg font-semibold mb-2">Alex checks the platform</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">Alex logs in and goes to the admin panel. GreenLeaf Cafe now shows up in the companies table with 3 members and an active status. Alex clicks the <strong>Audit Log</strong> tab and sees every single action that happened — Sarah creating the company, James publishing the schedule, Maya clocking in and out. Every entry linked to the previous one in a cryptographic chain.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">If anyone had tried to tamper with the log, the chain would break and Alex would know immediately.</p>
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /admin</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200 bg-gray-800 text-white">
+                <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gray-600 border-2 border-gray-500 flex items-center justify-center text-xs font-bold">R</div><div class="font-bold text-sm">Roster Admin</div></div>
+                <div class="flex items-center gap-2"><span class="text-xs text-gray-400">Super admin</span><div class="wf-avatar bg-gray-600 border-gray-500" style="color:#ccc;">AL</div></div>
+              </div>
+              <div class="flex border-b-2 border-dashed border-gray-200 px-4">
+                <div class="wf-tab active">Companies</div>
+                <div class="wf-tab">Audit Log</div>
+              </div>
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="wf-title">All Companies</div>
+                  <input class="wf-input w-32 wf-btn-sm" placeholder="Search...">
+                </div>
+                <table class="wf-table">
+                  <thead><tr><th>Company</th><th>Members</th><th>Status</th><th>Created</th></tr></thead>
+                  <tbody>
+                    <tr><td><span class="font-medium">GreenLeaf Cafe</span></td><td>3</td><td><span class="wf-badge bg-green-100 text-green-700">Active</span></td><td class="text-xs">Jul 13, 2026</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="wf-badge bg-gray-800 text-white text-xs px-1.5 py-0.5" style="border-radius:4px;letter-spacing:.03em;">MVP</span> /admin/audit-log</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200 bg-gray-800 text-white">
+                <div class="flex items-center gap-2"><span class="font-bold text-sm">Roster Admin</span></div>
+                <div class="wf-avatar bg-gray-600 border-gray-500" style="color:#ccc;">AL</div>
+              </div>
+              <div class="flex border-b-2 border-dashed border-gray-200 px-4">
+                <div class="wf-tab">Companies</div>
+                <div class="wf-tab active">Audit Log</div>
+              </div>
+              <div class="p-4">
+                <div class="wf-title mb-3">Platform Audit Log</div>
+                <table class="wf-table">
+                  <thead><tr><th>Time</th><th>Company</th><th>Actor</th><th>Action</th></tr></thead>
+                  <tbody>
+                    <tr><td class="text-xs">13:00</td><td>GreenLeaf</td><td>Sarah</td><td>company.create</td></tr>
+                    <tr><td class="text-xs">13:05</td><td>GreenLeaf</td><td>Sarah</td><td>person.create (James)</td></tr>
+                    <tr><td class="text-xs">13:25</td><td>GreenLeaf</td><td>James</td><td>template.create</td></tr>
+                    <tr><td class="text-xs">13:35</td><td>GreenLeaf</td><td>James</td><td>schedule.publish</td></tr>
+                    <tr><td class="text-xs">13:40</td><td>GreenLeaf</td><td>James</td><td>shift.assign (Maya)</td></tr>
+                    <tr><td class="text-xs">05:58</td><td>GreenLeaf</td><td>Maya</td><td>clock.clock_in</td></tr>
+                    <tr><td class="text-xs">14:02</td><td>GreenLeaf</td><td>Maya</td><td>clock.clock_out</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== POST-MVP DIVIDER ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6 border-amber-300">
+    <div class="text-center py-4">
+      <div class="text-3xl mb-2">&#128640;</div>
+      <h2 class="text-xl font-bold text-amber-800 mb-1">Beyond MVP — The Road Ahead</h2>
+      <p class="text-amber-600 text-sm max-w-xl mx-auto">MVP gives GreenLeaf Cafe working scheduling and clock-in. Here's how Roster grows across 4 post-MVP phases — each unlocking new capabilities for Sarah, James, Maya, and Alex.</p>
+    </div>
+  </section>
+
+  <!-- ====== ACT 11 (Phase A) ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6 border-amber-200">
+    <div class="flex items-start gap-4">
+      <div class="bg-amber-100 text-amber-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5" style="background:#fde68a;color:#92400e;">11</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium" style="background:#fde68a;color:#92400e;">Phase A — Before the Shift</span>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Self-scheduling, time off &amp; smarter org data</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">In Phase A, the biggest shift is <strong>self-scheduling</strong>. Instead of James assigning every shift, Maya can now browse open shifts and pick them up herself. James sees requests come in and approves or denies them with a single tap. If Maya tries to claim a shift that overlaps with an existing assignment or approved time-off, <strong>conflict detection</strong> warns her immediately.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">Maya can also request time off — James reviews the request alongside a coverage impact preview showing how the absence would affect the schedule. Shift swaps between teammates follow the same approval pattern.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">Sarah fills out her org with <strong>positions</strong> (line cook, sous chef, dishwasher with pay rates), <strong>skills</strong> (CPR certified, forklift license), and <strong>locations</strong> (downtown cafe, east side commissary). She creates a company <strong>holiday calendar</strong> so the system knows which days are paid. A <strong>feature flags</strong> page lets her toggle which capabilities are active per location. Maya can set her <strong>timezone</strong> in her profile so her schedule always displays in her local time.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">Notification upgrades arrive: email reminders before a shift, a weekly digest of upcoming shifts, and — for the first time — calendar export so Maya can sync her schedule to Google Calendar or Apple Calendar via iCal or webcal subscription. Password reset is now self-service — Maya can reset her own password if she forgets it. Rate limiting (60 req/min for reads, 10 for writes) protects the API from abuse.</p>
+
+        <div class="text-xs font-semibold text-amber-700 mt-5 mb-2 uppercase tracking-wide">&#128274; Manager Approvals</div>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Shift Requests — Phase A</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
+                <div class="flex items-center gap-2"><span class="font-bold text-gray-800 text-sm">Roster</span></div>
+                <div class="wf-avatar">JM</div>
+              </div>
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-3"><div class="wf-title">Shift Requests <span class="wf-badge bg-yellow-100 text-yellow-700">3 pending</span></div><button class="wf-btn wf-btn-sm">Approve All</button></div>
+                <div class="space-y-2">
+                  <div class="border-2 border-gray-200 rounded-lg p-3"><div class="flex justify-between items-start"><div><div class="text-sm font-semibold">Alice Johnson</div><div class="text-xs text-gray-500">Morning Support &#183; Thu, Jul 17 &#183; 08–16</div></div><div class="flex gap-1"><button class="wf-btn wf-btn-sm wf-btn-primary">&#10003;</button><button class="wf-btn wf-btn-sm wf-btn-danger">&#10007;</button></div></div></div>
+                  <div class="border-2 border-gray-200 rounded-lg p-3"><div class="flex justify-between items-start"><div><div class="text-sm font-semibold">Bob Smith</div><div class="text-xs text-gray-500">Evening Support &#183; Fri, Jul 18 &#183; 16–00</div></div><div class="flex gap-1"><button class="wf-btn wf-btn-sm wf-btn-primary">&#10003;</button><button class="wf-btn wf-btn-sm wf-btn-danger">&#10007;</button></div></div></div>
+                  <div class="border-2 border-gray-200 rounded-lg p-3"><div class="flex justify-between items-start"><div><div class="text-sm font-semibold">Carol Williams</div><div class="text-xs text-gray-500">Morning Support &#183; Wed, Jul 16 &#183; 08–16</div></div><div class="flex gap-1"><button class="wf-btn wf-btn-sm wf-btn-primary">&#10003;</button><button class="wf-btn wf-btn-sm wf-btn-danger">&#10007;</button></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Time-Off Approvals — Phase A</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-3"><div class="wf-title">Time-Off Requests <span class="wf-badge bg-yellow-100 text-yellow-700">2 pending</span></div></div>
+                <div class="space-y-2">
+                  <div class="border-2 border-gray-200 rounded-lg p-3"><div class="flex justify-between"><div><div class="text-sm font-semibold">Alice Johnson</div><div class="text-xs text-gray-500">Vacation &#183; Aug 1–7 (7 days)</div></div><div class="flex gap-1"><button class="wf-btn wf-btn-sm wf-btn-primary">&#10003;</button><button class="wf-btn wf-btn-sm wf-btn-danger">&#10007;</button></div></div></div>
+                  <div class="border-2 border-gray-200 rounded-lg p-3"><div class="flex justify-between"><div><div class="text-sm font-semibold">Bob Smith</div><div class="text-xs text-gray-500">Sick &#183; Jul 20 (1 day)</div></div><div class="flex gap-1"><button class="wf-btn wf-btn-sm wf-btn-primary">&#10003;</button><button class="wf-btn wf-btn-sm wf-btn-danger">&#10007;</button></div></div></div>
+                </div>
+                <div class="mt-3 p-2 bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg"><div class="text-xs font-semibold text-gray-600">Coverage impact</div><div class="text-xs text-gray-500">Aug 1–7: Engineering would be 1 person short on mornings</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Swap Requests — Phase A</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-title mb-3">Swap Requests <span class="wf-badge bg-yellow-100 text-yellow-700">1 pending</span></div>
+                <div class="border-2 border-gray-200 rounded-lg p-3">
+                  <div class="flex justify-between items-start">
+                    <div><div class="text-sm font-semibold">Alice Johnson <span class="text-xs text-gray-500 font-normal">wants to swap with</span> Bob Smith</div>
+                    <div class="text-xs text-gray-500 mt-1">Evening Support &#183; Tue, Jul 15 &#183; 16–00</div>
+                    <div class="text-xs text-gray-500">Reason: Doctor's appointment</div></div>
+                    <div class="flex gap-1"><button class="wf-btn wf-btn-sm wf-btn-primary">&#10003;</button><button class="wf-btn wf-btn-sm wf-btn-danger">&#10007;</button></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-xs font-semibold text-amber-700 mt-5 mb-2 uppercase tracking-wide">&#128100; Employee Self-Service</div>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Employee Self-Schedule — Phase A</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2 border-b-2 border-dashed border-gray-200">
+                <div class="flex items-center gap-2"><span class="font-bold text-gray-800 text-sm">Roster</span></div>
+                <div class="wf-avatar">MJ</div>
+              </div>
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2"><div class="wf-title">My Schedule</div><span class="text-xs text-gray-500">Week of Jul 14</span></div>
+                <div class="space-y-2">
+                  <div class="border-2 border-l-4 border-l-green-500 border-gray-200 rounded-lg p-3"><div class="flex justify-between items-start"><div><div class="text-xs font-semibold">Morning Line Prep</div><div class="text-xs text-gray-500">Mon, Jul 14 &#183; 06–14</div></div><span class="wf-badge bg-green-100 text-green-700" style="font-size:10px;">Assigned</span></div></div>
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-3 bg-blue-50"><div class="flex justify-between items-start"><div><div class="text-xs font-semibold">Evening Cleanup <span class="wf-badge bg-blue-100 text-blue-700" style="font-size:10px;">Open</span></div><div class="text-xs text-gray-500">Wed, Jul 16 &#183; 14–22</div></div><button class="wf-btn wf-btn-sm wf-btn-primary" style="font-size:10px;">Claim</button></div></div>
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-3 bg-blue-50"><div class="flex justify-between items-start"><div><div class="text-xs font-semibold">Evening Cleanup <span class="wf-badge bg-blue-100 text-blue-700" style="font-size:10px;">Open</span></div><div class="text-xs text-gray-500">Fri, Jul 18 &#183; 14–22</div></div><button class="wf-btn wf-btn-sm wf-btn-primary" style="font-size:10px;">Claim</button></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Calendar Export — Phase A</div>
+            <div class="wf p-6 max-w-xs mx-auto">
+              <div class="text-center mb-4"><div class="wf-icon-box mx-auto mb-2">&#128197;</div><div class="wf-title text-base">Export Schedule</div></div>
+              <div class="space-y-3">
+                <div class="border-2 border-dashed border-gray-200 rounded-lg p-3 flex items-center justify-between"><div><div class="text-sm font-semibold">Download .ics</div><div class="text-xs text-gray-500">Static file import</div></div><button class="wf-btn wf-btn-sm">Download</button></div>
+                <div class="border-2 border-dashed border-gray-200 rounded-lg p-3"><div class="text-sm font-semibold mb-1">Webcal Subscription</div><div class="text-xs text-gray-500 mb-2">Copy URL into Google/Apple Calendar</div><div class="flex gap-1"><input class="wf-input flex-1 text-xs" value="webcal://roster.app/.../webcal.ics?token=xxx" readonly><button class="wf-btn wf-btn-sm">Copy</button></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Notifications &amp; Profile — Phase A</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-title mb-3">Notification Preferences</div>
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between py-1 border-b border-dashed border-gray-100"><div class="text-xs">Shift assigned</div><div class="flex gap-2"><div class="w-3 h-3 rounded border-2 border-gray-400 bg-gray-700"></div><span class="text-xs text-gray-500">Email</span></div></div>
+                  <div class="flex items-center justify-between py-1 border-b border-dashed border-gray-100"><div class="text-xs">Shift reminder (1h before)</div><div class="flex gap-2"><div class="w-3 h-3 rounded border-2 border-gray-400 bg-gray-700"></div><span class="text-xs text-gray-500">Email</span></div></div>
+                  <div class="flex items-center justify-between py-1 border-b border-dashed border-gray-100"><div class="text-xs">Weekly digest</div><div class="w-3 h-3 rounded border-2 border-gray-400"></div></div>
+                  <div class="flex items-center justify-between py-1"><div class="text-xs">Time-off status</div><div class="flex gap-2"><div class="w-3 h-3 rounded border-2 border-gray-400 bg-gray-700"></div><span class="text-xs text-gray-500">Email</span></div></div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-dashed border-gray-200">
+                  <div class="text-xs font-medium text-gray-600 mb-1">My timezone</div>
+                  <select class="wf-select w-full"><option>America/New_York (UTC-5)</option></select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-xs font-semibold text-amber-700 mt-5 mb-2 uppercase tracking-wide">&#128188; Company Org Data</div>
+        <div class="grid md:grid-cols-4 gap-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Locations — Phase A</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2"><div class="wf-title">Locations</div><button class="wf-btn wf-btn-sm wf-btn-primary">+ Add</button></div>
+                <div class="space-y-2">
+                  <div class="border-2 border-gray-200 rounded-lg p-2 flex justify-between items-center"><div><div class="text-xs font-semibold">Downtown Office</div><div class="text-xs text-gray-400" style="font-size:9px;">123 Main St, Portland, OR</div><div class="text-xs text-gray-400" style="font-size:9px;">2 teams &#183; Geofence: 100m</div></div><button class="wf-btn wf-btn-sm">Edit</button></div>
+                  <div class="border-2 border-gray-200 rounded-lg p-2 flex justify-between items-center"><div><div class="text-xs font-semibold">East Side Clinic</div><div class="text-xs text-gray-400" style="font-size:9px;">456 Oak Ave, Portland, OR</div></div><button class="wf-btn wf-btn-sm">Edit</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Positions — Phase A</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2"><div class="wf-title">Positions</div><button class="wf-btn wf-btn-sm wf-btn-primary">+ Add</button></div>
+                <table class="wf-table">
+                  <thead><tr><th>Name</th><th>Pay</th><th>#</th></tr></thead>
+                  <tbody>
+                    <tr><td>Registered Nurse</td><td>$45.00</td><td>3</td></tr>
+                    <tr><td>Cashier</td><td>$18.50</td><td>5</td></tr>
+                    <tr><td>Security Guard</td><td>$22.00</td><td>2</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Skills — Phase A</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2"><div class="wf-title">Skills</div><button class="wf-btn wf-btn-sm wf-btn-primary">+ Add</button></div>
+                <table class="wf-table">
+                  <thead><tr><th>Name</th><th>People</th></tr></thead>
+                  <tbody>
+                    <tr><td>CPR Certified</td><td>4</td></tr>
+                    <tr><td>Forklift</td><td>2</td></tr>
+                    <tr><td>Spanish Speaker</td><td>3</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Holidays — Phase A</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2"><div class="wf-title">Holidays</div><button class="wf-btn wf-btn-sm wf-btn-primary">+ Add</button></div>
+                <table class="wf-table">
+                  <thead><tr><th>Name</th><th>Date</th><th>Paid</th></tr></thead>
+                  <tbody>
+                    <tr><td>New Year's Day</td><td>Jan 1</td><td>&#10003;</td></tr>
+                    <tr><td>Independence Day</td><td>Jul 4</td><td>&#10003;</td></tr>
+                    <tr><td>Thanksgiving</td><td>Nov 27</td><td>&#10003;</td></tr>
+                    <tr><td>Christmas</td><td>Dec 25</td><td>&#10003;</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-xs font-semibold text-amber-700 mt-5 mb-2 uppercase tracking-wide">&#9881;&#65039; Feature Flags</div>
+        <div class="grid md:grid-cols-1 gap-4">
+          <div class="screen-card max-w-sm" style="margin:0 auto;">
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-title mb-2">Feature Flags</div>
+                <div class="space-y-2">
+                  <div class="flex justify-between items-center py-1 border-b border-dashed border-gray-100"><div><div class="text-xs">Self-scheduling</div><div class="text-xs text-gray-400" style="font-size:9px;">Employees pick shifts</div></div><div class="w-8 h-4 rounded-full bg-gray-700 relative"><div class="w-2.5 h-2.5 rounded-full bg-white absolute right-0.5 top-0.5"></div></div></div>
+                  <div class="flex justify-between items-center py-1 border-b border-dashed border-gray-100"><div><div class="text-xs">Break tracking</div><div class="text-xs text-gray-400" style="font-size:9px;">Meal/rest recording</div></div><div class="w-8 h-4 rounded-full bg-gray-200 relative"><div class="w-2.5 h-2.5 rounded-full bg-white absolute left-0.5 top-0.5"></div></div></div>
+                  <div class="flex justify-between items-center py-1 border-b border-dashed border-gray-100"><div><div class="text-xs">GPS clock-in</div><div class="text-xs text-gray-400" style="font-size:9px;">Location on clock-in</div></div><div class="w-8 h-4 rounded-full bg-gray-200 relative"><div class="w-2.5 h-2.5 rounded-full bg-white absolute left-0.5 top-0.5"></div></div></div>
+                  <div class="flex justify-between items-center py-1"><div><div class="text-xs">HIPAA mode</div><div class="text-xs text-gray-400" style="font-size:9px;">PHI protection</div></div><div class="w-8 h-4 rounded-full bg-gray-200 relative"><div class="w-2.5 h-2.5 rounded-full bg-white absolute left-0.5 top-0.5"></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 12 (Phase B) ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6 border-amber-200">
+    <div class="flex items-start gap-4">
+      <div class="bg-amber-100 text-amber-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5" style="background:#fde68a;color:#92400e;">12</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium" style="background:#fde68a;color:#92400e;">Phase B — During the Shift</span>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Break tracking, live attendance &amp; integrations</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">Maya clocks in for her shift. Now, instead of a single clock-in/out, the system prompts her to log <strong>meal and rest breaks</strong> — recording each break start and end time automatically. If she forgets, the system flags a compliance concern.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">James opens a <strong>Live Attendance</strong> board that updates in real time: who's clocked in on time, who's late, who's on break, who hasn't shown up. He can see at a glance that Bob is 18 minutes late and Carol is on her meal break.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">Sarah sets up <strong>integrations</strong> — a Slack connection posts shift reminders to <code>#kitchen-alerts</code> automatically. The Microsoft Teams connector isn't configured yet but the UI is ready.</p>
+        <div class="grid md:grid-cols-3 gap-4 mt-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Clock In with Breaks — Phase B</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="border-2 border-l-4 border-l-green-500 border-gray-200 rounded-lg p-3 mb-3">
+                  <div class="flex justify-between items-start">
+                    <div><div class="text-xs font-bold">Today, Jul 14</div><div class="text-xs font-semibold mt-1">Morning Line Prep</div><div class="text-xs text-gray-500">06:00 – 14:00</div><div class="mt-1"><span class="wf-badge bg-blue-100 text-blue-700">Clocked in &#183; 5h 20m</span></div></div>
+                    <div class="flex flex-col gap-1"><button class="wf-btn wf-btn-sm" style="font-size:9px;color:#dc2626;border-color:#fca5a5;">Clock Out</button><button class="wf-btn wf-btn-sm" style="font-size:9px;">Start Break</button></div>
+                  </div>
+                </div>
+                <div class="text-xs font-semibold text-gray-600 mb-1">Today's Timeline</div>
+                <div class="space-y-1 text-xs">
+                  <div class="flex justify-between p-1 bg-gray-50 rounded"><span>Clock In</span><span class="text-gray-500">05:58</span></div>
+                  <div class="flex justify-between p-1 bg-gray-50 rounded"><span>Break (meal)</span><span class="text-gray-500">12:00 – 12:32</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Live Attendance — Phase B</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2"><div class="wf-title">Live Attendance</div><span class="text-xs text-gray-500">Today, Jul 14</span></div>
+                <table class="wf-table">
+                  <thead><tr><th>Person</th><th>Shift</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td>Alice Johnson</td><td>Morning 08–16</td><td><span class="wf-badge bg-green-100 text-green-700" style="font-size:9px;">On time</span></td></tr>
+                    <tr><td>Bob Smith</td><td>Morning 08–16</td><td><span class="wf-badge bg-yellow-100 text-yellow-700" style="font-size:9px;">Late (18m)</span></td></tr>
+                    <tr><td>Carol Williams</td><td>Evening 16–00</td><td><span class="wf-badge bg-blue-100 text-blue-700" style="font-size:9px;">On break</span></td></tr>
+                    <tr><td>Dave Brown</td><td>Morning 08–16</td><td><span class="wf-badge bg-red-100 text-red-700" style="font-size:9px;">No-show</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Integrations — Phase B</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-title mb-2">Integrations</div>
+                <div class="space-y-2">
+                  <div class="border-2 border-gray-200 rounded-lg p-3 flex justify-between items-center"><div class="flex items-center gap-2"><div class="text-base">&#128172;</div><div><div class="text-xs font-semibold">Slack</div><div class="text-xs text-gray-400" style="font-size:9px;">#shift-alerts</div></div></div><div class="flex gap-1"><span class="wf-badge bg-green-100 text-green-700" style="font-size:9px;">Active</span><button class="wf-btn wf-btn-sm">Edit</button></div></div>
+                  <div class="border-2 border-gray-200 rounded-lg p-3 flex justify-between items-center opacity-60"><div class="flex items-center gap-2"><div class="text-base">&#129515;</div><div><div class="text-xs font-semibold">Microsoft Teams</div><div class="text-xs text-gray-400" style="font-size:9px;">Not configured</div></div></div><button class="wf-btn wf-btn-sm">Connect</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 13 (Phase C) ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6 border-amber-200">
+    <div class="flex items-start gap-4">
+      <div class="bg-amber-100 text-amber-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5" style="background:#fde68a;color:#92400e;">13</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium" style="background:#fde68a;color:#92400e;">Phase C — After the Shift</span>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Reports, compliance &amp; audit UI</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">Now that Roster has been running for months, James wants to see patterns. He opens the <strong>Attendance Report</strong> — scheduled vs actual hours for July. Bob has been late twice. Alice is spotless. A <strong>CSV export</strong> button lets him pull the data for payroll.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">The <strong>Overtime Report</strong> shows who's exceeding 40 hours per week — Alice at 44h, Carol at 42h. The <strong>Coverage Report</strong> uses a visual <strong>heatmap</strong> to highlight gaps at a glance: Wednesday July 16 shows 50% fill rate in red. The <strong>Compliance Report</strong> surfaces violations: missed meal breaks, late clock-ins, no-shows.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">Sarah opens the <strong>Company Audit Log</strong> — a filterable chronological view of every action. She configures <strong>Compliance Settings</strong> (overtime thresholds, minimum rest periods, data retention). The <strong>Data Management</strong> page gives her GDPR erasure: she selects a person and permanently anonymizes their personal data while preserving clock entries.</p>
+
+        <div class="text-xs font-semibold text-amber-700 mt-5 mb-2 uppercase tracking-wide">&#128202; Manager Reports</div>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Attendance Report — Phase C</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2"><div class="wf-title">Attendance Report</div><button class="wf-btn wf-btn-sm">CSV</button></div>
+                <div class="flex gap-1 mb-2 flex-wrap"><input class="wf-input" style="width:70px;font-size:10px;" value="Jul 1"><input class="wf-input" style="width:70px;font-size:10px;" value="Jul 31"></div>
+                <table class="wf-table">
+                  <thead><tr><th>Person</th><th>Sch.</th><th>Act.</th><th>&Delta;</th><th>Late</th></tr></thead>
+                  <tbody>
+                    <tr><td>Alice</td><td>80h</td><td>79h55m</td><td>-5m</td><td>0</td></tr>
+                    <tr><td>Bob</td><td>64h</td><td>62h10m</td><td>-1h50m</td><td>2</td></tr>
+                    <tr><td>Carol</td><td>56h</td><td>56h00m</td><td>0m</td><td>0</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Overtime Report — Phase C</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2"><div class="wf-title">Overtime Report</div><span class="text-xs text-gray-500">Threshold: 40h/wk</span></div>
+                <table class="wf-table">
+                  <thead><tr><th>Person</th><th>Total</th><th>OT</th></tr></thead>
+                  <tbody>
+                    <tr><td>Alice Johnson</td><td>44h</td><td><span style="color:#dc2626;font-weight:600;">4h</span></td></tr>
+                    <tr><td>Bob Smith</td><td>38h</td><td>0h</td></tr>
+                    <tr><td>Carol Williams</td><td>42h</td><td><span style="color:#dc2626;font-weight:600;">2h</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Coverage Report — Phase C</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-title mb-2">Coverage Report</div>
+                <table class="wf-table">
+                  <thead><tr><th>Date</th><th>Shifts</th><th>Filled</th><th>Coverage</th></tr></thead>
+                  <tbody>
+                    <tr><td>Mon, Jul 14</td><td>4</td><td>4</td><td><span class="wf-badge bg-green-100 text-green-700" style="font-size:9px;">100%</span></td></tr>
+                    <tr><td>Tue, Jul 15</td><td>4</td><td>3</td><td><span class="wf-badge bg-yellow-100 text-yellow-700" style="font-size:9px;">75%</span></td></tr>
+                    <tr><td>Wed, Jul 16</td><td>4</td><td>2</td><td><span class="wf-badge bg-red-100 text-red-700" style="font-size:9px;">50%</span></td></tr>
+                    <tr><td>Thu, Jul 17</td><td>3</td><td>3</td><td><span class="wf-badge bg-green-100 text-green-700" style="font-size:9px;">100%</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-xs font-semibold text-amber-700 mt-5 mb-2 uppercase tracking-wide">&#128220; Compliance &amp; Data</div>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Compliance Report — Phase C</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-title mb-2">Compliance Violations <span class="wf-badge bg-red-100 text-red-700">4 open</span></div>
+                <table class="wf-table">
+                  <thead><tr><th>Date</th><th>Person</th><th>Type</th></tr></thead>
+                  <tbody>
+                    <tr><td>Jul 14</td><td>Bob</td><td class="text-xs">Missed meal break</td></tr>
+                    <tr><td>Jul 15</td><td>Bob</td><td class="text-xs">Late clock-in (18m)</td></tr>
+                    <tr><td>Jul 16</td><td>Alice</td><td class="text-xs">Overtime (44h/wk)</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Company Audit Log — Phase C</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-title mb-2">Audit Log</div>
+                <div class="flex gap-1 mb-2 flex-wrap">
+                  <select class="wf-select" style="font-size:9px;width:70px;"><option>All</option></select>
+                  <select class="wf-select" style="font-size:9px;width:60px;"><option>All</option></select>
+                </div>
+                <table class="wf-table">
+                  <thead><tr><th>Time</th><th>Actor</th><th>Action</th></tr></thead>
+                  <tbody>
+                    <tr><td class="text-xs" style="font-size:9px;">Jul 14, 09:15</td><td style="font-size:9px;">Jane Mgr</td><td class="text-xs" style="font-size:9px;">assigned Bob to Morning</td></tr>
+                    <tr><td class="text-xs" style="font-size:9px;">Jul 14, 09:10</td><td style="font-size:9px;">Jane Mgr</td><td class="text-xs" style="font-size:9px;">published schedule</td></tr>
+                    <tr><td class="text-xs" style="font-size:9px;">Jul 14, 08:02</td><td style="font-size:9px;">Alice J.</td><td class="text-xs" style="font-size:9px;">clocked_in #1234</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Compliance Settings — Phase C</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-title mb-2">Compliance Settings</div>
+                <div class="space-y-2 text-xs">
+                  <div><div class="text-gray-500" style="font-size:9px;">Overtime (weekly)</div><select class="wf-select w-full" style="font-size:9px;"><option>40 hours</option></select></div>
+                  <div><div class="text-gray-500" style="font-size:9px;">Min rest between shifts</div><select class="wf-select w-full" style="font-size:9px;"><option>8 hours</option></select></div>
+                  <div><div class="text-gray-500" style="font-size:9px;">Meal break trigger</div><input class="wf-input w-full" style="font-size:9px;" value="After 5 hours"></div>
+                  <div><div class="text-gray-500" style="font-size:9px;">Data retention</div><input class="wf-input w-full" style="font-size:9px;" value="365 days"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-xs font-semibold text-amber-700 mt-5 mb-2 uppercase tracking-wide">&#128196; Data Management</div>
+        <div class="grid md:grid-cols-1 gap-4">
+          <div class="screen-card max-w-sm" style="margin:0 auto;">
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-title mb-2">Data Management</div>
+                <div class="space-y-2">
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-2"><div class="text-xs font-semibold">Export Data</div><div class="flex gap-1 mt-1"><select class="wf-select" style="font-size:10px;width:100px;"><option>Shifts</option></select><button class="wf-btn wf-btn-sm">CSV</button></div></div>
+                  <div class="border-2 border-dashed border-red-200 rounded-lg p-2"><div class="text-xs font-semibold text-red-700">GDPR Erasure</div><div class="flex gap-1 mt-1"><select class="wf-select" style="font-size:10px;width:120px;"><option>Select person...</option></select><button class="wf-btn wf-btn-sm wf-btn-danger" style="font-size:10px;">Delete</button></div><div class="text-xs text-gray-500 mt-1">Permanently anonymizes all personal data</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ACT 14 (Phase D) ====== -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mb-6 border-amber-200">
+    <div class="flex items-start gap-4">
+      <div class="bg-amber-100 text-amber-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5" style="background:#fde68a;color:#92400e;">14</div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium" style="background:#fde68a;color:#92400e;">Phase D — Scale &amp; Enterprise</span>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Data residency, SSO, billing &amp; public API</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">GreenLeaf Cafe has grown to 20 locations across 3 countries. Sarah's data needs to stay in Australia. Alex configures <strong>data residency</strong> routing — GreenLeaf's data now lives on an AU cluster, while a US-based client routes to us-east.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">Sarah's parent company requires <strong>SSO/OIDC</strong> — employees log in with their corporate Google Workspace accounts instead of Roster passwords. Alex enables it from the admin panel with a few clicks.</p>
+        <p class="text-gray-600 text-sm leading-relaxed mt-2">Alex sets up <strong>Billing</strong> — GreenLeaf is on the Pro plan ($99/mo), 50 active employees, annual discount applied. A team of developers wants to build a custom payroll integration, so Sarah generates a <strong>Public API key</strong> scoped to read-only shift data.</p>
+        <div class="grid md:grid-cols-3 gap-4 mt-4">
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Data Residency — Phase D</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-title mb-2">Region Routing</div>
+                <table class="wf-table">
+                  <thead><tr><th>Company</th><th>Region</th><th>Cluster</th></tr></thead>
+                  <tbody>
+                    <tr><td>GreenLeaf Cafe</td><td>Australia</td><td class="text-xs">au-syd-1</td></tr>
+                    <tr><td>Acme Corp</td><td>US East</td><td class="text-xs">us-east-1</td></tr>
+                    <tr><td>EuroBistro GmbH</td><td>Germany</td><td class="text-xs">eu-fra-1</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> SSO/OIDC — Phase D</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="wf-title mb-2">SSO Settings</div>
+                <div class="space-y-2 text-xs">
+                  <div><div class="text-gray-500">Provider</div><select class="wf-select w-full mt-0.5"><option>Google Workspace</option></select></div>
+                  <div><div class="text-gray-500">Client ID</div><input class="wf-input w-full" value="ga-abc123..."></div>
+                  <div><div class="text-gray-500">Status</div><span class="wf-badge bg-green-100 text-green-700">Connected</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="screen-card">
+            <div class="wf-label flex items-center gap-2 mb-1"><span class="phase-post" style="font-size:10px;background:#fde68a;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600;">Post-MVP</span> Billing &amp; API — Phase D</div>
+            <div class="wf p-0 overflow-hidden">
+              <div class="p-4">
+                <div class="space-y-2 text-xs">
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-2">
+                    <div class="flex justify-between"><span class="font-semibold">Pro Plan</span><span class="text-gray-700">$99/mo</span></div>
+                    <div class="text-gray-400">50 employees &#183; Annual &#183; Next bill: Aug 1</div>
+                  </div>
+                  <div class="border-2 border-dashed border-gray-200 rounded-lg p-2">
+                    <div class="font-semibold mb-1">API Keys</div>
+                    <div class="flex justify-between items-center"><code class="text-xs" style="font-size:9px;">rost_live_abc123...</code><button class="wf-btn wf-btn-sm">Revoke</button></div>
+                    <div class="text-gray-400 mt-0.5">Read-only &#183; Created Jul 10</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section class="bg-white rounded-xl shadow-sm border p-6 mt-8">
+    <h2 class="text-lg font-semibold mb-4">The Full Picture</h2>
+    <div class="flex flex-wrap items-center justify-center gap-2 text-sm">
+      <span class="bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-medium">Alex seeds</span>
+      <span class="text-gray-300 text-lg">&#8594;</span>
+      <span class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium">Sarah signs up</span>
+      <span class="text-gray-300 text-lg">&#8594;</span>
+      <span class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-medium">Sarah invites James</span>
+      <span class="text-gray-300 text-lg">&#8594;</span>
+      <span class="bg-green-100 text-green-700 px-3 py-1.5 rounded-full font-medium">James creates templates</span>
+      <span class="text-gray-300 text-lg">&#8594;</span>
+      <span class="bg-green-100 text-green-700 px-3 py-1.5 rounded-full font-medium">James publishes</span>
+      <span class="text-gray-300 text-lg">&#8594;</span>
+      <span class="bg-green-100 text-green-700 px-3 py-1.5 rounded-full font-medium">James assigns Maya</span>
+      <span class="text-gray-300 text-lg">&#8594;</span>
+      <span class="bg-orange-100 text-orange-700 px-3 py-1.5 rounded-full font-medium">Maya clocks in/out</span>
+      <span class="text-gray-300 text-lg">&#8594;</span>
+      <span class="bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full font-medium">Alex monitors</span>
+    </div>
+    <div class="flex flex-wrap items-center justify-center gap-2 text-sm mt-3">
+      <span class="text-gray-300 text-xs">&mdash; POST-MVP &mdash;</span>
+    </div>
+    <div class="flex flex-wrap items-center justify-center gap-2 text-sm mt-1">
+      <span class="bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full font-medium">Phase A: Self-scheduling</span>
+      <span class="text-gray-300 text-lg">&#8594;</span>
+      <span class="bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full font-medium">Phase B: Breaks &amp; live view</span>
+      <span class="text-gray-300 text-lg">&#8594;</span>
+      <span class="bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full font-medium">Phase C: Reports &amp; compliance</span>
+      <span class="text-gray-300 text-lg">&#8594;</span>
+      <span class="bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full font-medium">Phase D: Scale &amp; enterprise</span>
+    </div>
+    <div class="grid md:grid-cols-4 gap-3 mt-6 text-sm">
+      <div class="bg-purple-50 rounded-lg p-3 text-center">
+        <div class="font-semibold text-purple-700">&#128081; Super Admin</div>
+        <div class="text-gray-500 text-xs mt-1">Sees everything. Can suspend companies. Configures data regions &amp; SSO.</div>
+      </div>
+      <div class="bg-blue-50 rounded-lg p-3 text-center">
+        <div class="font-semibold text-blue-700">&#128105;&#8205;&#128188; Company Admin</div>
+        <div class="text-gray-500 text-xs mt-1">Owns the company. Manages settings, positions, skills, locations, billing, integrations.</div>
+      </div>
+      <div class="bg-green-50 rounded-lg p-3 text-center">
+        <div class="font-semibold text-green-700">&#128104;&#8205;&#127858; Manager</div>
+        <div class="text-gray-500 text-xs mt-1">Runs a team. Creates schedules, assigns people, approves requests, runs reports.</div>
+      </div>
+      <div class="bg-orange-50 rounded-lg p-3 text-center">
+        <div class="font-semibold text-orange-700">&#128105;&#8205;&#127858; Employee</div>
+        <div class="text-gray-500 text-xs mt-1">Sees shifts, clocks in/out, takes breaks, requests time off, picks up open shifts.</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="text-center text-xs text-gray-400 border-t border-gray-200 pt-6 mt-8">
+    Roster &#183; MVP + Post-MVP (Phases A-D)
+  </footer>
+
+</div>
+</body>
+</html>

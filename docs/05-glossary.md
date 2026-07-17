@@ -121,8 +121,8 @@ A reference guide for understanding the technical language used throughout the R
 
 | Term | Definition |
 |---|---|
-| **MVP (Minimum Viable Product)** | Smallest shippable version with core features. Roster MVP: ~31 days / 6 weeks development. |
-| **RBAC (Role-Based Access Control)** | Permission model where access is determined by user role (company_admin, manager, employee). |
+| **MVP (Minimum Viable Product)** | Smallest shippable version with core features. Roster MVP: ~38.5 days / 8 weeks development. |
+| **RBAC (Role-Based Access Control)** | Permission model where access is determined by user role (company_admin, manager, employee, super_admin). |
 | **Audit Log** | Immutable record of all system changes. Includes who, what, when, and old/new values. |
 | **Middleware** | Code that runs before route handlers. Used for auth, tenant isolation, and RBAC checks. |
 | **Endpoint** | Specific API URL + HTTP method combination (e.g., `GET /api/v1/teams`). |

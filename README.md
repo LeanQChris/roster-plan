@@ -10,12 +10,12 @@ Multi-tenant workforce scheduling platform — manage shifts, teams, and time tr
 
 | Area | Key Docs |
 |------|----------|
-| Product | [PRD](docs/01-PRD.md), [Feature Breakdown](docs/02-feature-breakdown.md), [UX Stories](docs/03-ux-user-stories.md), [MVP Plan](docs/04-mvp-plan.md) |
+| Product | [PRD](docs/01-PRD.md), [Feature Breakdown](docs/02-feature-breakdown.md), [UX Stories](docs/03-ux-user-stories.md), [MVP Plan](docs/04-mvp-plan.md), [MVP Story (walkthrough)](roster-story.html) |
 | API | [Full Spec](spec/01-api-spec.md), [RBAC Matrix](spec/02-rbac-matrix.md), [Pagination](spec/04-pagination.md), [Sessions](spec/06-session-management.md) |
 | Database | [Data Model](db/01-data-model.md), [Schema](db/02-schema.sql), [RRULE Strategy](db/03-rrule-storage.md) |
 | Architecture | [Overview](spec/07-architecture.md), [ADRs](docs/adr/) |
 | Compliance | [GDPR](compliance/01-GDPR.md), [CCPA](compliance/02-CCPA.md), [SOC 2](compliance/03-SOC2.md), [HIPAA](compliance/04-HIPAA.md), [Security](compliance/05-security.md) |
-| Prototype | [`prototype.html`](prototype.html) |
+
 
 ## Architecture Overview
 
@@ -37,17 +37,17 @@ Company (multi-tenant)
 
 See [MVP Plan](docs/04-mvp-plan.md). Core deliverable:
 
-> Manager signs up → creates teams → invites people → builds shift templates with recurrence → publishes schedule → assigns people → employees view their week.
+> Manager signs up → creates teams → invites people → builds shift templates with recurrence → publishes schedule → assigns people → employees view their week. Clock in/out included for attendance tracking.
 
-Estimated effort: **~31 days / 6 weeks** (16 backend, 15.5 frontend).
+Estimated effort: **~38.5 days / 8 weeks** (19 backend, 19.5 frontend).
 
 ## Phases
 
 | Phase | Focus |
 |-------|-------|
-| **MVP** | Core scheduling loop |
+| **MVP** | Core scheduling loop + clock in/out |
 | **Phase A** | Self-scheduling, calendar export, reminders |
-| **Phase B** | Clock in/out, mobile/PWA, live coverage |
+| **Phase B** | Break tracking, mobile/PWA, live attendance |
 | **Phase C** | Reports, payroll export, audit UI |
 | **Phase D** | Multi-region, SSO, billing, public API |
 

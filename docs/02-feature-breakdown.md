@@ -62,23 +62,23 @@ This document breaks every feature into atomic units and organizes them into imp
 - [ ] Recurrence exceptions (cancel/modify a single occurrence)
 - [ ] Store expanded instances in `shift_instances` or compute on read (see db/03-rrule-storage.md)
 
-### P2.3 — Self-Scheduling Workflow
+### P2.3 — Self-Scheduling Workflow (MVP+)
 - [ ] Employee sees available open shifts (not yet assigned)
 - [ ] Employee requests assignment (shift request)
 - [ ] Manager dashboard to approve/bulk/deny requests
 - [ ] Auto-assignment fallback: if no request submitted by cutoff, manager assigns
 - [ ] Employee swap requests (manager must approve — No self-swap model)
 
-### P2.4 — Conflict Detection
+### P2.4 — Conflict Detection (MVP+)
 - [ ] Double-booking prevention (same person, overlapping shift)
 - [ ] Overtime rules > 40h/week or > 12h/day configurable per company
 - [ ] Minimum rest period between shifts (configurable, default 8h)
 - [ ] Conflict highlight in UI (red indicator, tooltip with reason)
 
 ### P2.5 — Published Schedule
-- [ ] Draft → Published workflow (lock shifts against further changes)
-- [ ] Published schedule view (read-only for employees)
-- [ ] Re-publish triggers diff notification
+- [ ] Draft → Published workflow (lock shifts against further changes) — ✓ MVP (basic publish/expand)
+- [ ] Published schedule view (read-only for employees) — ✓ MVP
+- [ ] Re-publish triggers diff notification — MVP+
 
 ### P2.6 — Clock In/Out
 - [ ] Clock-in button on web UI (requires active shift assignment)
@@ -180,7 +180,7 @@ This document breaks every feature into atomic units and organizes them into imp
 
 ---
 
-## Phase 7.5: MVP+ (Deferred from Phase 1)
+## Phase 7.5: MVP+ (Deferred Items)
 
 The following are deferred from Foundation/Phase 1 to reduce MVP scope. See `docs/04-mvp-plan.md` for the full deferral rationale.
 

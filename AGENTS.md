@@ -2,7 +2,7 @@
 
 ## Project state
 
-Greenfield design/spec project. Nothing implemented. All `.md` (requirements, specs, compliance), one `.sql` schema, one `prototype.html`.
+Greenfield design/spec project. Nothing implemented. All `.md` (requirements, specs, compliance) and one `.sql` schema.
 
 ## Directory structure
 
@@ -13,7 +13,7 @@ Greenfield design/spec project. Nothing implemented. All `.md` (requirements, sp
 | `db/` | Data model, full SQL schema (`02-schema.sql`), RRULE storage strategy |
 | `compliance/` | GDPR, CCPA, SOC2, HIPAA, security, data residency, incident response, Australia |
 | `docs/adr/` | Architecture Decision Records |
-| `prototype.html` | Single-file HTML/CSS prototype (Tailwind CSS via CDN) |
+
 
 ## Architecture decisions (honor these when implementing)
 

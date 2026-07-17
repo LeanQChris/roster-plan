@@ -10,7 +10,6 @@
 --   - team_memberships (single team per person in MVP)
 --   - shift_swap_requests (no swap workflow in MVP)
 --   - time_off_requests (deferred)
---   - clock_entries (MVP — basic clock in/out, no break tracking)
 --   - integrations (deferred)
 --   - compliance_violations (deferred)
 --   - region_routing (Phase D)
