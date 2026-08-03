@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roster — Flow Charts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090b;
+      --surface: #18181b;
+      --surface-hover: #1e1e22;
+      --border: #27272a;
+      --border-hover: #3f3f46;
+      --text: #fafafa;
+      --text-secondary: #a1a1aa;
+      --accent: #6366f1;
+      --accent-glow: rgba(99,102,241,0.15);
+      --gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+      --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      padding: 5rem 2rem 4rem;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.02em;
+    }
+    .hero-badge span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+    .hero h1 .gradient {
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 1.0625rem;
+      color: var(--text-secondary);
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ── Stats ── */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      margin-top: 2.5rem;
+      flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 0.125rem;
+    }
+
+    /* ── Search ── */
+    .search-wrap {
+      max-width: 480px;
+      margin: 2rem auto 0;
+      position: relative;
+    }
+    .search-wrap svg {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      padding: 0.75rem 1rem 0.75rem 2.75rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input::placeholder { color: var(--text-secondary); }
+    .search-input:focus { border-color: var(--accent); }
+    .search-clear {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1rem;
+      display: none;
+      padding: 0.25rem;
+    }
+    .search-clear.visible { display: block; }
+    .no-results {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      display: none;
+    }
+    .no-results.visible { display: block; }
+
+    /* ── Nav ── */
+    .nav-wrapper {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(9,9,11,0.8);
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+      border-bottom: 1px solid var(--border);
+    }
+    nav {
+      display: flex;
+      gap: 0.25rem;
+      padding: 0.75rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    nav::-webkit-scrollbar { display: none; }
+    nav a {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    nav a:hover { color: var(--text); background: var(--surface); }
+    nav a.active {
+      color: var(--text);
+      background: var(--accent-glow);
+      box-shadow: inset 0 0 0 1px rgba(99,102,241,0.3);
+    }
+
+    /* ── Main ── */
+    main {
+      padding: 3rem 2rem 6rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ── Section ── */
+    section { margin-bottom: 2.5rem; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      user-select: none;
+      padding: 0.5rem 0;
+    }
+    .section-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .section-header h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      flex: 1;
+    }
+    .section-header .count {
+      font-size: 0.6875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+    }
+    .section-chevron {
+      color: var(--text-secondary);
+      transition: transform 0.2s;
+      font-size: 0.875rem;
+    }
+    section.collapsed .section-chevron { transform: rotate(-90deg); }
+    .section-desc {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.25rem;
+      padding-left: calc(36px + 0.75rem);
+      line-height: 1.5;
+    }
+    section.collapsed .section-desc,
+    section.collapsed .grid,
+    section.collapsed .overview-card { display: none; }
+
+    /* ── Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      position: relative;
+    }
+    .card.hidden { display: none; }
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius);
+      opacity: 0;
+      transition: opacity 0.3s;
+      box-shadow: 0 0 0 1px var(--accent), 0 8px 32px rgba(99,102,241,0.12);
+      pointer-events: none;
+    }
+    .card:hover { transform: translateY(-2px); border-color: transparent; }
+    .card:hover::after { opacity: 1; }
+    .card-img-wrap {
+      position: relative;
+      background: #000;
+      aspect-ratio: 16/10;
+      overflow: hidden;
+    }
+    .card-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .card:hover .card-img-wrap img { transform: scale(1.03); }
+    .card-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+    .card:hover .card-overlay { opacity: 1; }
+    .card-overlay svg { width: 32px; height: 32px; color: #fff; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4)); }
+    .card-body {
+      padding: 0.875rem 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.375rem;
+    }
+    .card-title { font-size: 0.8125rem; font-weight: 500; color: var(--text); }
+    .card-step {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    .card-desc { font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; }
+    .card-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.625rem;
+      padding-top: 0.625rem;
+      border-top: 1px solid var(--border);
+    }
+    .card-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.375rem;
+      padding: 0.4rem 0;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.6875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .card-btn:hover { color: var(--text); border-color: var(--accent); background: var(--accent-glow); }
+    .card-btn svg { width: 12px; height: 12px; }
+
+    /* ── Overview ── */
+    .overview-card { max-width: 900px; margin: 0 auto; }
+    .overview-card .card-img-wrap { aspect-ratio: 16/9; }
+
+    /* ── Lightbox ── */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .lightbox.active { display: flex; animation: fadeIn 0.2s; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .lightbox-inner {
+      position: relative;
+      max-width: 94vw;
+      max-height: 94vh;
+    }
+    .lightbox-inner img {
+      max-width: 100%;
+      max-height: 88vh;
+      border-radius: 12px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    }
+    .lightbox-close {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s;
+      backdrop-filter: blur(8px);
+    }
+    .lightbox-close:hover { background: rgba(255,255,255,0.18); }
+    .lightbox-nav {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s;
+      backdrop-filter: blur(8px);
+      z-index: 210;
+    }
+    .lightbox-nav:hover { background: rgba(255,255,255,0.18); }
+    .lightbox-nav.prev { left: 1.5rem; }
+    .lightbox-nav.next { right: 1.5rem; }
+    .lightbox-nav svg { width: 20px; height: 20px; }
+    .lightbox-bottom {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      z-index: 210;
+    }
+    .lightbox-caption {
+      background: rgba(24,24,27,0.92);
+      border: 1px solid var(--border);
+      padding: 0.5rem 1.25rem;
+      border-radius: 10px;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      backdrop-filter: blur(8px);
+      max-width: 600px;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .lightbox-caption strong { color: var(--text); }
+    .lightbox-counter {
+      font-size: 0.6875rem;
+      color: var(--text-secondary);
+      background: rgba(24,24,27,0.8);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+    }
+
+    @media (max-width: 640px) {
+      .hero { padding: 3rem 1.5rem 2.5rem; }
+      .stats { gap: 1.5rem; }
+      main { padding: 2rem 1rem 4rem; }
+      .grid { grid-template-columns: 1fr; }
+      nav { padding: 0.75rem 1rem; }
+      .lightbox-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge"><span></span> Design Reference</div>
+    <h1><span class="gradient">Roster</span> User Flows</h1>
+    <p>Screen-by-screen wireframes and interaction flows for every role in the platform.</p>
+    <div class="stats">
+      <div class="stat"><div class="stat-value">4</div><div class="stat-label">Roles</div></div>
+      <div class="stat"><div class="stat-value">23</div><div class="stat-label">Screens</div></div>
+      <div class="stat"><div class="stat-value">24</div><div class="stat-label">Flow Charts</div></div>
+    </div>
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="search-input" id="search" placeholder="Search screens..." autocomplete="off">
+      <button class="search-clear" id="searchClear">&times;</button>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav-wrapper">
+    <nav id="nav">
+      <a href="#overview" class="active">Overview</a>
+      <a href="#super-admin">Super Admin</a>
+      <a href="#company-admin">Company Admin</a>
+      <a href="#managers">Manager</a>
+      <a href="#employee">Employee</a>
+    </nav>
+  </div>
+
+  <!-- Main -->
+  <main>
+    <div class="no-results" id="noResults">No screens match your search.</div>
+
+    <!-- Overview -->
+    <section id="overview" data-section="overview">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="section-icon" style="background:var(--accent-glow);color:var(--accent);">&#9672;</div>
+        <h2>Platform Overview</h2>
+        <span class="section-chevron">&#9662;</span>
+      </div>
+      <p class="section-desc">End-to-end user journey across all four roles — Super Admin, Company Admin, Manager, and Employee.</p>
+      <div class="grid">
+        <div class="card overview-card" onclick="openLightbox(this)" data-title="Full Platform Flow" data-desc="End-to-end user journey across all four roles — Super Admin, Company Admin, Manager, and Employee. Shows how each role navigates from login through their core tasks to logout.">
+          <div class="card-img-wrap">
+            <img src="images/flow.png" alt="Platform flow overview" loading="lazy">
+            <div class="card-overlay">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-top">
+              <span class="card-title">Full Platform Flow</span>
+            </div>
+            <p class="card-desc">End-to-end user journey across all four roles — Super Admin, Company Admin, Manager, and Employee. Shows how each role navigates from login through their core tasks to logout.</p>
+            <div class="card-actions">
+              <button class="card-btn" onclick="event.stopPropagation(); openLightbox(this.closest('.card'))">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                View
+              </button>
+              <button class="card-btn" onclick="event.stopPropagation(); downloadImage(this.closest('.card'))">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Super Admin -->
+    <section id="super-admin" data-section="super-admin">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="section-icon" style="background:rgba(168,85,247,0.12);color:#a855f7;">&#9878;</div>
+        <h2>Super Admin</h2>
+        <span class="count">3 screens</span>
+        <span class="section-chevron">&#9662;</span>
+      </div>
+      <p class="section-desc">Platform-level administrator. Manages all companies, monitors audit logs, and controls global access.</p>
+      <div class="grid" id="super-admin-grid"></div>
+    </section>
+
+    <!-- Company Admin -->
+    <section id="company-admin" data-section="company-admin">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="section-icon" style="background:rgba(239,68,68,0.12);color:#ef4444;">&#9881;</div>
+        <h2>Company Admin</h2>
+        <span class="count">9 screens</span>
+        <span class="section-chevron">&#9662;</span>
+      </div>
+      <p class="section-desc">Company-level administrator. Manages teams, people, shift templates, scheduling, publishing, and compliance.</p>
+      <div class="grid" id="company-admin-grid"></div>
+    </section>
+
+    <!-- Manager -->
+    <section id="managers" data-section="managers">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="section-icon" style="background:rgba(34,197,94,0.12);color:#22c55e;">&#9733;</div>
+        <h2>Manager</h2>
+        <span class="count">5 screens</span>
+        <span class="section-chevron">&#9662;</span>
+      </div>
+      <p class="section-desc">Team-level manager. Views assigned teams, manages members, templates, scheduling, and shift assignments.</p>
+      <div class="grid" id="managers-grid"></div>
+    </section>
+
+    <!-- Employee -->
+    <section id="employee" data-section="employee">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="section-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">&#9998;</div>
+        <h2>Employee</h2>
+        <span class="count">6 screens</span>
+        <span class="section-chevron">&#9662;</span>
+      </div>
+      <p class="section-desc">Individual contributor. Views schedule, clocks in/out, manages profile, and receives notifications.</p>
+      <div class="grid" id="employee-grid"></div>
+    </section>
+  </main>
+
+  <footer>Roster &mdash; Internal Design Reference</footer>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+    <button class="lightbox-nav prev" onclick="navLightbox(-1)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="lightbox-nav next" onclick="navLightbox(1)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <div class="lightbox-inner">
+      <img id="lightbox-img" src="" alt="">
+    </div>
+    <div class="lightbox-bottom">
+      <div class="lightbox-caption" id="lightbox-caption"></div>
+      <div class="lightbox-counter" id="lightbox-counter"></div>
+    </div>
+  </div>
+
+  <script>
+    // ── Data ──
+    const sections = {
+      'company-admin': [
+        ['01-company-setting.png', 'Company Setting', 'View and edit company-wide settings including timezone, branding, and locale. Changes are validated and logged to the audit trail.'],
+        ['02-team-management.png', 'Team Management', 'Create, edit, or delete teams. Assign managers and reassign members before deletion. All changes are audit-logged.'],
+        ['03-people-management.png', 'People Management', 'Invite new employees by email, assign roles and teams, view profiles, and resend invitations. Supports full people lifecycle.'],
+        ['04-shift-template-management.png', 'Shift Templates', 'Create reusable shift templates with title, time, duration, staff count, and RRULE recurrence. Edit, preview, or delete templates.'],
+        ['05-schedule-management.png', 'Schedule Management', 'View, create, edit, and delete individual shifts. Select dates, set times, and assign shifts to specific teams.'],
+        ['06-publish-schedule.png', 'Publish Schedule', 'Choose a date range, expand active templates into concrete shift instances, resolve conflicts, then publish and notify employees.'],
+        ['07-shift-assignment.png', 'Shift Assignment', 'Assign employees to published shifts. Detects scheduling conflicts and allows force-assign with override. Sends notification on assign.'],
+        ['08-time-tracking.png', 'Time Tracking', 'View clock-in/clock-out entries for any employee. Filter by date range and review worked hours.'],
+        ['09-compliance.png', 'Compliance', 'Manage HIPAA mode, data retention policies, and GDPR right-to-erasure requests. Anonymizes personal data while preserving audit records.'],
+      ],
+      managers: [
+        ['01-team-overview.png', 'Team Overview', 'Dashboard showing all teams assigned to the manager. Select a team to access members, templates, schedule, and audit logs.'],
+        ['02-invite-employe.png', 'Invite Employee', 'Invite new employees by entering their email, selecting a role, and assigning them to a team. Validates inputs before sending.'],
+        ['03-template-management.png', 'Template Management', 'Create, edit, or delete shift templates. Fill in details, save, and audit all template changes.'],
+        ['04-scheduling.png', 'Scheduling', 'Select a week and manage shifts — create, edit, delete, or publish. Publishing expands templates and notifies assigned employees.'],
+        ['05-shift-assignment.png', 'Shift Assignment', 'Assign employees to shifts with conflict detection. Option to override conflicts. Sends notification and logs to audit on save.'],
+      ],
+      employee: [
+        ['01-invitation.png', 'Invitation', 'Employee receives an email invite, accepts it, creates a password, and activates their account to reach the dashboard.'],
+        ['02-dashboard.png', 'Dashboard', 'Home screen with quick access to schedule, notifications, profile, and clock-in. Central hub for all employee actions.'],
+        ['03-schedule.png', 'Schedule', 'Select a week to view assigned shifts. Tap any shift to see full details like time, team, and location.'],
+        ['04-clockin-clockout.png', 'Clock In / Clock Out', 'Clock in when a shift is assigned. Record start time, work, then clock out with optional notes. Duration is calculated automatically.'],
+        ['05-profile.png', 'Profile', 'View and edit personal profile — update timezone and phone number. Changes are saved immediately.'],
+        ['06-notificaitons.png', 'Notifications', 'View notifications, open and read them, mark individual or all as read. Keeps employees informed of shift changes.'],
+      ],
+      'super-admin': [
+        ['01-authentication.png', 'Authentication', 'Super admin logs in with standard credentials. System detects the role and loads the admin-specific dashboard.'],
+        ['02-company-management.png', 'Company Management', 'List all companies, view details, and take actions — suspend (terminates sessions), activate (restores access), or soft-delete.'],
+        ['03-platform-audit.png', 'Platform Audit', 'Browse the platform-wide audit log. Filter by actor, company, date, or action type. Expand entries for full details.'],
+      ],
+    };
+
+    const svgExpand = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+    const svgDownload = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+
+    // ── Build cards ──
+    Object.entries(sections).forEach(([key, images]) => {
+      const grid = document.getElementById(`${key}-grid`);
+      images.forEach(([file, label, desc], i) => {
+        grid.innerHTML += `
+          <div class="card" onclick="openLightbox(this)" data-title="${label}" data-desc="${desc}">
+            <div class="card-img-wrap">
+              <img src="images/${key}/${file}" alt="${label}" loading="lazy">
+              <div class="card-overlay">${svgExpand}</div>
+            </div>
+            <div class="card-body">
+              <div class="card-top">
+                <span class="card-title">${label}</span>
+                <span class="card-step">Step ${i + 1}</span>
+              </div>
+              <p class="card-desc">${desc}</p>
+              <div class="card-actions">
+                <button class="card-btn" onclick="event.stopPropagation(); openLightbox(this.closest('.card'))">${svgExpand} View</button>
+                <button class="card-btn" onclick="event.stopPropagation(); downloadImage(this.closest('.card'))">${svgDownload} Download</button>
+              </div>
+            </div>
+          </div>`;
+      });
+    });
+
+    // ── All visible cards (for lightbox navigation) ──
+    function getVisibleCards() {
+      return [...document.querySelectorAll('.card:not(.hidden)')];
+    }
+
+    // ── Lightbox ──
+    let currentIndex = 0;
+
+    function openLightbox(card) {
+      const cards = getVisibleCards();
+      currentIndex = cards.indexOf(card);
+      updateLightbox();
+      document.getElementById('lightbox').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function updateLightbox() {
+      const cards = getVisibleCards();
+      if (!cards.length) return;
+      const card = cards[currentIndex];
+      const img = card.querySelector('.card-img-wrap img');
+      const title = card.dataset.title || '';
+      const desc = card.dataset.desc || '';
+      document.getElementById('lightbox-img').src = img.src;
+      document.getElementById('lightbox-caption').innerHTML = `<strong>${title}</strong>${desc ? ' — ' + desc : ''}`;
+      document.getElementById('lightbox-counter').textContent = `${currentIndex + 1} of ${cards.length}`;
+    }
+
+    function navLightbox(dir) {
+      const cards = getVisibleCards();
+      currentIndex = (currentIndex + dir + cards.length) % cards.length;
+      updateLightbox();
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', e => {
+      if (!document.getElementById('lightbox').classList.contains('active')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') navLightbox(-1);
+      if (e.key === 'ArrowRight') navLightbox(1);
+    });
+
+    // ── Download ──
+    function downloadImage(card) {
+      const img = card.querySelector('.card-img-wrap img');
+      const a = document.createElement('a');
+      a.href = img.src;
+      a.download = img.src.split('/').pop();
+      a.click();
+    }
+
+    // ── Search ──
+    const searchInput = document.getElementById('search');
+    const searchClear = document.getElementById('searchClear');
+    const noResults = document.getElementById('noResults');
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.toLowerCase().trim();
+      searchClear.classList.toggle('visible', q.length > 0);
+      let totalVisible = 0;
+
+      document.querySelectorAll('.card').forEach(card => {
+        const title = (card.dataset.title || '').toLowerCase();
+        const desc = (card.dataset.desc || '').toLowerCase();
+        const match = !q || title.includes(q) || desc.includes(q);
+        card.classList.toggle('hidden', !match);
+        if (match) totalVisible++;
+      });
+
+      noResults.classList.toggle('visible', totalVisible === 0 && q.length > 0);
+    });
+
+    searchClear.addEventListener('click', () => {
+      searchInput.value = '';
+      searchClear.classList.remove('visible');
+      searchInput.dispatchEvent(new Event('input'));
+      searchInput.focus();
+    });
+
+    // ── Section collapse ──
+    function toggleSection(header) {
+      header.closest('section').classList.toggle('collapsed');
+    }
+
+    // ── Active nav on scroll ──
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+          document.querySelector(`nav a[href="#${e.target.id}"]`)?.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-40% 0px -55% 0px' });
+    document.querySelectorAll('section').forEach(s => observer.observe(s));
+  </script>
+</body>
+</html>
