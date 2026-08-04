@@ -390,7 +390,7 @@
     }
     .lightbox-inner img {
       max-width: 100%;
-      max-height: 88vh;
+      max-height: calc(100vh - 12rem);
       border-radius: 12px;
       box-shadow: 0 24px 80px rgba(0,0,0,0.6);
     }
@@ -714,7 +714,7 @@
       const title = card.dataset.title || '';
       const desc = card.dataset.desc || '';
       document.getElementById('lightbox-img').src = img.src;
-      document.getElementById('lightbox-caption').innerHTML = `<strong>${title}</strong>${desc ? ' — ' + desc : ''}`;
+      document.getElementById('lightbox-caption').innerHTML = `<strong>${title}</strong>`;
       document.getElementById('lightbox-counter').textContent = `${currentIndex + 1} of ${cards.length}`;
     }
 
