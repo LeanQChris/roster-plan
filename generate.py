@@ -215,7 +215,7 @@ inconsistencies = r"""<div class="status-warning">
 pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <h2>What Is This?</h2>
 <p>A multi-tenant, web-based roster application for globally distributed teams to manage employee scheduling across time zones. Each company operates as an isolated tenant with their own teams, people, schedules, and shift rules.</p>
-<p>This is a <strong>greenfield design and specification project</strong> — nothing is implemented yet. All files are requirements documents, specifications, compliance research, one SQL schema, and HTML wireframes.</p>
+<p>This is a <strong>greenfield design and specification project</strong> — nothing is implemented yet. All files are requirements documents, specifications, compliance research, and one SQL schema.</p>
 <h2>Architecture Ground Truths</h2>
 <table>
 <thead><tr><th>Decision</th><th>Detail</th></tr></thead>
@@ -265,7 +265,6 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <thead><tr><th>Directory</th><th>Contents</th></tr></thead>
 <tbody>
 <tr><td>/ (root)</td><td>AGENTS.md (architecture ground truths), roster-story.html (MVP walkthrough), DEVELOPMENT.md (local setup guide)</td></tr>
-<tr><td>wireframes/</td><td>wireframes.html and per-role wireframes (low-fidelity block-frame diagrams)</td></tr>
 <tr><td>docs/</td><td>PRD, feature breakdown, UX stories, MVP plan</td></tr>
 <tr><td>db/</td><td>Data model doc, full SQL schema (30 tables), RRULE storage strategy</td></tr>
 <tr><td>spec/</td><td>API spec, RBAC matrix, calendar export, pagination, webhooks, session management, architecture, email templates, audit events, testing strategy</td></tr>
@@ -275,63 +274,11 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 <h2>MVP Story Walkthrough</h2>
 <p>The complete start-to-finish narrative walkthrough of the Roster MVP is available as an interactive HTML document. It follows four characters through 10 acts covering the entire MVP flow.</p>
 <p><a href="roster-story.html" target="_blank" style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:.875rem" onmouseover="this.style.background=\'#333\'" onmouseout="this.style.background=\'#000\'"><i class="fas fa-eye"></i> Open MVP Story Walkthrough</a></p>
-<h2>Wireframes</h2>
-<p>The full set of wireframe mockups is available in the dedicated <a href="#wireframes">Wireframes page</a> — a comprehensive layout reference covering all 14 MVP screens and all post-MVP screens, rendered as low-fidelity block-frame diagrams.</p>
-"""
-
-# Wireframes overview page
-pages['wireframes'] = r"""<h1>Wireframes Overview</h1>
-<p>Full set of UI wireframes for the Roster application, organized by role. Each screen is represented as a labeled panel with placeholder layout blocks — not pixel-perfect, but sufficient to validate flow and layout before implementation.</p>
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;margin:1.5rem 0">
-  <a href="#wf-auth" class="wf p-4 text-center text-decoration-none" style="cursor:pointer;display:block;border:2px dashed #9ca3af;border-radius:12px;background:#fff;padding:1.5rem;transition:border-color .15s" onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='#9ca3af'">
-    <div style="font-size:1.5rem;margin-bottom:.5rem">🔐</div>
-    <div style="font-weight:700;color:#1f2937;font-size:.9375rem">Auth / Public</div>
-    <div style="font-size:.75rem;color:#6b7280;margin-top:.25rem">7 screens</div>
-    <div style="margin-top:.5rem"><span class="mvp-scope-badge in-mvp">MVP</span></div>
-  </a>
-  <a href="#wf-employee" class="wf p-4 text-center text-decoration-none" style="cursor:pointer;display:block;border:2px dashed #9ca3af;border-radius:12px;background:#fff;padding:1.5rem;transition:border-color .15s" onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='#9ca3af'">
-    <div style="font-size:1.5rem;margin-bottom:.5rem">👤</div>
-    <div style="font-weight:700;color:#1f2937;font-size:.9375rem">Employee</div>
-    <div style="font-size:.75rem;color:#6b7280;margin-top:.25rem">12 screens</div>
-    <div style="margin-top:.5rem"><span class="mvp-scope-badge in-mvp">MVP</span></div>
-  </a>
-  <a href="#wf-manager" class="wf p-4 text-center text-decoration-none" style="cursor:pointer;display:block;border:2px dashed #9ca3af;border-radius:12px;background:#fff;padding:1.5rem;transition:border-color .15s" onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='#9ca3af'">
-    <div style="font-size:1.5rem;margin-bottom:.5rem">📋</div>
-    <div style="font-weight:700;color:#1f2937;font-size:.9375rem">Manager</div>
-    <div style="font-size:.75rem;color:#6b7280;margin-top:.25rem">14 screens</div>
-    <div style="margin-top:.5rem"><span class="mvp-scope-badge in-mvp">MVP</span></div>
-  </a>
-  <a href="#wf-company-admin" class="wf p-4 text-center text-decoration-none" style="cursor:pointer;display:block;border:2px dashed #9ca3af;border-radius:12px;background:#fff;padding:1.5rem;transition:border-color .15s" onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='#9ca3af'">
-    <div style="font-size:1.5rem;margin-bottom:.5rem">⚙️</div>
-    <div style="font-weight:700;color:#1f2937;font-size:.9375rem">Company Admin</div>
-    <div style="font-size:.75rem;color:#6b7280;margin-top:.25rem">15 screens</div>
-    <div style="margin-top:.5rem"><span class="mvp-scope-badge in-mvp">MVP</span></div>
-  </a>
-  <a href="#wf-super-admin" class="wf p-4 text-center text-decoration-none" style="cursor:pointer;display:block;border:2px dashed #9ca3af;border-radius:12px;background:#fff;padding:1.5rem;transition:border-color .15s" onmouseover="this.style.borderColor='#000'" onmouseout="this.style.borderColor='#9ca3af'">
-    <div style="font-size:1.5rem;margin-bottom:.5rem">🛡️</div>
-    <div style="font-weight:700;color:#1f2937;font-size:.9375rem">Super Admin</div>
-    <div style="font-size:.75rem;color:#6b7280;margin-top:.25rem">4 screens</div>
-    <div style="margin-top:.5rem"><span class="mvp-scope-badge in-mvp">MVP</span></div>
-  </a>
-</div>
-"""
-
-# Role-specific wireframe pages
-for wf_id, wf_label, wf_file in [
-    ('wf-auth', 'Auth / Public', 'wireframes/wireframes-auth.html'),
-    ('wf-employee', 'Employee', 'wireframes/wireframes-employee.html'),
-    ('wf-manager', 'Manager', 'wireframes/wireframes-manager.html'),
-    ('wf-company-admin', 'Company Admin', 'wireframes/wireframes-company-admin.html'),
-    ('wf-super-admin', 'Super Admin', 'wireframes/wireframes-super-admin.html'),
-]:
-    pages[wf_id] = f"""<h1>Wireframes — {wf_label}</h1>
-<p>Low-fidelity block-frame diagrams for all {wf_label.lower()} screens.</p>
-<iframe src="{wf_file}" style="width:100%;height:calc(100vh - 200px);border:1px solid #ddd;border-radius:8px;margin:1rem 0" title="{wf_label} Wireframes"></iframe>
 """
 
 # MVP Story page
-pages['mvp-story'] = r"""<h1>MVP Story — Walkthrough with Wireframes</h1>
-<p>A complete start-to-finish narrative walkthrough of the Roster MVP, told through the eyes of four characters: Alex (Super Admin), Sarah (Company Admin), James (Manager), and Maya (Employee). Each act includes embedded wireframe mockups showing exactly what each user sees.</p>
+pages['mvp-story'] = r"""<h1>MVP Story — Walkthrough</h1>
+<p>A complete start-to-finish narrative walkthrough of the Roster MVP, told through the eyes of four characters: Alex (Super Admin), Sarah (Company Admin), James (Manager), and Maya (Employee). Each act includes embedded mockups showing exactly what each user sees.</p>
 <p>Also covers the full post-MVP roadmap across Phases A–D (self-scheduling, break tracking, reports, enterprise features).</p>
 <p><a href="roster-story.html" target="_blank" style="display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:#000;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:.875rem" onmouseover="this.style.background=\'#333\'" onmouseout="this.style.background=\'#000\'"><i class="fas fa-eye"></i> Open MVP Story</a></p>
 <iframe src="roster-story.html" style="width:100%;height:calc(100vh - 200px);border:1px solid #ddd;border-radius:8px;margin:1rem 0" title="MVP Story"></iframe>
@@ -792,7 +739,6 @@ const NAV = [
   {label:'API Reference',icon:'fa-plug',pages:[{id:'api-spec',label:'API Specification'},{id:'api-pagination',label:'Pagination'},{id:'api-webhooks',label:'Webhooks'},{id:'spec-calendar',label:'Calendar Export'}]},
   {label:'Security & RBAC',icon:'fa-lock',pages:[{id:'rbac-matrix',label:'Permissions Matrix'},{id:'rbac-super-admin',label:'Role: super_admin',mvp:true},{id:'rbac-company-admin',label:'Role: company_admin',mvp:true},{id:'rbac-manager',label:'Role: manager',mvp:true},{id:'rbac-employee',label:'Role: employee',mvp:true},{id:'rbac-viewer',label:'Role: viewer',mvp:false}]},
   {label:'Operations',icon:'fa-gear',pages:[{id:'spec-testing',label:'Testing Strategy'},{id:'spec-email',label:'Email Templates'},{id:'spec-audit',label:'Audit Events'},{id:'dev-guide',label:'Development Guide'}]},
-  {label:'Design',icon:'fa-pencil-ruler',pages:[{id:'wireframes',label:'Wireframes Overview'},{id:'wf-auth',label:'Auth / Public',mvp:true},{id:'wf-employee',label:'Employee',mvp:true},{id:'wf-manager',label:'Manager',mvp:true},{id:'wf-company-admin',label:'Company Admin',mvp:true},{id:'wf-super-admin',label:'Super Admin',mvp:true}]},
   {label:'Compliance',icon:'fa-shield',pages:[{id:'compliance-gdpr',label:'GDPR'},{id:'compliance-ccpa',label:'CCPA / CPRA'},{id:'compliance-soc2',label:'SOC 2'},{id:'compliance-hipaa',label:'HIPAA'},{id:'compliance-security',label:'Security'},{id:'compliance-residency',label:'Data Residency'},{id:'compliance-incident',label:'Incident Response'},{id:'compliance-australia',label:'Australia (APPs)'}]}
 ];
 
