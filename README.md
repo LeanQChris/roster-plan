@@ -58,6 +58,5 @@ Estimated effort: **~38.5 days / 8 weeks** (19 backend, 19.5 frontend).
 ├── spec/          API spec, RBAC, pagination, sessions, architecture
 ├── db/            Data model, SQL schema, RRULE strategy
 ├── compliance/    GDPR, CCPA, SOC2, HIPAA, security, IR plan
-├── docs/adr/      Architecture Decision Records
-└── er/            DBML diagram
+└── docs/adr/      Architecture Decision Records
 ```
