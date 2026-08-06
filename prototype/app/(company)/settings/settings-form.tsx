@@ -21,8 +21,6 @@ import {
   ClockIcon,
   PaletteIcon,
   SaveIcon,
-  SettingsIcon,
-  UsersIcon,
 } from "@/components/admin/icons";
 
 const inputClass =

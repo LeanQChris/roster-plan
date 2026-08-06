@@ -164,6 +164,20 @@ export const TrashIcon = ({ ...p }: IconProps) => (
   </svg>
 );
 
+export const PencilIcon = ({ ...p }: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M21.17 2.83a2.83 2.83 0 0 0-4 0L3.93 16.07a2 2 0 0 0-.5.83l-1.32 4.24a.5.5 0 0 0 .63.63l4.24-1.32a2 2 0 0 0 .83-.5L21.17 6.83a2.83 2.83 0 0 0 0-4Z" />
+    <path d="m15 5 4 4" />
+  </svg>
+);
+
+export const MailIcon = ({ ...p }: IconProps) => (
+  <svg {...base} {...p}>
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+  </svg>
+);
+
 export const PauseIcon = ({ ...p }: IconProps) => (
   <svg {...base} {...p}>
     <rect x="6" y="4" width="4" height="16" rx="1" />

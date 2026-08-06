@@ -16,8 +16,8 @@ import {
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: ActivityIcon, soon: false },
-  { href: "/teams", label: "Teams", icon: ListIcon, soon: true },
-  { href: "/people", label: "People", icon: UsersIcon, soon: true },
+  { href: "/teams", label: "Teams", icon: ListIcon, soon: false },
+  { href: "/people", label: "People", icon: UsersIcon, soon: false },
   { href: "/settings", label: "Settings", icon: SettingsIcon, soon: false },
 ];
 

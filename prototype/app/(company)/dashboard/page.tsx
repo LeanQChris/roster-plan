@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { readCompanySetup } from "@/lib/company";
+import { useCompany } from "@/lib/company-data";
 import StatCard from "@/components/admin/StatCard";
 import {
   ArrowRightIcon,
@@ -12,12 +13,13 @@ import {
   CheckIcon,
   ClockIcon,
   ListIcon,
+  PlusIcon,
   SettingsIcon,
   UsersIcon,
 } from "@/components/admin/icons";
 
 const QUICK_LINKS = [
-  { label: "Team People", hint: "Invite and manage staff", icon: UsersIcon, soon: true },
+  { label: "Team People", hint: "Invite and manage staff", icon: UsersIcon, href: "/people", soon: false },
   { label: "Shift Templates", hint: "Reusable shifts with repeat rules", icon: ClockIcon, soon: true },
   { label: "Schedule", hint: "Plan and publish the week", icon: CalendarIcon, soon: true },
   { label: "Company Settings", hint: "Timezone, branding, defaults", icon: SettingsIcon, href: "/settings", soon: false },
@@ -32,14 +34,16 @@ function weekPhase(): string {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { teams, people } = useCompany();
   const [setup] = useState(() => readCompanySetup());
 
   if (!user) return null;
 
   const company = setup?.company ?? user.company ?? "Your company";
-  const team = setup?.team ?? "General";
   const timezone = setup?.timezone ?? "—";
   const firstName = user.name.split(/\s+/)[0] ?? user.name;
+  const activeMembers = people.filter((p) => p.status === "active").length;
+  const pendingInvites = people.filter((p) => p.status === "invited").length;
 
   return (
     <div>
@@ -62,41 +66,43 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-primary/25 bg-primary-weak px-4 py-3.5">
-        <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-white">
-          <UsersIcon className="size-3.5" />
-        </span>
-        <div className="flex flex-1 items-center justify-between gap-3">
-          <div>
-            <p className="text-[13px] font-medium text-ink">
-              Your team is ready to grow
-            </p>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              {team} has no members yet — invite people to get scheduling.
-            </p>
+      {people.length === 0 && (
+        <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-primary/25 bg-primary-weak px-4 py-3.5">
+          <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-white">
+            <UsersIcon className="size-3.5" />
+          </span>
+          <div className="flex flex-1 items-center justify-between gap-3">
+            <div>
+              <p className="text-[13px] font-medium text-ink">
+                Your team is ready to grow
+              </p>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Invite people by email — they&apos;ll accept and start scheduling.
+              </p>
+            </div>
+            <Link
+              href="/people"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+            >
+              Invite team
+              <ArrowRightIcon className="size-3.5" />
+            </Link>
           </div>
-          <Link
-            href=""
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
-          >
-            Invite team
-            <ArrowRightIcon className="size-3.5" />
-          </Link>
         </div>
-      </div>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label="Members"
-          value="0"
+          value={people.length}
           icon={<UsersIcon className="size-4" />}
-          sub="invite people to get started"
+          sub={activeMembers === 0 && people.length === 0 ? "invite people to get started" : `${activeMembers} active · ${pendingInvites} pending`}
         />
         <StatCard
           label="Teams"
-          value="1"
+          value={teams.length}
           icon={<ListIcon className="size-4" />}
-          sub={team}
+          sub={teams.length > 0 ? teams.map((t) => t.name).join(", ") : "create your first team"}
         />
         <StatCard
           label="Shifts published"
@@ -158,40 +164,51 @@ export default function DashboardPage() {
             <BuildingIcon className="size-4 text-ink-subtle" />
           </div>
 
-          <div className="mt-4 rounded-lg border border-hairline bg-surface-1 p-4">
-            <p className="text-sm font-semibold text-ink">{team}</p>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              0 members · invite people to get started
+          {teams.length === 0 ? (
+            <p className="mt-4 text-xs text-ink-muted">
+              No teams yet — create your first team to group people.
             </p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <Link
-                href="/people"
-                className="rounded-md border border-hairline bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-ink-muted transition-colors hover:text-ink"
-              >
-                People
-              </Link>
-              <Link
-                href="/schedule"
-                className="rounded-md border border-hairline bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-ink-muted transition-colors hover:text-ink"
-              >
-                Schedule
-              </Link>
-              <Link
-                href="/templates"
-                className="rounded-md border border-hairline bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-ink-muted transition-colors hover:text-ink"
-              >
-                Templates
-              </Link>
+          ) : (
+            <div className="mt-4 space-y-2">
+              {teams.slice(0, 3).map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-surface-1 p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-semibold text-ink">
+                      {t.name}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-ink-muted">
+                      {people.filter((p) => p.teamId === t.id).length} members
+                    </p>
+                  </div>
+                  <Link
+                    href="/people"
+                    className="shrink-0 rounded-md border border-hairline bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-ink-muted transition-colors hover:text-ink"
+                  >
+                    People
+                  </Link>
+                </div>
+              ))}
+              {teams.length > 3 && (
+                <p className="pt-1 text-[11px] text-ink-subtle">
+                  +{teams.length - 3} more in{" "}
+                  <Link href="/teams" className="text-primary hover:text-primary-hover">
+                    Teams
+                  </Link>
+                </p>
+              )}
             </div>
-          </div>
+          )}
 
-          <button
-            type="button"
+          <Link
+            href="/teams"
             className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-hairline py-2 text-xs font-medium text-ink-subtle transition-colors hover:border-primary/40 hover:text-ink-muted"
           >
-            <UsersIcon className="size-3.5" />
+            <PlusIcon className="size-3.5" />
             Add team
-          </button>
+          </Link>
         </div>
       </div>
 

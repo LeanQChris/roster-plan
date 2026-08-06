@@ -13,6 +13,7 @@ interface ModalProps {
   onConfirm: () => void;
   onClose: () => void;
   children?: ReactNode;
+  hideFooter?: boolean;
 }
 
 export default function Modal({
@@ -24,6 +25,7 @@ export default function Modal({
   onConfirm,
   onClose,
   children,
+  hideFooter = false,
 }: ModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -74,26 +76,32 @@ export default function Modal({
           </button>
         </div>
 
-        {children}
+        {hideFooter ? (
+          children
+        ) : (
+          <>
+            {children}
 
-        <div className="mt-6 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="h-8 rounded-lg border border-hairline bg-surface-3 px-3.5 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className={`h-8 rounded-lg px-3.5 text-[13px] font-medium text-white transition-colors ${
-              danger
-                ? "bg-danger hover:bg-danger-hover"
-                : "bg-primary hover:bg-primary-hover"
-            }`}
-          >
-            {confirmLabel}
-          </button>
-        </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={onClose}
+                className="h-8 rounded-lg border border-hairline bg-surface-3 px-3.5 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onConfirm}
+                className={`h-8 rounded-lg px-3.5 text-[13px] font-medium text-white transition-colors ${
+                  danger
+                    ? "bg-danger hover:bg-danger-hover"
+                    : "bg-primary hover:bg-primary-hover"
+                }`}
+              >
+                {confirmLabel}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
