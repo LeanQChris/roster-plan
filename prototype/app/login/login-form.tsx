@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DEMO_EMAIL, DEMO_PASSWORD, useAuth } from "@/lib/auth";
 import LogoMark from "@/components/admin/Logo";
-import { EyeIcon, EyeOffIcon } from "@/components/admin/icons";
+import { ArrowLeftIcon, EyeIcon, EyeOffIcon } from "@/components/admin/icons";
+
+const homeForRole = (role: string | undefined) =>
+  role === "super_admin" ? "/admin" : "/dashboard";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -16,7 +20,7 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) router.replace("/admin");
+    if (user) router.replace(homeForRole(user.role));
   }, [user, router]);
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -24,7 +28,7 @@ export default function LoginForm() {
     setError(null);
     const result = signIn(email, password);
     if (result.ok) {
-      router.replace("/admin");
+      router.replace(homeForRole(result.user?.role));
     } else {
       setError(result.error ?? "Unable to sign in.");
     }
@@ -39,7 +43,7 @@ export default function LoginForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
       <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center gap-3">
+        <div className="mt-6 flex flex-col items-center gap-3">
           <LogoMark className="size-11" />
           <div className="text-center">
             <h1 className="text-xl font-semibold tracking-tight text-ink">
@@ -53,7 +57,7 @@ export default function LoginForm() {
 
         <form
           onSubmit={onSubmit}
-          className="mt-6 rounded-xl border border-hairline bg-surface-2 p-6"
+          className="mt-4 rounded-xl border border-hairline bg-surface-2 p-6"
         >
           <div className="space-y-4">
             <div>
@@ -134,6 +138,22 @@ export default function LoginForm() {
           >
             Fill in
           </button>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <Link
+            href="/register"
+            className="flex items-center gap-1.5 text-xs font-medium text-primary transition-colors hover:text-primary-hover"
+          >
+            <ArrowLeftIcon className="size-3.5" />
+            New to Roster? Create an account
+          </Link>
+          <Link
+            href="/"
+            className="shrink-0 text-xs text-ink-subtle transition-colors hover:text-ink-muted"
+          >
+            Back to home
+          </Link>
         </div>
       </div>
     </div>

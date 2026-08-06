@@ -15,11 +15,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Roster · Admin",
+    default: "Roster · Workforce scheduling",
     template: "%s · Roster",
   },
   description:
-    "Super-admin platform control for the Roster workforce scheduling platform.",
+    "Workforce scheduling for teams that take their weeks seriously — plan, publish, and clock in with audit-grade records.",
 };
 
 export const viewport: Viewport = {

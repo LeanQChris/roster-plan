@@ -7,7 +7,7 @@ import Toasts from "@/components/admin/Toasts";
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <AdminProvider>
-      <AuthGuard>
+      <AuthGuard allowedRoles={["super_admin"]}>
         <div className="flex min-h-screen flex-col bg-canvas">
           <AdminNav />
           <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-16 pt-8">

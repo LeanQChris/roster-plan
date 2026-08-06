@@ -43,7 +43,7 @@ export default function AdminNav() {
   const handleSignOut = () => {
     setMenuOpen(false);
     signOut();
-    router.push("/login");
+    router.push("/");
   };
 
   return (
@@ -112,8 +112,13 @@ export default function AdminNav() {
                   <p className="mt-0.5 truncate text-xs text-ink-muted">
                     {user?.email ?? "superadmin@gmail.com"}
                   </p>
+                  {user?.company && (
+                    <p className="mt-0.5 truncate text-xs text-ink-subtle">
+                      {user.company}
+                    </p>
+                  )}
                   <span className="mt-1.5 inline-block rounded-md border border-primary/30 bg-primary-weak px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
-                    super admin
+                    {user?.role === "super_admin" ? "super admin" : "company admin"}
                   </span>
                 </div>
                 <div className="border-t border-hairline" />
