@@ -254,7 +254,7 @@ interface InviteInput {
   timezone: string;
 }
 
-interface LocationInput {
+export interface LocationInput {
   name: string;
   description?: string;
   address?: string;

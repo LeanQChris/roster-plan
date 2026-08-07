@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
-import LogoMark from "@/components/admin/Logo";
+import LogoMark from "@/components/ui/Logo";
 import {
   ArrowLeftIcon,
   EyeIcon,
@@ -14,7 +14,7 @@ import {
   MoonIcon,
   ShieldIcon,
   SunIcon,
-} from "@/components/admin/icons";
+} from "@/components/ui/icons";
 
 const CODE_LENGTH = 6;
 

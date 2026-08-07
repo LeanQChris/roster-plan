@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { DEFAULT_BRANDING, readCompanySetup } from "@/lib/company";
-import LogoMark from "@/components/admin/Logo";
+import LogoMark from "@/components/ui/Logo";
 import {
   ActivityIcon,
   ChevronDownIcon,
@@ -16,7 +16,7 @@ import {
   SettingsIcon,
   SunIcon,
   UsersIcon,
-} from "@/components/admin/icons";
+} from "@/components/ui/icons";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: ActivityIcon, soon: false },

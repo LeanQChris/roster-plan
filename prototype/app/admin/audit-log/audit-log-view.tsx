@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { useAdmin } from "@/lib/store";
 import { formatDateTime, formatTime, timeAgo } from "@/lib/format";
 import type { AuditTone } from "@/lib/data";
-import Menu from "@/components/admin/Menu";
-import { ListIcon, SearchIcon, ShieldIcon } from "@/components/admin/icons";
+import Menu from "@/components/ui/Menu";
+import { ListIcon, SearchIcon, ShieldIcon } from "@/components/ui/icons";
 
 type ToneFilter = "all" | AuditTone;
 

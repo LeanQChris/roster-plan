@@ -23,7 +23,7 @@ import {
   PaletteIcon,
   SaveIcon,
   TrashIcon,
-} from "@/components/admin/icons";
+} from "@/components/ui/icons";
 
 const inputClass =
   "mt-1.5 h-9 w-full rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none";

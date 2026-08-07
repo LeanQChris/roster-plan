@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAdmin } from "@/lib/store";
 import { formatCount, formatDate, formatDateTime, timeAgo } from "@/lib/format";
-import { CompanyAvatar, StatusBadge } from "@/components/admin/badges";
-import Modal from "@/components/admin/Modal";
-import StatCard from "@/components/admin/StatCard";
+import { CompanyAvatar, StatusBadge } from "@/components/ui/badges";
+import Modal from "@/components/ui/Modal";
+import StatCard from "@/components/ui/StatCard";
 import {
   AlertTriangleIcon,
   ArrowLeftIcon,
@@ -18,7 +18,7 @@ import {
   ShieldIcon,
   TrashIcon,
   UsersIcon,
-} from "@/components/admin/icons";
+} from "@/components/ui/icons";
 
 const regionLabel: Record<string, string> = {
   "us-east": "US East (us-east-1)",

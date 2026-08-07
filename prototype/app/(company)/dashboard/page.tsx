@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { readCompanySetup } from "@/lib/company";
 import { useCompany } from "@/lib/company-data";
-import StatCard from "@/components/admin/StatCard";
+import StatCard from "@/components/ui/StatCard";
 import {
   ArrowRightIcon,
   BuildingIcon,
@@ -13,10 +13,11 @@ import {
   CheckIcon,
   ClockIcon,
   ListIcon,
+  MoreIcon,
   PlusIcon,
   SettingsIcon,
   UsersIcon,
-} from "@/components/admin/icons";
+} from "@/components/ui/icons";
 
 const QUICK_LINKS = [
   { label: "Team People", hint: "Invite and manage staff", icon: UsersIcon, href: "/people", soon: false },
@@ -44,6 +45,8 @@ export default function DashboardPage() {
   const firstName = user.name.split(/\s+/)[0] ?? user.name;
   const activeMembers = people.filter((p) => p.status === "active").length;
   const pendingInvites = people.filter((p) => p.status === "invited").length;
+  const shownTeams = teams.slice(0, 3);
+  const restTeams = teams.slice(3);
 
   return (
     <div>
@@ -102,7 +105,27 @@ export default function DashboardPage() {
           label="Teams"
           value={teams.length}
           icon={<ListIcon className="size-4" />}
-          sub={teams.length > 0 ? teams.map((t) => t.name).join(", ") : "create your first team"}
+          sub={
+            teams.length > 0 ? (
+              <span className="flex min-w-0 items-center gap-1">
+                <span className="truncate">
+                  {shownTeams.map((t) => t.name).join(", ")}
+                </span>
+                {restTeams.length > 0 && (
+                  <span className="group/tip relative shrink-0">
+                    <span className="flex items-center rounded border border-hairline bg-surface-3 px-1 py-0.5 text-ink-subtle transition-colors group-hover/tip:text-ink">
+                      <MoreIcon className="size-3" />
+                    </span>
+                    <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden w-max max-w-[180px] -translate-x-1/2 rounded-md border border-hairline bg-surface-1 px-2 py-1.5 text-[11px] leading-snug text-ink shadow-md group-hover/tip:block">
+                      {restTeams.map((t) => t.name).join(", ")}
+                    </span>
+                  </span>
+                )}
+              </span>
+            ) : (
+              "create your first team"
+            )
+          }
         />
         <StatCard
           label="Shifts published"

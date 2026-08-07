@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
-import LogoMark from "./Logo";
-import { BellIcon, ChevronDownIcon, MoonIcon, SunIcon } from "./icons";
+import LogoMark from "@/components/ui/Logo";
+import { BellIcon, ChevronDownIcon, MoonIcon, SunIcon } from "@/components/ui/icons";
 
 const TABS = [
   { href: "/admin", label: "Companies" },

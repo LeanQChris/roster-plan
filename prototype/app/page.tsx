@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTheme } from "@/lib/theme";
-import LogoMark from "@/components/admin/Logo";
+import LogoMark from "@/components/ui/Logo";
 import {
   ActivityIcon,
   ArrowRightIcon,
@@ -15,7 +15,7 @@ import {
   ShieldIcon,
   SunIcon,
   UsersIcon,
-} from "@/components/admin/icons";
+} from "@/components/ui/icons";
 
 const NAV_LINKS = [
   { href: "#features", label: "Features" },

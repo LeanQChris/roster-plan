@@ -11,13 +11,13 @@ import {
   SETUP_KEY,
   TIMEZONES,
 } from "@/lib/company";
-import LogoMark from "@/components/admin/Logo";
+import LogoMark from "@/components/ui/Logo";
 import {
   ArrowLeftIcon,
   ChevronDownIcon,
   MoonIcon,
   SunIcon,
-} from "@/components/admin/icons";
+} from "@/components/ui/icons";
 
 export default function SetupForm() {
   const router = useRouter();

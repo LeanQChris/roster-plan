@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAdmin } from "@/lib/store";
 import { formatCount, formatDate } from "@/lib/format";
-import { CompanyAvatar, StatusBadge } from "@/components/admin/badges";
-import Menu from "@/components/admin/Menu";
-import StatCard from "@/components/admin/StatCard";
+import { CompanyAvatar, StatusBadge } from "@/components/ui/badges";
+import Menu from "@/components/ui/Menu";
+import StatCard from "@/components/ui/StatCard";
 import {
   ActivityIcon,
   BuildingIcon,
@@ -16,7 +16,7 @@ import {
   SearchIcon,
   ShieldIcon,
   UsersIcon,
-} from "@/components/admin/icons";
+} from "@/components/ui/icons";
 
 type StatusFilter = "all" | "active" | "suspended";
 type SortKey = "name" | "created" | "members";

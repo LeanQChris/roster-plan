@@ -8,8 +8,8 @@ import { useCompany } from "@/lib/company-data";
 import type { Person, PersonRole } from "@/lib/company-data";
 import { DEFAULT_TIMEZONE, TIMEZONES } from "@/lib/company";
 import { formatDate, formatDateTime, initials, timeAgo } from "@/lib/format";
-import Modal from "@/components/admin/Modal";
-import StatCard from "@/components/admin/StatCard";
+import Modal from "@/components/ui/Modal";
+import StatCard from "@/components/ui/StatCard";
 import {
   ArrowLeftIcon,
   ChevronDownIcon,
@@ -20,7 +20,7 @@ import {
   PencilIcon,
   TrashIcon,
   UsersIcon,
-} from "@/components/admin/icons";
+} from "@/components/ui/icons";
 
 const inputClass =
   "mt-1.5 h-9 w-full rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none";

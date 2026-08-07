@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 import { AdminProvider } from "@/lib/store";
 import AdminNav from "@/components/admin/AdminNav";
 import AuthGuard from "@/components/AuthGuard";
-import Toasts from "@/components/admin/Toasts";
+import Toasts from "@/components/ui/Toasts";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (

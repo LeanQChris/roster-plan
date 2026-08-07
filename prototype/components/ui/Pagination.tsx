@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { ArrowLeftIcon, ArrowRightIcon } from "@/components/admin/icons";
+import { ArrowLeftIcon, ArrowRightIcon } from "@/components/ui/icons";
 
 interface PaginationProps {
   page: number;
