@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 import LogoMark from "./Logo";
-import { BellIcon, ChevronDownIcon } from "./icons";
+import { BellIcon, ChevronDownIcon, MoonIcon, SunIcon } from "./icons";
 
 const TABS = [
   { href: "/admin", label: "Companies" },
@@ -16,6 +17,7 @@ export default function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -120,6 +122,21 @@ export default function AdminNav() {
                   <span className="mt-1.5 inline-block rounded-md border border-primary/30 bg-primary-weak px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
                     {user?.role === "super_admin" ? "super admin" : "company admin"}
                   </span>
+                </div>
+                <div className="border-t border-hairline" />
+                <div className="p-1">
+                  <button
+                    role="menuitem"
+                    onClick={toggleTheme}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium text-ink transition-colors hover:bg-surface-3"
+                  >
+                    {theme === "dark" ? (
+                      <SunIcon className="size-4" />
+                    ) : (
+                      <MoonIcon className="size-4" />
+                    )}
+                    {theme === "dark" ? "Light mode" : "Dark mode"}
+                  </button>
                 </div>
                 <div className="border-t border-hairline" />
                 <div className="p-1">

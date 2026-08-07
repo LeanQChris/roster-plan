@@ -18,6 +18,19 @@ export interface Team {
   id: string;
   name: string;
   description?: string;
+  locationId: string | null;
+  createdAt: string;
+}
+
+export interface Location {
+  id: string;
+  name: string;
+  description?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  active: boolean;
   createdAt: string;
 }
 
@@ -28,6 +41,7 @@ export interface Person {
   phone?: string;
   role: PersonRole;
   teamId: string | null;
+  locationId: string | null;
   timezone: string;
   status: PersonStatus;
   createdAt: string;
@@ -37,6 +51,7 @@ export interface Person {
 interface CompanyState {
   teams: Team[];
   people: Person[];
+  locations: Location[];
 }
 
 type CompanyAction =
@@ -45,10 +60,14 @@ type CompanyAction =
   | { type: "deleteTeam"; id: string }
   | { type: "addPerson"; person: Person }
   | { type: "updatePerson"; id: string; patch: Partial<Person> }
-  | { type: "deletePerson"; id: string };
+  | { type: "deletePerson"; id: string }
+  | { type: "createLocation"; location: Location }
+  | { type: "updateLocation"; id: string; patch: Partial<Location> }
+  | { type: "deleteLocation"; id: string };
 
 const TEAMS_KEY = "roster.teams";
 const PEOPLE_KEY = "roster.people";
+const LOCATIONS_KEY = "roster.locations";
 
 let seq = 0;
 export const nextId = (prefix: string) =>
@@ -77,6 +96,7 @@ function writeStored(key: string, value: unknown) {
 function initState(): CompanyState {
   const teams = readStored<Team[]>(TEAMS_KEY, []);
   const people = readStored<Person[]>(PEOPLE_KEY, []);
+  const locations = readStored<Location[]>(LOCATIONS_KEY, []);
 
   if (teams.length === 0) {
     const setup = readCompanySetup();
@@ -85,13 +105,14 @@ function initState(): CompanyState {
         id: nextId("team"),
         name: setup.team,
         description: "Your first team",
+        locationId: null,
         createdAt: new Date().toISOString(),
       };
       teams.push(first);
       writeStored(TEAMS_KEY, teams);
     }
   }
-  return { teams, people };
+  return { teams, people, locations };
 }
 
 const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
@@ -127,6 +148,26 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
         ...state,
         people: state.people.filter((p) => p.id !== action.id),
       };
+    case "createLocation":
+      return { ...state, locations: [action.location, ...state.locations] };
+    case "updateLocation":
+      return {
+        ...state,
+        locations: state.locations.map((l) =>
+          l.id === action.id ? { ...l, ...action.patch } : l,
+        ),
+      };
+    case "deleteLocation":
+      return {
+        ...state,
+        locations: state.locations.filter((l) => l.id !== action.id),
+        teams: state.teams.map((t) =>
+          t.locationId === action.id ? { ...t, locationId: null } : t,
+        ),
+        people: state.people.map((p) =>
+          p.locationId === action.id ? { ...p, locationId: null } : p,
+        ),
+      };
   }
 };
 
@@ -136,17 +177,35 @@ interface InviteInput {
   phone?: string;
   role: PersonRole;
   teamId: string | null;
+  locationId: string | null;
   timezone: string;
 }
 
+interface LocationInput {
+  name: string;
+  description?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  active: boolean;
+}
+
 interface CompanyContextValue extends CompanyState {
-  createTeam: (name: string, description?: string) => Team | null;
+  createTeam: (
+    name: string,
+    description?: string,
+    locationId?: string | null,
+  ) => Team | null;
   updateTeam: (id: string, patch: Partial<Team>) => boolean;
   deleteTeam: (id: string) => void;
   invitePerson: (input: InviteInput) => { ok: boolean; error?: string };
   updatePerson: (id: string, patch: Partial<Person>) => boolean;
   resendInvite: (id: string) => void;
   deletePerson: (id: string) => void;
+  createLocation: (input: LocationInput) => Location | null;
+  updateLocation: (id: string, patch: Partial<Location>) => boolean;
+  deleteLocation: (id: string) => void;
 }
 
 const CompanyContext = createContext<CompanyContextValue | null>(null);
@@ -162,8 +221,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     writeStored(PEOPLE_KEY, state.people);
   }, [state.people]);
 
+  useEffect(() => {
+    writeStored(LOCATIONS_KEY, state.locations);
+  }, [state.locations]);
+
   const createTeam = useCallback(
-    (name: string, description?: string): Team | null => {
+    (name: string, description?: string, locationId?: string | null): Team | null => {
       const trimmed = name.trim();
       if (!trimmed) return null;
       if (state.teams.some((t) => t.name.toLowerCase() === trimmed.toLowerCase())) {
@@ -173,6 +236,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         id: nextId("team"),
         name: trimmed,
         description: description?.trim() || undefined,
+        locationId: locationId ?? null,
         createdAt: new Date().toISOString(),
       };
       dispatch({ type: "createTeam", team });
@@ -209,6 +273,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           phone: input.phone?.trim() || undefined,
           role: input.role,
           teamId: input.teamId,
+          locationId: input.locationId,
           timezone: input.timezone,
           status: "invited",
           createdAt: new Date().toISOString(),
@@ -233,6 +298,42 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "deletePerson", id });
   }, []);
 
+  const createLocation = useCallback(
+    (input: LocationInput): Location | null => {
+      const trimmed = input.name.trim();
+      if (!trimmed) return null;
+      if (
+        state.locations.some((l) => l.name.toLowerCase() === trimmed.toLowerCase())
+      ) {
+        return null;
+      }
+      const location: Location = {
+        id: nextId("location"),
+        name: trimmed,
+        description: input.description?.trim() || undefined,
+        address: input.address?.trim() || undefined,
+        city: input.city?.trim() || undefined,
+        state: input.state?.trim() || undefined,
+        country: input.country?.trim() || undefined,
+        active: input.active,
+        createdAt: new Date().toISOString(),
+      };
+      dispatch({ type: "createLocation", location });
+      return location;
+    },
+    [state.locations],
+  );
+
+  const updateLocation = useCallback((id: string, patch: Partial<Location>) => {
+    if (patch.name !== undefined && !patch.name.trim()) return false;
+    dispatch({ type: "updateLocation", id, patch });
+    return true;
+  }, []);
+
+  const deleteLocation = useCallback((id: string) => {
+    dispatch({ type: "deleteLocation", id });
+  }, []);
+
   const value = useMemo<CompanyContextValue>(
     () => ({
       ...state,
@@ -243,8 +344,23 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       updatePerson,
       resendInvite,
       deletePerson,
+      createLocation,
+      updateLocation,
+      deleteLocation,
     }),
-    [state, createTeam, updateTeam, deleteTeam, invitePerson, updatePerson, resendInvite, deletePerson],
+    [
+      state,
+      createTeam,
+      updateTeam,
+      deleteTeam,
+      invitePerson,
+      updatePerson,
+      resendInvite,
+      deletePerson,
+      createLocation,
+      updateLocation,
+      deleteLocation,
+    ],
   );
 
   return (

@@ -26,13 +26,41 @@
   --danger-weak: #f0575a 17;
 }
 
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --canvas: #f7f8fa;
+  --surface-1: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #f1f2f5;
+  --surface-4: #e4e6eb;
+  --hairline: #00000014;
+
+  --ink: #14161a;
+  --ink-muted: #565c66;
+  --ink-subtle: #878d97;
+  --ink-faint: #b8bcc4;
+
+  --primary: #5e6ad2;
+  --primary-hover: #6c77e0;
+  --primary-weak: #5e6ad2 1f;
+
+  --success: #2fc06a;
+  --success-weak: #2fc06a 14;
+  --warning: #e6a310;
+  --warning-weak: #e6a310 14;
+  --danger: #f0575a;
+  --danger-hover: #e04f52;
+  --danger-weak: #f0575a 14;
+}
+
 @theme inline {
-  --color-background: var(--background);
+  --color-background: var(--canvas);
   --color-foreground: var(--ink);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  --color-canvas: var(--background);
+  --color-canvas: var(--canvas);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
@@ -62,7 +90,7 @@ html {
 }
 
 body {
-  background: var(--background);
+  background: var(--canvas);
   color: var(--ink);
   font-family: var(--font-geist-sans), "Inter", system-ui, "Helvetica Neue",
     Arial, sans-serif;

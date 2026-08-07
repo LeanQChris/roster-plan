@@ -5,8 +5,16 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 import LogoMark from "@/components/admin/Logo";
-import { ArrowLeftIcon, EyeIcon, EyeOffIcon, ShieldIcon } from "@/components/admin/icons";
+import {
+  ArrowLeftIcon,
+  EyeIcon,
+  EyeOffIcon,
+  MoonIcon,
+  ShieldIcon,
+  SunIcon,
+} from "@/components/admin/icons";
 
 const CODE_LENGTH = 6;
 
@@ -70,6 +78,7 @@ interface PendingSignup {
 export default function RegisterForm() {
   const router = useRouter();
   const { registerAdmin } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const [pending, setPending] = useState<PendingSignup | null>(null);
   const [code, setCode] = useState(generateCode());
@@ -254,6 +263,18 @@ export default function RegisterForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
+      <button
+        type="button"
+        onClick={toggleTheme}
+        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        className="fixed right-4 top-4 rounded-lg border border-hairline bg-surface-2 p-2 text-ink-muted transition-colors hover:bg-surface-3 hover:text-ink"
+      >
+        {theme === "dark" ? (
+          <SunIcon className="size-4" />
+        ) : (
+          <MoonIcon className="size-4" />
+        )}
+      </button>
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center gap-3">
           <LogoMark className="size-11" />

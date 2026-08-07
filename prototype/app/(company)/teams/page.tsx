@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/format";
 import Modal from "@/components/admin/Modal";
 import StatCard from "@/components/admin/StatCard";
 import {
+  ChevronDownIcon,
   ListIcon,
   PencilIcon,
   PlusIcon,
@@ -18,19 +19,30 @@ import {
 const inputClass =
   "mt-1.5 h-9 w-full rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none";
 
+const selectClass =
+  "mt-1.5 h-9 w-full appearance-none rounded-lg border border-hairline bg-surface-3 px-3 pr-9 text-[13px] text-ink transition-colors focus:border-primary/60 focus:outline-none";
+
 type TeamModalState =
   | { mode: "create" }
   | { mode: "edit"; team: Team }
   | null;
 
 export default function TeamsPage() {
-  const { teams, people, createTeam, updateTeam, deleteTeam } = useCompany();
+  const { teams, people, locations, createTeam, updateTeam, deleteTeam } =
+    useCompany();
   const [modal, setModal] = useState<TeamModalState>(null);
   const [confirmDelete, setConfirmDelete] = useState<Team | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [locationId, setLocationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+
+  const locationName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const l of locations) map.set(l.id, l.name);
+    return map;
+  }, [locations]);
 
   const memberCount = useMemo(() => {
     const counts = new Map<string, number>();
@@ -44,6 +56,7 @@ export default function TeamsPage() {
   const openCreate = () => {
     setName("");
     setDescription("");
+    setLocationId(null);
     setError(null);
     setModal({ mode: "create" });
   };
@@ -51,6 +64,7 @@ export default function TeamsPage() {
   const openEdit = (team: Team) => {
     setName(team.name);
     setDescription(team.description ?? "");
+    setLocationId(team.locationId);
     setError(null);
     setModal({ mode: "edit", team });
   };
@@ -62,12 +76,18 @@ export default function TeamsPage() {
     setError(null);
 
     if (modal?.mode === "edit") {
-      if (!updateTeam(modal.team.id, { name, description: description || undefined })) {
+      if (
+        !updateTeam(modal.team.id, {
+          name,
+          description: description || undefined,
+          locationId,
+        })
+      ) {
         setError("Team names can't be empty or duplicate an existing team.");
         return;
       }
     } else {
-      if (!createTeam(name, description)) {
+      if (!createTeam(name, description, locationId)) {
         setError("Team name can't be empty or match an existing team.");
         return;
       }
@@ -156,56 +176,82 @@ export default function TeamsPage() {
           </button>
         </div>
       ) : (
-        <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {teams.map((team) => {
-            const members = memberCount.get(team.id) ?? 0;
-            return (
-              <div
-                key={team.id}
-                className="group flex flex-col rounded-xl border border-hairline bg-surface-2 p-5"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary-weak text-primary">
-                    <ListIcon className="size-4" />
-                  </span>
-                  <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(team)}
-                      aria-label={`Edit ${team.name}`}
-                      className="rounded-md p-1.5 text-ink-subtle transition-colors hover:bg-surface-3 hover:text-ink"
+        <div className="mt-6 overflow-hidden rounded-xl border border-hairline bg-surface-2">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-hairline">
+                  {["Name", "Description", "Members", "Location", "Created"].map(
+                    (h) => (
+                      <th
+                        key={h}
+                        className="whitespace-nowrap px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-subtle"
+                      >
+                        {h}
+                      </th>
+                    ),
+                  )}
+                  <th className="w-8" />
+                </tr>
+              </thead>
+              <tbody>
+                {teams.map((team) => {
+                  const members = memberCount.get(team.id) ?? 0;
+                  return (
+                    <tr
+                      key={team.id}
+                      className="group border-b border-hairline/60 transition-colors last:border-b-0 hover:bg-surface-3/70"
                     >
-                      <PencilIcon className="size-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDelete(team)}
-                      aria-label={`Delete ${team.name}`}
-                      className="rounded-md p-1.5 text-ink-subtle transition-colors hover:bg-surface-3 hover:text-danger"
-                    >
-                      <TrashIcon className="size-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                <h2 className="mt-3 text-[15px] font-semibold tracking-tight text-ink">
-                  {team.name}
-                </h2>
-                <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-ink-muted">
-                  {team.description || "No description yet."}
-                </p>
-
-                <div className="mt-4 flex items-center gap-3 border-t border-hairline pt-3 text-[11px] text-ink-subtle">
-                  <span className="flex items-center gap-1.5">
-                    <UsersIcon className="size-3.5" />
-                    {members} {members === 1 ? "member" : "members"}
-                  </span>
-                  <span>·</span>
-                  <span>Created {formatDate(team.createdAt)}</span>
-                </div>
-              </div>
-            );
-          })}
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-2 text-[13px] font-medium text-ink">
+                          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary-weak text-primary">
+                            <ListIcon className="size-3.5" />
+                          </span>
+                          {team.name}
+                        </span>
+                      </td>
+                      <td className="max-w-xs px-4 py-3 text-xs text-ink-muted">
+                        <span className="line-clamp-2">
+                          {team.description || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-ink-muted">
+                        {members}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-ink-muted">
+                        {team.locationId
+                          ? locationName.get(team.locationId) ?? "—"
+                          : "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-ink-subtle">
+                        {formatDate(team.createdAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(team)}
+                            aria-label={`Edit ${team.name}`}
+                            className="rounded-md p-1.5 text-ink-subtle transition-colors hover:bg-surface-3 hover:text-ink"
+                          >
+                            <PencilIcon className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDelete(team)}
+                            aria-label={`Delete ${team.name}`}
+                            className="rounded-md p-1.5 text-ink-subtle transition-colors hover:bg-surface-3 hover:text-danger"
+                          >
+                            <TrashIcon className="size-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -257,6 +303,30 @@ export default function TeamsPage() {
                 rows={2}
                 className="mt-1.5 w-full resize-none rounded-lg border border-hairline bg-surface-3 px-3 py-2 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none"
               />
+            </div>
+            <div>
+              <label
+                htmlFor="team-location"
+                className="block text-xs font-medium text-ink-muted"
+              >
+                Location
+              </label>
+              <div className="relative">
+                <select
+                  id="team-location"
+                  value={locationId ?? ""}
+                  onChange={(e) => setLocationId(e.target.value || null)}
+                  className={selectClass}
+                >
+                  <option value="">Unassigned</option>
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
+              </div>
             </div>
             {error && (
               <p className="rounded-lg border border-danger/30 bg-danger-weak px-3 py-2 text-[13px] font-medium text-danger">

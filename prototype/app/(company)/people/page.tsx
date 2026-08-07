@@ -10,6 +10,7 @@ import Modal from "@/components/admin/Modal";
 import {
   ChevronDownIcon,
   MailIcon,
+  MapPinIcon,
   PencilIcon,
   PlusIcon,
   TrashIcon,
@@ -66,6 +67,7 @@ interface PersonFormState {
   phone: string;
   role: PersonRole;
   teamId: string | null;
+  locationId: string | null;
   timezone: string;
 }
 
@@ -76,12 +78,20 @@ const EMPTY_FORM: PersonFormState = {
   phone: "",
   role: "employee",
   teamId: null,
+  locationId: null,
   timezone: DEFAULT_TIMEZONE,
 };
 
 export default function PeoplePage() {
-  const { teams, people, invitePerson, updatePerson, resendInvite, deletePerson } =
-    useCompany();
+  const {
+    teams,
+    people,
+    locations,
+    invitePerson,
+    updatePerson,
+    resendInvite,
+    deletePerson,
+  } = useCompany();
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<PersonFormState>(EMPTY_FORM);
@@ -94,6 +104,12 @@ export default function PeoplePage() {
     for (const t of teams) map.set(t.id, t.name);
     return map;
   }, [teams]);
+
+  const locationName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const l of locations) map.set(l.id, l.name);
+    return map;
+  }, [locations]);
 
   const filtered = useMemo(() => {
     if (teamFilter === "all") return people;
@@ -115,6 +131,7 @@ export default function PeoplePage() {
       phone: person.phone ?? "",
       role: person.role,
       teamId: person.teamId,
+      locationId: person.locationId,
       timezone: person.timezone,
     });
     setError(null);
@@ -131,6 +148,7 @@ export default function PeoplePage() {
         phone: form.phone.trim() || undefined,
         role: form.role,
         teamId: form.teamId,
+        locationId: form.locationId,
         timezone: form.timezone,
       });
     } else {
@@ -140,6 +158,7 @@ export default function PeoplePage() {
         phone: form.phone,
         role: form.role,
         teamId: form.teamId,
+        locationId: form.locationId,
         timezone: form.timezone,
       });
       if (!result.ok) {
@@ -252,6 +271,12 @@ export default function PeoplePage() {
                 <span className="hidden shrink-0 text-xs text-ink-subtle sm:block">
                   {person.teamId ? teamName.get(person.teamId) ?? "—" : "Unassigned"}
                 </span>
+                {person.locationId && (
+                  <span className="hidden shrink-0 items-center gap-1 text-xs text-ink-subtle lg:flex">
+                    <MapPinIcon className="size-3.5" />
+                    {locationName.get(person.locationId) ?? "—"}
+                  </span>
+                )}
                 <span className="hidden shrink-0 text-xs text-ink-faint md:block">
                   {person.timezone.replace(/_/g, " ")}
                 </span>
@@ -399,9 +424,15 @@ export default function PeoplePage() {
                   <select
                     id="person-team"
                     value={form.teamId ?? ""}
-                    onChange={(e) =>
-                      setForm({ ...form, teamId: e.target.value || null })
-                    }
+                    onChange={(e) => {
+                      const teamId = e.target.value || null;
+                      const team = teams.find((t) => t.id === teamId);
+                      setForm({
+                        ...form,
+                        teamId,
+                        locationId: team?.locationId ?? null,
+                      });
+                    }}
                     className={selectClass}
                   >
                     <option value="">Unassigned</option>
@@ -416,23 +447,24 @@ export default function PeoplePage() {
               </div>
               <div>
                 <label
-                  htmlFor="person-tz"
+                  htmlFor="person-location"
                   className="block text-xs font-medium text-ink-muted"
                 >
-                  Timezone
+                  Location
                 </label>
                 <div className="relative">
                   <select
-                    id="person-tz"
-                    value={form.timezone}
+                    id="person-location"
+                    value={form.locationId ?? ""}
                     onChange={(e) =>
-                      setForm({ ...form, timezone: e.target.value })
+                      setForm({ ...form, locationId: e.target.value || null })
                     }
                     className={selectClass}
                   >
-                    {TIMEZONES.map((tz) => (
-                      <option key={tz} value={tz}>
-                        {tz.replace(/_/g, " ")}
+                    <option value="">Unassigned</option>
+                    {locations.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
                       </option>
                     ))}
                   </select>
@@ -440,6 +472,7 @@ export default function PeoplePage() {
                 </div>
               </div>
             </div>
+
 
             {error && (
               <p className="rounded-lg border border-danger/30 bg-danger-weak px-3 py-2 text-[13px] font-medium text-danger">

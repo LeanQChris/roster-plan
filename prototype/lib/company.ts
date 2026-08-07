@@ -6,6 +6,7 @@ export interface CompanySetup {
   completeAt: string;
   locale?: string;
   brandingColor?: string;
+  logoUrl?: string;
 }
 
 export const SETUP_KEY = "roster.setup";
@@ -67,6 +68,7 @@ export function saveCompanySettings(
       locale: patch.locale ?? existing?.locale ?? DEFAULT_LOCALE,
       brandingColor:
         patch.brandingColor ?? existing?.brandingColor ?? DEFAULT_BRANDING,
+      logoUrl: patch.logoUrl ?? existing?.logoUrl,
     };
     window.localStorage.setItem(SETUP_KEY, JSON.stringify(next));
     return next;

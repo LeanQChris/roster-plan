@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useTheme } from "@/lib/theme";
 import LogoMark from "@/components/admin/Logo";
 import {
   ActivityIcon,
@@ -8,7 +11,9 @@ import {
   DownloadIcon,
   FingerprintIcon,
   ListIcon,
+  MoonIcon,
   ShieldIcon,
+  SunIcon,
   UsersIcon,
 } from "@/components/admin/icons";
 
@@ -166,6 +171,8 @@ function SchedulePreview() {
 }
 
 export default function HomePage() {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
       <header className="sticky top-0 z-40 border-b border-hairline bg-canvas/85 backdrop-blur">
@@ -188,6 +195,18 @@ export default function HomePage() {
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              className="rounded-lg p-2 text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+            >
+              {theme === "dark" ? (
+                <SunIcon className="size-4" />
+              ) : (
+                <MoonIcon className="size-4" />
+              )}
+            </button>
             <Link
               href="/login"
               className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"

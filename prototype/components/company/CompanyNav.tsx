@@ -4,13 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 import { DEFAULT_BRANDING, readCompanySetup } from "@/lib/company";
 import LogoMark from "@/components/admin/Logo";
 import {
   ActivityIcon,
   ChevronDownIcon,
   ListIcon,
+  MapPinIcon,
+  MoonIcon,
   SettingsIcon,
+  SunIcon,
   UsersIcon,
 } from "@/components/admin/icons";
 
@@ -18,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: ActivityIcon, soon: false },
   { href: "/teams", label: "Teams", icon: ListIcon, soon: false },
   { href: "/people", label: "People", icon: UsersIcon, soon: false },
+  { href: "/locations", label: "Locations", icon: MapPinIcon, soon: false },
   { href: "/settings", label: "Settings", icon: SettingsIcon, soon: false },
 ];
 
@@ -25,6 +30,7 @@ export default function CompanyNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [branding] = useState(() => readCompanySetup());
@@ -169,6 +175,21 @@ export default function CompanyNav() {
                     {user.company}
                   </p>
                 )}
+              </div>
+              <div className="border-t border-hairline" />
+              <div className="p-1">
+                <button
+                  role="menuitem"
+                  onClick={toggleTheme}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium text-ink transition-colors hover:bg-surface-3"
+                >
+                  {theme === "dark" ? (
+                    <SunIcon className="size-4" />
+                  ) : (
+                    <MoonIcon className="size-4" />
+                  )}
+                  {theme === "dark" ? "Light mode" : "Dark mode"}
+                </button>
               </div>
               <div className="border-t border-hairline" />
               <div className="p-1">

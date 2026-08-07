@@ -242,6 +242,34 @@ export const SettingsIcon = ({ ...p }: IconProps) => (
   </svg>
 );
 
+export const ImageIcon = ({ ...p }: IconProps) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <circle cx="9" cy="9" r="2" />
+    <path d="m21 15-3.5-3.5a2 2 0 0 0-2.83 0L5 21" />
+  </svg>
+);
+
+export const MapPinIcon = ({ ...p }: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+export const SunIcon = ({ ...p }: IconProps) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+  </svg>
+);
+
+export const MoonIcon = ({ ...p }: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" />
+  </svg>
+);
+
 export const PaletteIcon = ({ ...p }: IconProps) => (
   <svg {...base} {...p}>
     <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useRef, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import {
   DEFAULT_BRANDING,
@@ -19,8 +19,10 @@ import {
   CheckIcon,
   ChevronDownIcon,
   ClockIcon,
+  ImageIcon,
   PaletteIcon,
   SaveIcon,
+  TrashIcon,
 } from "@/components/admin/icons";
 
 const inputClass =
@@ -28,6 +30,9 @@ const inputClass =
 
 const selectClass =
   "h-9 w-full appearance-none rounded-lg border border-hairline bg-surface-3 px-3 pr-9 text-[13px] text-ink transition-colors focus:border-primary/60 focus:outline-none";
+
+const LOGO_MAX_BYTES = 1024 * 1024; // 1MB
+const LOGO_TYPES = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
 
 export default function SettingsForm() {
   const { user } = useAuth();
@@ -39,14 +44,38 @@ export default function SettingsForm() {
   const [branding, setBranding] = useState(
     setup?.brandingColor ?? DEFAULT_BRANDING,
   );
+  const [logoUrl, setLogoUrl] = useState(setup?.logoUrl ?? "");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const dirty =
     name.trim() !== (setup?.company ?? "") ||
     timezone !== (setup?.timezone ?? DEFAULT_TIMEZONE) ||
     locale !== (setup?.locale ?? DEFAULT_LOCALE) ||
-    branding !== (setup?.brandingColor ?? DEFAULT_BRANDING);
+    branding !== (setup?.brandingColor ?? DEFAULT_BRANDING) ||
+    logoUrl !== (setup?.logoUrl ?? "");
+
+  const onLogoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setError(null);
+    if (!LOGO_TYPES.includes(file.type)) {
+      setError("Logo must be PNG, JPG, WEBP, or SVG.");
+      return;
+    }
+    if (file.size > LOGO_MAX_BYTES) {
+      setError("Logo must be under 1MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => setLogoUrl(reader.result as string);
+    reader.onerror = () => setError("Couldn't read that file.");
+    reader.readAsDataURL(file);
+  };
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -62,6 +91,7 @@ export default function SettingsForm() {
       timezone,
       locale,
       brandingColor: branding,
+      logoUrl,
     });
     if (!result) {
       setError("Couldn't save — storage unavailable.");
@@ -142,6 +172,56 @@ export default function SettingsForm() {
                 value={user?.email ?? ""}
                 readOnly
                 className={`${inputClass} cursor-not-allowed opacity-60`}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p className="block text-xs font-medium text-ink-muted">Logo</p>
+            <div className="mt-1.5 flex items-center gap-3">
+              <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-hairline bg-surface-3">
+                {logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoUrl}
+                    alt="Company logo"
+                    className="size-full object-contain"
+                  />
+                ) : (
+                  <ImageIcon className="size-5 text-ink-subtle" />
+                )}
+              </span>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    className="flex h-8 items-center gap-1.5 rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4"
+                  >
+                    <ImageIcon className="size-3.5" />
+                    {logoUrl ? "Replace logo" : "Upload logo"}
+                  </button>
+                  {logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setLogoUrl("")}
+                      aria-label="Remove logo"
+                      className="flex h-8 items-center gap-1.5 rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] font-medium text-danger transition-colors hover:bg-danger-weak"
+                    >
+                      <TrashIcon className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-ink-subtle">
+                  PNG, JPG, WEBP, or SVG. Up to 1MB.
+                </p>
+              </div>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept={LOGO_TYPES.join(",")}
+                onChange={onLogoChange}
+                className="hidden"
               />
             </div>
           </div>

@@ -5,8 +5,15 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DEMO_EMAIL, DEMO_PASSWORD, useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 import LogoMark from "@/components/admin/Logo";
-import { ArrowLeftIcon, EyeIcon, EyeOffIcon } from "@/components/admin/icons";
+import {
+  ArrowLeftIcon,
+  EyeIcon,
+  EyeOffIcon,
+  MoonIcon,
+  SunIcon,
+} from "@/components/admin/icons";
 
 const homeForRole = (role: string | undefined) =>
   role === "super_admin" ? "/admin" : "/dashboard";
@@ -14,6 +21,7 @@ const homeForRole = (role: string | undefined) =>
 export default function LoginForm() {
   const router = useRouter();
   const { user, signIn } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -42,6 +50,18 @@ export default function LoginForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
+      <button
+        type="button"
+        onClick={toggleTheme}
+        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        className="fixed right-4 top-4 rounded-lg border border-hairline bg-surface-2 p-2 text-ink-muted transition-colors hover:bg-surface-3 hover:text-ink"
+      >
+        {theme === "dark" ? (
+          <SunIcon className="size-4" />
+        ) : (
+          <MoonIcon className="size-4" />
+        )}
+      </button>
       <div className="w-full max-w-sm">
         <div className="mt-6 flex flex-col items-center gap-3">
           <LogoMark className="size-11" />
