@@ -2,19 +2,24 @@
 
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { useCompany } from "@/lib/company-data";
 import type { Team } from "@/lib/company-data";
 import { formatDate } from "@/lib/format";
 import Modal from "@/components/admin/Modal";
+import Pagination from "@/components/admin/Pagination";
 import StatCard from "@/components/admin/StatCard";
 import {
   ChevronDownIcon,
   ListIcon,
   PencilIcon,
   PlusIcon,
+  SearchIcon,
   TrashIcon,
   UsersIcon,
 } from "@/components/admin/icons";
+
+const PAGE_SIZE = 10;
 
 const inputClass =
   "mt-1.5 h-9 w-full rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none";
@@ -32,6 +37,8 @@ export default function TeamsPage() {
     useCompany();
   const [modal, setModal] = useState<TeamModalState>(null);
   const [confirmDelete, setConfirmDelete] = useState<Team | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [locationId, setLocationId] = useState<string | null>(null);
@@ -52,6 +59,23 @@ export default function TeamsPage() {
     }
     return counts;
   }, [people]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return teams;
+    return teams.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        (t.description ?? "").toLowerCase().includes(q),
+    );
+  }, [teams, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const paged = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage],
+  );
 
   const openCreate = () => {
     setName("");
@@ -176,7 +200,34 @@ export default function TeamsPage() {
           </button>
         </div>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-xl border border-hairline bg-surface-2">
+        <>
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <p className="text-sm text-ink-muted">
+              {filtered.length} {filtered.length === 1 ? "team" : "teams"}
+            </p>
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-subtle" />
+              <input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search teams…"
+                className="h-8 w-48 rounded-lg border border-hairline bg-surface-2 pl-8 pr-3 text-xs text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {filtered.length === 0 ? (
+        <div className="mt-4 rounded-xl border border-hairline bg-surface-2 p-10 text-center">
+          <p className="text-[13px] font-medium text-ink">No teams found</p>
+          <p className="mt-1 text-xs text-ink-muted">
+            Try a different search term.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 overflow-hidden rounded-xl border border-hairline bg-surface-2">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
@@ -195,7 +246,7 @@ export default function TeamsPage() {
                 </tr>
               </thead>
               <tbody>
-                {teams.map((team) => {
+                {paged.map((team) => {
                   const members = memberCount.get(team.id) ?? 0;
                   return (
                     <tr
@@ -203,12 +254,15 @@ export default function TeamsPage() {
                       className="group border-b border-hairline/60 transition-colors last:border-b-0 hover:bg-surface-3/70"
                     >
                       <td className="px-4 py-3">
-                        <span className="flex items-center gap-2 text-[13px] font-medium text-ink">
+                        <Link
+                          href={`/teams/${team.id}`}
+                          className="flex items-center gap-2 text-[13px] font-medium text-ink hover:text-primary"
+                        >
                           <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary-weak text-primary">
                             <ListIcon className="size-3.5" />
                           </span>
                           {team.name}
-                        </span>
+                        </Link>
                       </td>
                       <td className="max-w-xs px-4 py-3 text-xs text-ink-muted">
                         <span className="line-clamp-2">
@@ -252,7 +306,10 @@ export default function TeamsPage() {
               </tbody>
             </table>
           </div>
+          <Pagination page={currentPage} pageCount={pageCount} onPageChange={setPage} />
         </div>
+      )}
+        </>
       )}
 
       {modal && (

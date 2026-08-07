@@ -5,13 +5,17 @@ import type { FormEvent } from "react";
 import { useCompany } from "@/lib/company-data";
 import type { Location } from "@/lib/company-data";
 import Modal from "@/components/admin/Modal";
+import Pagination from "@/components/admin/Pagination";
 import StatCard from "@/components/admin/StatCard";
 import {
   MapPinIcon,
   PencilIcon,
   PlusIcon,
+  SearchIcon,
   TrashIcon,
 } from "@/components/admin/icons";
+
+const PAGE_SIZE = 10;
 
 const inputClass =
   "mt-1.5 h-9 w-full rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none";
@@ -70,6 +74,8 @@ export default function LocationsPage() {
     useCompany();
   const [modal, setModal] = useState<LocationModalState>(null);
   const [confirmDelete, setConfirmDelete] = useState<Location | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
@@ -184,6 +190,24 @@ export default function LocationsPage() {
     return counts;
   }, [people]);
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return locations;
+    return locations.filter(
+      (l) =>
+        l.name.toLowerCase().includes(q) ||
+        (l.description ?? "").toLowerCase().includes(q) ||
+        locationSummary(l).toLowerCase().includes(q),
+    );
+  }, [locations, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const paged = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage],
+  );
+
   const close = () => setModal(null);
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -284,7 +308,34 @@ export default function LocationsPage() {
           </button>
         </div>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-xl border border-hairline bg-surface-2">
+        <>
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <p className="text-sm text-ink-muted">
+              {filtered.length} {filtered.length === 1 ? "location" : "locations"}
+            </p>
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-subtle" />
+              <input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search locations…"
+                className="h-8 w-48 rounded-lg border border-hairline bg-surface-2 pl-8 pr-3 text-xs text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-hairline bg-surface-2 p-10 text-center">
+              <p className="text-[13px] font-medium text-ink">No locations found</p>
+              <p className="mt-1 text-xs text-ink-muted">
+                Try a different search term.
+              </p>
+            </div>
+          ) : (
+        <div className="mt-4 overflow-hidden rounded-xl border border-hairline bg-surface-2">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
@@ -303,7 +354,7 @@ export default function LocationsPage() {
                 </tr>
               </thead>
               <tbody>
-                {locations.map((location) => (
+                {paged.map((location) => (
                   <tr
                     key={location.id}
                     className="group border-b border-hairline/60 transition-colors last:border-b-0 hover:bg-surface-3/70"
@@ -369,7 +420,10 @@ export default function LocationsPage() {
               </tbody>
             </table>
           </div>
+          <Pagination page={currentPage} pageCount={pageCount} onPageChange={setPage} />
         </div>
+          )}
+        </>
       )}
 
       {modal && (

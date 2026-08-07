@@ -44,14 +44,36 @@ export interface Person {
   locationId: string | null;
   timezone: string;
   status: PersonStatus;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ActivityAction = "invited" | "updated" | "resent";
+
+export interface ActivityEntry {
+  id: string;
+  personId: string;
+  action: ActivityAction;
+  message: string;
+  timestamp: string;
+}
+
+export type ClockAction = "in" | "out";
+
+export interface ClockEntry {
+  id: string;
+  personId: string;
+  action: ClockAction;
+  at: string;
 }
 
 interface CompanyState {
   teams: Team[];
   people: Person[];
   locations: Location[];
+  activity: ActivityEntry[];
+  clockEntries: ClockEntry[];
 }
 
 type CompanyAction =
@@ -60,14 +82,18 @@ type CompanyAction =
   | { type: "deleteTeam"; id: string }
   | { type: "addPerson"; person: Person }
   | { type: "updatePerson"; id: string; patch: Partial<Person> }
+  | { type: "resendInvite"; id: string }
   | { type: "deletePerson"; id: string }
   | { type: "createLocation"; location: Location }
   | { type: "updateLocation"; id: string; patch: Partial<Location> }
-  | { type: "deleteLocation"; id: string };
+  | { type: "deleteLocation"; id: string }
+  | { type: "addClockEntry"; entry: ClockEntry };
 
 const TEAMS_KEY = "roster.teams";
 const PEOPLE_KEY = "roster.people";
 const LOCATIONS_KEY = "roster.locations";
+const ACTIVITY_KEY = "roster.activity";
+const CLOCK_KEY = "roster.clock";
 
 let seq = 0;
 export const nextId = (prefix: string) =>
@@ -97,6 +123,8 @@ function initState(): CompanyState {
   const teams = readStored<Team[]>(TEAMS_KEY, []);
   const people = readStored<Person[]>(PEOPLE_KEY, []);
   const locations = readStored<Location[]>(LOCATIONS_KEY, []);
+  const activity = readStored<ActivityEntry[]>(ACTIVITY_KEY, []);
+  const clockEntries = readStored<ClockEntry[]>(CLOCK_KEY, []);
 
   if (teams.length === 0) {
     const setup = readCompanySetup();
@@ -112,7 +140,7 @@ function initState(): CompanyState {
       writeStored(TEAMS_KEY, teams);
     }
   }
-  return { teams, people, locations };
+  return { teams, people, locations, activity, clockEntries };
 }
 
 const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
@@ -135,18 +163,61 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
         ),
       };
     case "addPerson":
-      return { ...state, people: [action.person, ...state.people] };
+      return {
+        ...state,
+        people: [action.person, ...state.people],
+        activity: [
+          {
+            id: nextId("activity"),
+            personId: action.person.id,
+            action: "invited",
+            message: "Invited to the company",
+            timestamp: new Date().toISOString(),
+          },
+          ...state.activity,
+        ],
+      };
     case "updatePerson":
       return {
         ...state,
         people: state.people.map((p) =>
           p.id === action.id ? { ...p, ...action.patch, updatedAt: new Date().toISOString() } : p,
         ),
+        activity: [
+          {
+            id: nextId("activity"),
+            personId: action.id,
+            action: "updated",
+            message: "Profile updated",
+            timestamp: new Date().toISOString(),
+          },
+          ...state.activity,
+        ],
+      };
+    case "resendInvite":
+      return {
+        ...state,
+        people: state.people.map((p) =>
+          p.id === action.id
+            ? { ...p, status: "invited", updatedAt: new Date().toISOString() }
+            : p,
+        ),
+        activity: [
+          {
+            id: nextId("activity"),
+            personId: action.id,
+            action: "resent",
+            message: "Invite resent",
+            timestamp: new Date().toISOString(),
+          },
+          ...state.activity,
+        ],
       };
     case "deletePerson":
       return {
         ...state,
         people: state.people.filter((p) => p.id !== action.id),
+        clockEntries: state.clockEntries.filter((c) => c.personId !== action.id),
       };
     case "createLocation":
       return { ...state, locations: [action.location, ...state.locations] };
@@ -168,6 +239,8 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
           p.locationId === action.id ? { ...p, locationId: null } : p,
         ),
       };
+    case "addClockEntry":
+      return { ...state, clockEntries: [action.entry, ...state.clockEntries] };
   }
 };
 
@@ -206,6 +279,7 @@ interface CompanyContextValue extends CompanyState {
   createLocation: (input: LocationInput) => Location | null;
   updateLocation: (id: string, patch: Partial<Location>) => boolean;
   deleteLocation: (id: string) => void;
+  addClockEntry: (personId: string, action: ClockAction) => void;
 }
 
 const CompanyContext = createContext<CompanyContextValue | null>(null);
@@ -224,6 +298,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     writeStored(LOCATIONS_KEY, state.locations);
   }, [state.locations]);
+
+  useEffect(() => {
+    writeStored(ACTIVITY_KEY, state.activity);
+  }, [state.activity]);
+
+  useEffect(() => {
+    writeStored(CLOCK_KEY, state.clockEntries);
+  }, [state.clockEntries]);
 
   const createTeam = useCallback(
     (name: string, description?: string, locationId?: string | null): Team | null => {
@@ -291,7 +373,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resendInvite = useCallback((id: string) => {
-    dispatch({ type: "updatePerson", id, patch: { status: "invited" } });
+    dispatch({ type: "resendInvite", id });
   }, []);
 
   const deletePerson = useCallback((id: string) => {
@@ -334,6 +416,18 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "deleteLocation", id });
   }, []);
 
+  const addClockEntry = useCallback((personId: string, action: ClockAction) => {
+    dispatch({
+      type: "addClockEntry",
+      entry: {
+        id: nextId("clock"),
+        personId,
+        action,
+        at: new Date().toISOString(),
+      },
+    });
+  }, []);
+
   const value = useMemo<CompanyContextValue>(
     () => ({
       ...state,
@@ -347,6 +441,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       createLocation,
       updateLocation,
       deleteLocation,
+      addClockEntry,
     }),
     [
       state,
@@ -360,6 +455,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       createLocation,
       updateLocation,
       deleteLocation,
+      addClockEntry,
     ],
   );
 

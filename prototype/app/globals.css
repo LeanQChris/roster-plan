@@ -103,6 +103,31 @@ body {
   color: #ffffff;
 }
 
+button:not(:disabled),
+[role="button"]:not(:disabled),
+a[href],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+input[type="color"],
+select:not(:disabled),
+label[for],
+summary,
+details[open],
+[role="menuitem"],
+[role="tab"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--surface-4) transparent;

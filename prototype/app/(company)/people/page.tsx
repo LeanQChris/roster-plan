@@ -2,20 +2,25 @@
 
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { useCompany } from "@/lib/company-data";
 import type { Person, PersonRole } from "@/lib/company-data";
 import { DEFAULT_TIMEZONE, TIMEZONES } from "@/lib/company";
 import { initials } from "@/lib/format";
 import Modal from "@/components/admin/Modal";
+import Pagination from "@/components/admin/Pagination";
 import {
   ChevronDownIcon,
   MailIcon,
   MapPinIcon,
   PencilIcon,
   PlusIcon,
+  SearchIcon,
   TrashIcon,
   UsersIcon,
 } from "@/components/admin/icons";
+
+const PAGE_SIZE = 10;
 
 const inputClass =
   "mt-1.5 h-9 w-full rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none";
@@ -93,6 +98,8 @@ export default function PeoplePage() {
     deletePerson,
   } = useCompany();
   const [teamFilter, setTeamFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<PersonFormState>(EMPTY_FORM);
   const [confirmDelete, setConfirmDelete] = useState<Person | null>(null);
@@ -112,10 +119,28 @@ export default function PeoplePage() {
   }, [locations]);
 
   const filtered = useMemo(() => {
-    if (teamFilter === "all") return people;
-    if (teamFilter === "unassigned") return people.filter((p) => !p.teamId);
-    return people.filter((p) => p.teamId === teamFilter);
-  }, [people, teamFilter]);
+    let list = people;
+    if (teamFilter === "unassigned") list = list.filter((p) => !p.teamId);
+    else if (teamFilter !== "all") list = list.filter((p) => p.teamId === teamFilter);
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.email.toLowerCase().includes(q) ||
+          (p.phone ?? "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [people, teamFilter, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const paged = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage],
+  );
 
   const openInvite = () => {
     setForm({ ...EMPTY_FORM });
@@ -207,22 +232,39 @@ export default function PeoplePage() {
               ? " unassigned"
               : " in the company"}
         </p>
-        <div className="relative">
-          <select
-            value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
-            aria-label="Filter by team"
-            className={`${selectClass} !mt-0 h-8 w-auto pr-8 text-xs`}
-          >
-            <option value="all">All teams</option>
-            <option value="unassigned">Unassigned</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-subtle" />
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-subtle" />
+            <input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search people…"
+              className="h-8 w-48 rounded-lg border border-hairline bg-surface-2 pl-8 pr-3 text-xs text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none"
+            />
+          </div>
+          <div className="relative">
+            <select
+              value={teamFilter}
+              onChange={(e) => {
+                setTeamFilter(e.target.value);
+                setPage(1);
+              }}
+              aria-label="Filter by team"
+              className={`${selectClass} !mt-0 h-8 w-auto pr-8 text-xs`}
+            >
+              <option value="all">All teams</option>
+              <option value="unassigned">Unassigned</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-subtle" />
+          </div>
         </div>
       </div>
 
@@ -251,16 +293,19 @@ export default function PeoplePage() {
       ) : (
         <div className="mt-4 overflow-hidden rounded-xl border border-hairline bg-surface-2">
           <ul className="divide-y divide-hairline">
-            {filtered.map((person) => (
+            {paged.map((person) => (
               <li key={person.id} className="group flex items-center gap-3 px-4 py-3">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-4 text-[11px] font-semibold text-ink">
                   {initials(person.name) || "?"}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="truncate text-[13px] font-medium text-ink">
+                    <Link
+                      href={`/people/${person.id}`}
+                      className="truncate text-[13px] font-medium text-ink hover:text-primary"
+                    >
                       {person.name}
-                    </p>
+                    </Link>
                     <RoleBadge role={person.role} />
                   </div>
                   <p className="mt-0.5 truncate text-xs text-ink-muted">
@@ -315,6 +360,7 @@ export default function PeoplePage() {
               </li>
             ))}
           </ul>
+          <Pagination page={currentPage} pageCount={pageCount} onPageChange={setPage} />
         </div>
       )}
 
