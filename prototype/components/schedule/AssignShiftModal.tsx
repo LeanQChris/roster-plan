@@ -54,7 +54,7 @@ export default function AssignShiftModal({
   const assignedSet = useMemo(() => new Set(assignedPersonIds), [assignedPersonIds]);
 
   const availablePeople = useMemo(
-    () => teamPeople.filter((p) => !assignedSet.has(p.id) && p.status === "active"),
+    () => teamPeople.filter((p) => !assignedSet.has(p.id) && (p.status === "active" || p.status === "invited")),
     [teamPeople, assignedSet],
   );
 

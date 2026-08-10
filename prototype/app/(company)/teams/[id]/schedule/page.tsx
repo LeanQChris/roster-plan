@@ -8,13 +8,19 @@ import type { Shift } from "@/lib/company-data";
 import Modal from "@/components/ui/Modal";
 import ShiftCalendar from "@/components/schedule/ShiftCalendar";
 import AssignShiftModal from "@/components/schedule/AssignShiftModal";
+import CreateShiftModal from "@/components/schedule/CreateShiftModal";
+import EditShiftModal from "@/components/schedule/EditShiftModal";
+import DeleteShiftDialog from "@/components/schedule/DeleteShiftDialog";
+import ShiftDetailsPanel from "@/components/schedule/ShiftDetailsPanel";
 import {
   ArrowLeftIcon,
   CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ClockIcon,
+  PencilIcon,
   PlusIcon,
+  TrashIcon,
 } from "@/components/ui/icons";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -34,10 +40,18 @@ function formatDateRange(start: Date): string {
   const startMonth = MONTH_NAMES[start.getMonth()];
   const endMonth = MONTH_NAMES[end.getMonth()];
   if (startMonth === endMonth) {
-    return `${startMonth} ${start.getDate()} – ${end.getDate()}, ${start.getFullYear()}`;
+    return startMonth + " " + start.getDate() + " \u2013 " + end.getDate() + ", " + start.getFullYear();
   }
-  return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${end.getFullYear()}`;
+  return startMonth + " " + start.getDate() + " \u2013 " + endMonth + " " + end.getDate() + ", " + start.getFullYear();
 }
+
+type ModalMode =
+  | { type: null }
+  | { type: "assign"; shift: Shift }
+  | { type: "create"; defaultDate?: string }
+  | { type: "edit"; shift: Shift }
+  | { type: "delete"; shift: Shift }
+  | { type: "details"; shift: Shift };
 
 export default function SchedulePage() {
   const params = useParams<{ id: string }>();
@@ -48,6 +62,8 @@ export default function SchedulePage() {
     shiftAssignments,
     shiftTemplates,
     publishShifts,
+    createShift,
+    updateShift,
     deleteShift,
     assignPerson,
     removeAssignment,
@@ -58,13 +74,9 @@ export default function SchedulePage() {
     () => people.filter((p) => p.teamId === params.id),
     [people, params.id],
   );
-  const teamShifts = useMemo(
-    () => shifts.filter((s) => s.teamId === params.id),
-    [shifts, params.id],
-  );
 
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
-  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+  const [modal, setModal] = useState<ModalMode>({ type: null });
   const [publishConfirm, setPublishConfirm] = useState(false);
   const [publishResult, setPublishResult] = useState<{ count: number } | null>(null);
 
@@ -74,13 +86,15 @@ export default function SchedulePage() {
     return end;
   }, [weekStart]);
 
-  const weekKey = `${weekStart.toISOString().slice(0, 10)}|${weekEnd.toISOString().slice(0, 10)}`;
+  const weekKey = weekStart.toISOString().slice(0, 10) + "|" + weekEnd.toISOString().slice(0, 10);
 
   const visibleShifts = useMemo(() => {
     const startStr = weekStart.toISOString().slice(0, 10);
     const endStr = weekEnd.toISOString().slice(0, 10);
-    return teamShifts.filter((s) => s.date >= startStr && s.date <= endStr);
-  }, [teamShifts, weekStart, weekEnd]);
+    return shifts.filter(
+      (s) => s.teamId === params.id && s.date >= startStr && s.date <= endStr,
+    );
+  }, [shifts, params.id, weekStart, weekEnd]);
 
   const visibleAssignments = useMemo(() => {
     const shiftIds = new Set(visibleShifts.map((s) => s.id));
@@ -114,9 +128,51 @@ export default function SchedulePage() {
     setPublishConfirm(false);
   };
 
+  const handleCreateShift = (shiftData: {
+    title: string;
+    date: string;
+    startTime: string;
+    durationMinutes: number;
+    requiredCount: number;
+  }) => {
+    const result = createShift({
+      teamId: params.id,
+      title: shiftData.title,
+      date: shiftData.date,
+      startTime: shiftData.startTime,
+      durationMinutes: shiftData.durationMinutes,
+      requiredCount: shiftData.requiredCount,
+    });
+    if (result.ok) {
+      setModal({ type: null });
+    }
+    return result;
+  };
+
+  const handleUpdateShift = (id: string, patch: Partial<Shift>) => {
+    const result = updateShift(id, patch);
+    if (result.ok) {
+      setModal({ type: null });
+    }
+    return result;
+  };
+
+  const handleDeleteShift = (id: string) => {
+    deleteShift(id);
+    setModal({ type: null });
+  };
+
   const handleAssign = (personId: string) => {
-    if (!selectedShift) return { ok: false, error: "No shift selected." };
-    return assignPerson(selectedShift.id, personId);
+    if (modal.type !== "assign") return { ok: false, error: "No shift selected." };
+    return assignPerson(modal.shift.id, personId);
+  };
+
+  const handleRemoveAssignment = (assignmentId: string) => {
+    removeAssignment(assignmentId);
+  };
+
+  const getAssignmentCount = (shiftId: string) => {
+    return visibleAssignments.filter((a) => a.shiftId === shiftId).length;
   };
 
   if (!team) {
@@ -141,7 +197,7 @@ export default function SchedulePage() {
   return (
     <div>
       <Link
-        href={`/teams/${team.id}`}
+        href={"/teams/" + team.id}
         className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-muted transition-colors hover:text-ink"
       >
         <ArrowLeftIcon className="size-4" />
@@ -193,6 +249,14 @@ export default function SchedulePage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setModal({ type: "create" })}
+            className="flex h-8 items-center gap-2 rounded-lg border border-hairline bg-surface-2 px-3.5 text-[13px] font-medium text-ink transition-colors hover:bg-surface-3"
+          >
+            <PlusIcon className="size-3.5" />
+            Add shift
+          </button>
           {activeTemplates.length > 0 && (
             <button
               type="button"
@@ -212,14 +276,25 @@ export default function SchedulePage() {
           <h2 className="mt-3 text-[15px] font-semibold text-ink">No shifts this week</h2>
           <p className="mx-auto mt-1 max-w-sm text-xs text-ink-muted">
             Create shift templates with recurrence rules, then publish them to generate concrete shifts.
+            Or add ad-hoc shifts manually.
           </p>
-          <Link
-            href={`/teams/${team.id}/templates`}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
-          >
-            <ClockIcon className="size-3.5" />
-            Manage templates
-          </Link>
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setModal({ type: "create" })}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+            >
+              <PlusIcon className="size-3.5" />
+              Add shift
+            </button>
+            <Link
+              href={"/teams/" + team.id + "/templates"}
+              className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-surface-2 px-3.5 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-surface-3"
+            >
+              <ClockIcon className="size-3.5" />
+              Manage templates
+            </Link>
+          </div>
         </div>
       )}
 
@@ -231,20 +306,118 @@ export default function SchedulePage() {
             shifts={visibleShifts}
             assignments={visibleAssignments}
             people={people}
-            onClickShift={setSelectedShift}
+            onClickShift={(shift) => setModal({ type: "assign", shift })}
           />
         </div>
       )}
 
-      {selectedShift && (
+      {/* Action buttons for each shift */}
+      {visibleShifts.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
+            Shifts this week
+          </p>
+          <div className="space-y-1.5">
+            {visibleShifts.map((shift) => {
+              const count = getAssignmentCount(shift.id);
+              return (
+                <div
+                  key={shift.id}
+                  className="flex items-center justify-between rounded-lg border border-hairline bg-surface-2 px-3 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-medium text-ink">
+                      {shift.title}
+                    </p>
+                    <p className="text-[11px] text-ink-subtle">
+                      {shift.date} {" \u00b7 "} {shift.startTime} {" \u00b7 "} {count}/{shift.requiredCount} assigned
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setModal({ type: "details", shift })}
+                      className="rounded-md p-1.5 text-ink-subtle transition-colors hover:bg-surface-3 hover:text-ink"
+                      title="View details"
+                    >
+                      <ClockIcon className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModal({ type: "assign", shift })}
+                      className="rounded-md p-1.5 text-ink-subtle transition-colors hover:bg-surface-3 hover:text-ink"
+                      title="Assign people"
+                    >
+                      <PlusIcon className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModal({ type: "edit", shift })}
+                      className="rounded-md p-1.5 text-ink-subtle transition-colors hover:bg-surface-3 hover:text-primary"
+                      title="Edit shift"
+                    >
+                      <PencilIcon className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModal({ type: "delete", shift })}
+                      className="rounded-md p-1.5 text-ink-subtle transition-colors hover:bg-surface-3 hover:text-danger"
+                      title="Delete shift"
+                    >
+                      <TrashIcon className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      {modal.type === "assign" && (
         <AssignShiftModal
-          shift={selectedShift}
+          shift={modal.shift}
           assignments={shiftAssignments}
           people={people}
           teamPeople={teamPeople}
           onAssign={handleAssign}
-          onRemove={removeAssignment}
-          onClose={() => setSelectedShift(null)}
+          onRemove={handleRemoveAssignment}
+          onClose={() => setModal({ type: null })}
+        />
+      )}
+
+      {modal.type === "create" && (
+        <CreateShiftModal
+          defaultDate={modal.defaultDate}
+          onCreate={handleCreateShift}
+          onClose={() => setModal({ type: null })}
+        />
+      )}
+
+      {modal.type === "edit" && (
+        <EditShiftModal
+          shift={modal.shift}
+          onUpdate={handleUpdateShift}
+          onClose={() => setModal({ type: null })}
+        />
+      )}
+
+      {modal.type === "delete" && (
+        <DeleteShiftDialog
+          shift={modal.shift}
+          assignmentCount={getAssignmentCount(modal.shift.id)}
+          onDelete={handleDeleteShift}
+          onClose={() => setModal({ type: null })}
+        />
+      )}
+
+      {modal.type === "details" && (
+        <ShiftDetailsPanel
+          shift={modal.shift}
+          assignments={shiftAssignments}
+          people={people}
+          onClose={() => setModal({ type: null })}
         />
       )}
 
@@ -252,7 +425,15 @@ export default function SchedulePage() {
         <Modal
           open
           title="Publish shifts?"
-          description={`This will expand ${activeTemplates.length} active template${activeTemplates.length === 1 ? "" : "s"} into concrete shifts for ${formatDateRange(weekStart)}. Shifts that already exist for the same date and time will be skipped.`}
+          description={
+            "This will expand " +
+            activeTemplates.length +
+            " active template" +
+            (activeTemplates.length === 1 ? "" : "s") +
+            " into concrete shifts for " +
+            formatDateRange(weekStart) +
+            ". Shifts that already exist for the same date and time will be skipped."
+          }
           confirmLabel="Publish"
           onClose={() => setPublishConfirm(false)}
           onConfirm={handlePublish}
@@ -265,8 +446,8 @@ export default function SchedulePage() {
           title="Shifts published"
           description={
             publishResult.count > 0
-              ? `${publishResult.count} new shift${publishResult.count === 1 ? "" : "s"} created for this week.`
-              : "No new shifts were created — all time slots already have shifts."
+              ? publishResult.count + " new shift" + (publishResult.count === 1 ? "" : "s") + " created for this week."
+              : "No new shifts were created \u2014 all time slots already have shifts."
           }
           confirmLabel="OK"
           onClose={() => setPublishResult(null)}

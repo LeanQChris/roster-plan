@@ -131,6 +131,8 @@ type CompanyAction =
   | { type: "updateShiftTemplate"; id: string; patch: Partial<ShiftTemplate> }
   | { type: "deleteShiftTemplate"; id: string }
   | { type: "addShifts"; shifts: Shift[] }
+  | { type: "createShift"; shift: Shift }
+  | { type: "updateShift"; id: string; patch: Partial<Shift> }
   | { type: "deleteShift"; id: string }
   | { type: "addAssignment"; assignment: ShiftAssignment }
   | { type: "removeAssignment"; id: string };
@@ -312,6 +314,15 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
       };
     case "addShifts":
       return { ...state, shifts: [...action.shifts, ...state.shifts] };
+    case "createShift":
+      return { ...state, shifts: [action.shift, ...state.shifts] };
+    case "updateShift":
+      return {
+        ...state,
+        shifts: state.shifts.map((s) =>
+          s.id === action.id ? { ...s, ...action.patch } : s,
+        ),
+      };
     case "deleteShift":
       return {
         ...state,
@@ -384,6 +395,15 @@ interface CompanyContextValue extends CompanyState {
   deleteShiftTemplate: (id: string) => void;
   getShiftTemplatesByTeam: (teamId: string) => ShiftTemplate[];
   publishShifts: (teamId: string, rangeStart: string, rangeEnd: string) => Shift[];
+  createShift: (input: {
+    teamId: string;
+    title: string;
+    date: string;
+    startTime: string;
+    durationMinutes: number;
+    requiredCount: number;
+  }) => { ok: boolean; error?: string; shift?: Shift };
+  updateShift: (id: string, patch: Partial<Shift>) => { ok: boolean; error?: string };
   deleteShift: (id: string) => void;
   assignPerson: (shiftId: string, personId: string) => { ok: boolean; error?: string };
   removeAssignment: (id: string) => void;
@@ -639,9 +659,57 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     [state.shiftTemplates, state.shifts],
   );
 
+  const createShift = useCallback(
+    (input: {
+      teamId: string;
+      title: string;
+      date: string;
+      startTime: string;
+      durationMinutes: number;
+      requiredCount: number;
+    }): { ok: boolean; error?: string; shift?: Shift } => {
+      const trimmed = input.title.trim();
+      if (!trimmed) return { ok: false, error: "Title is required." };
+      if (!input.date) return { ok: false, error: "Date is required." };
+      if (input.durationMinutes <= 0) return { ok: false, error: "Duration must be greater than 0." };
+      if (input.requiredCount < 1) return { ok: false, error: "Staff required must be at least 1." };
+
+      const shift: Shift = {
+        id: nextId("shift"),
+        teamId: input.teamId,
+        title: trimmed,
+        date: input.date,
+        startTime: input.startTime,
+        durationMinutes: input.durationMinutes,
+        requiredCount: input.requiredCount,
+        createdAt: new Date().toISOString(),
+      };
+      dispatch({ type: "createShift", shift });
+      return { ok: true, shift };
+    },
+    [],
+  );
+
   const deleteShift = useCallback((id: string) => {
     dispatch({ type: "deleteShift", id });
   }, []);
+
+  const updateShift = useCallback(
+    (id: string, patch: Partial<Shift>): { ok: boolean; error?: string } => {
+      if (patch.title !== undefined && !patch.title.trim()) {
+        return { ok: false, error: "Title is required." };
+      }
+      if (patch.durationMinutes !== undefined && patch.durationMinutes <= 0) {
+        return { ok: false, error: "Duration must be greater than 0." };
+      }
+      if (patch.requiredCount !== undefined && patch.requiredCount < 1) {
+        return { ok: false, error: "Staff required must be at least 1." };
+      }
+      dispatch({ type: "updateShift", id, patch });
+      return { ok: true };
+    },
+    [],
+  );
 
   const assignPerson = useCallback(
     (shiftId: string, personId: string): { ok: boolean; error?: string } => {
@@ -684,6 +752,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       deleteShiftTemplate,
       getShiftTemplatesByTeam,
       publishShifts,
+      createShift,
+      updateShift,
       deleteShift,
       assignPerson,
       removeAssignment,
@@ -706,6 +776,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       deleteShiftTemplate,
       getShiftTemplatesByTeam,
       publishShifts,
+      createShift,
+      updateShift,
       deleteShift,
       assignPerson,
       removeAssignment,

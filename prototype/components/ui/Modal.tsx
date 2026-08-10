@@ -89,7 +89,6 @@ export default function Modal({
         ) : (
           <>
             {children}
-
             <div className="mt-6 flex justify-end gap-2">
               <button
                 onClick={onClose}
