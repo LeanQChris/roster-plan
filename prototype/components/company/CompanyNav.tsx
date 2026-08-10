@@ -10,6 +10,7 @@ import LogoMark from "@/components/ui/Logo";
 import {
   ActivityIcon,
   ChevronDownIcon,
+  ClockIcon,
   ListIcon,
   MapPinIcon,
   MoonIcon,
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: ActivityIcon, soon: false },
   { href: "/teams", label: "Teams", icon: ListIcon, soon: false },
   { href: "/people", label: "People", icon: UsersIcon, soon: false },
+  { href: "/templates", label: "Shift Templates", icon: ClockIcon, soon: false },
   { href: "/locations", label: "Locations", icon: MapPinIcon, soon: false },
   { href: "/settings", label: "Settings", icon: SettingsIcon, soon: false },
 ];

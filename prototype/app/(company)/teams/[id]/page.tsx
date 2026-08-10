@@ -10,6 +10,7 @@ import Modal from "@/components/ui/Modal";
 import StatCard from "@/components/ui/StatCard";
 import {
   ArrowLeftIcon,
+  CalendarIcon,
   ChevronDownIcon,
   ListIcon,
   PencilIcon,
@@ -133,6 +134,13 @@ export default function TeamDetailPage() {
               Saved
             </span>
           )}
+          <Link
+            href={`/teams/${team.id}/schedule`}
+            className="flex h-8 items-center gap-2 rounded-lg border border-hairline bg-surface-2 px-3.5 text-[13px] font-medium text-ink transition-colors hover:bg-surface-3"
+          >
+            <CalendarIcon className="size-3.5" />
+            Schedule
+          </Link>
           <button
             onClick={openEdit}
             className="flex h-8 items-center gap-2 rounded-lg border border-hairline bg-surface-2 px-3.5 text-[13px] font-medium text-ink transition-colors hover:bg-surface-3"

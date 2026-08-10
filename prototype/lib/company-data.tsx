@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { readCompanySetup } from "./company";
+import { RRule } from "rrule";
 
 export type PersonRole = "employee" | "manager";
 export type PersonStatus = "active" | "invited" | "inactive";
@@ -68,12 +69,50 @@ export interface ClockEntry {
   at: string;
 }
 
+export interface ShiftTemplate {
+  id: string;
+  teamId: string;
+  title: string;
+  description?: string;
+  durationMinutes: number;
+  startTime: string;
+  requiredCount: number;
+  maxCount?: number;
+  isActive: boolean;
+  recurrenceRule?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Shift {
+  id: string;
+  teamId: string;
+  templateId?: string;
+  title: string;
+  description?: string;
+  date: string;
+  startTime: string;
+  durationMinutes: number;
+  requiredCount: number;
+  createdAt: string;
+}
+
+export interface ShiftAssignment {
+  id: string;
+  shiftId: string;
+  personId: string;
+  createdAt: string;
+}
+
 interface CompanyState {
   teams: Team[];
   people: Person[];
   locations: Location[];
   activity: ActivityEntry[];
   clockEntries: ClockEntry[];
+  shiftTemplates: ShiftTemplate[];
+  shifts: Shift[];
+  shiftAssignments: ShiftAssignment[];
 }
 
 type CompanyAction =
@@ -87,13 +126,23 @@ type CompanyAction =
   | { type: "createLocation"; location: Location }
   | { type: "updateLocation"; id: string; patch: Partial<Location> }
   | { type: "deleteLocation"; id: string }
-  | { type: "addClockEntry"; entry: ClockEntry };
+  | { type: "addClockEntry"; entry: ClockEntry }
+  | { type: "createShiftTemplate"; template: ShiftTemplate }
+  | { type: "updateShiftTemplate"; id: string; patch: Partial<ShiftTemplate> }
+  | { type: "deleteShiftTemplate"; id: string }
+  | { type: "addShifts"; shifts: Shift[] }
+  | { type: "deleteShift"; id: string }
+  | { type: "addAssignment"; assignment: ShiftAssignment }
+  | { type: "removeAssignment"; id: string };
 
 const TEAMS_KEY = "roster.teams";
 const PEOPLE_KEY = "roster.people";
 const LOCATIONS_KEY = "roster.locations";
 const ACTIVITY_KEY = "roster.activity";
 const CLOCK_KEY = "roster.clock";
+const TEMPLATES_KEY = "roster.shiftTemplates";
+const SHIFTS_KEY = "roster.shifts";
+const ASSIGNMENTS_KEY = "roster.shiftAssignments";
 
 let seq = 0;
 export const nextId = (prefix: string) =>
@@ -125,6 +174,9 @@ function initState(): CompanyState {
   const locations = readStored<Location[]>(LOCATIONS_KEY, []);
   const activity = readStored<ActivityEntry[]>(ACTIVITY_KEY, []);
   const clockEntries = readStored<ClockEntry[]>(CLOCK_KEY, []);
+  const shiftTemplates = readStored<ShiftTemplate[]>(TEMPLATES_KEY, []);
+  const shifts = readStored<Shift[]>(SHIFTS_KEY, []);
+  const shiftAssignments = readStored<ShiftAssignment[]>(ASSIGNMENTS_KEY, []);
 
   if (teams.length === 0) {
     const setup = readCompanySetup();
@@ -140,7 +192,7 @@ function initState(): CompanyState {
       writeStored(TEAMS_KEY, teams);
     }
   }
-  return { teams, people, locations, activity, clockEntries };
+  return { teams, people, locations, activity, clockEntries, shiftTemplates, shifts, shiftAssignments };
 }
 
 const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
@@ -241,6 +293,41 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
       };
     case "addClockEntry":
       return { ...state, clockEntries: [action.entry, ...state.clockEntries] };
+    case "createShiftTemplate":
+      return {
+        ...state,
+        shiftTemplates: [action.template, ...state.shiftTemplates],
+      };
+    case "updateShiftTemplate":
+      return {
+        ...state,
+        shiftTemplates: state.shiftTemplates.map((t) =>
+          t.id === action.id ? { ...t, ...action.patch, updatedAt: new Date().toISOString() } : t,
+        ),
+      };
+    case "deleteShiftTemplate":
+      return {
+        ...state,
+        shiftTemplates: state.shiftTemplates.filter((t) => t.id !== action.id),
+      };
+    case "addShifts":
+      return { ...state, shifts: [...action.shifts, ...state.shifts] };
+    case "deleteShift":
+      return {
+        ...state,
+        shifts: state.shifts.filter((s) => s.id !== action.id),
+        shiftAssignments: state.shiftAssignments.filter((a) => a.shiftId !== action.id),
+      };
+    case "addAssignment":
+      return {
+        ...state,
+        shiftAssignments: [action.assignment, ...state.shiftAssignments],
+      };
+    case "removeAssignment":
+      return {
+        ...state,
+        shiftAssignments: state.shiftAssignments.filter((a) => a.id !== action.id),
+      };
   }
 };
 
@@ -264,6 +351,18 @@ export interface LocationInput {
   active: boolean;
 }
 
+export interface ShiftTemplateInput {
+  teamId: string;
+  title: string;
+  description?: string;
+  durationMinutes: number;
+  startTime: string;
+  requiredCount: number;
+  maxCount?: number;
+  isActive: boolean;
+  recurrenceRule?: string;
+}
+
 interface CompanyContextValue extends CompanyState {
   createTeam: (
     name: string,
@@ -280,6 +379,14 @@ interface CompanyContextValue extends CompanyState {
   updateLocation: (id: string, patch: Partial<Location>) => boolean;
   deleteLocation: (id: string) => void;
   addClockEntry: (personId: string, action: ClockAction) => void;
+  createShiftTemplate: (input: ShiftTemplateInput) => { ok: boolean; error?: string; template?: ShiftTemplate };
+  updateShiftTemplate: (id: string, patch: Partial<ShiftTemplate>) => boolean;
+  deleteShiftTemplate: (id: string) => void;
+  getShiftTemplatesByTeam: (teamId: string) => ShiftTemplate[];
+  publishShifts: (teamId: string, rangeStart: string, rangeEnd: string) => Shift[];
+  deleteShift: (id: string) => void;
+  assignPerson: (shiftId: string, personId: string) => { ok: boolean; error?: string };
+  removeAssignment: (id: string) => void;
 }
 
 const CompanyContext = createContext<CompanyContextValue | null>(null);
@@ -306,6 +413,18 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     writeStored(CLOCK_KEY, state.clockEntries);
   }, [state.clockEntries]);
+
+  useEffect(() => {
+    writeStored(TEMPLATES_KEY, state.shiftTemplates);
+  }, [state.shiftTemplates]);
+
+  useEffect(() => {
+    writeStored(SHIFTS_KEY, state.shifts);
+  }, [state.shifts]);
+
+  useEffect(() => {
+    writeStored(ASSIGNMENTS_KEY, state.shiftAssignments);
+  }, [state.shiftAssignments]);
 
   const createTeam = useCallback(
     (name: string, description?: string, locationId?: string | null): Team | null => {
@@ -428,6 +547,124 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const createShiftTemplate = useCallback(
+    (input: ShiftTemplateInput): { ok: boolean; error?: string; template?: ShiftTemplate } => {
+      const trimmed = input.title.trim();
+      if (!trimmed) return { ok: false, error: "Title is required." };
+      if (input.durationMinutes <= 0) return { ok: false, error: "Duration must be greater than 0." };
+      if (input.requiredCount < 1) return { ok: false, error: "Staff required must be at least 1." };
+      if (input.maxCount !== undefined && input.maxCount < input.requiredCount) {
+        return { ok: false, error: "Max count must be greater than or equal to staff required." };
+      }
+      const now = new Date().toISOString();
+      const template: ShiftTemplate = {
+        id: nextId("template"),
+        teamId: input.teamId,
+        title: trimmed,
+        description: input.description?.trim() || undefined,
+        durationMinutes: input.durationMinutes,
+        startTime: input.startTime,
+        requiredCount: input.requiredCount,
+        maxCount: input.maxCount,
+        isActive: input.isActive,
+        recurrenceRule: input.recurrenceRule?.trim() || undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+      dispatch({ type: "createShiftTemplate", template });
+      return { ok: true, template };
+    },
+    [],
+  );
+
+  const updateShiftTemplate = useCallback((id: string, patch: Partial<ShiftTemplate>) => {
+    if (patch.title !== undefined && !patch.title.trim()) return false;
+    dispatch({ type: "updateShiftTemplate", id, patch });
+    return true;
+  }, []);
+
+  const deleteShiftTemplate = useCallback((id: string) => {
+    dispatch({ type: "deleteShiftTemplate", id });
+  }, []);
+
+  const getShiftTemplatesByTeam = useCallback(
+    (teamId: string) => state.shiftTemplates.filter((t) => t.teamId === teamId),
+    [state.shiftTemplates],
+  );
+
+  const publishShifts = useCallback(
+    (teamId: string, rangeStart: string, rangeEnd: string): Shift[] => {
+      const templates = state.shiftTemplates.filter(
+        (t) => t.teamId === teamId && t.isActive && t.recurrenceRule,
+      );
+      const start = new Date(rangeStart + "T00:00:00");
+      const end = new Date(rangeEnd + "T23:59:59");
+      const newShifts: Shift[] = [];
+      const existingDates = new Set(
+        state.shifts
+          .filter((s) => s.teamId === teamId)
+          .map((s) => `${s.date}|${s.startTime}`),
+      );
+      for (const template of templates) {
+        try {
+          const rule = RRule.fromString(template.recurrenceRule!);
+          const dates = rule.between(start, end, true);
+          for (const date of dates) {
+            const dateStr = date.toISOString().slice(0, 10);
+            const key = `${dateStr}|${template.startTime}`;
+            if (existingDates.has(key)) continue;
+            existingDates.add(key);
+            newShifts.push({
+              id: nextId("shift"),
+              teamId,
+              templateId: template.id,
+              title: template.title,
+              description: template.description,
+              date: dateStr,
+              startTime: template.startTime,
+              durationMinutes: template.durationMinutes,
+              requiredCount: template.requiredCount,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        } catch {
+          // invalid RRULE — skip this template
+        }
+      }
+      if (newShifts.length > 0) {
+        dispatch({ type: "addShifts", shifts: newShifts });
+      }
+      return newShifts;
+    },
+    [state.shiftTemplates, state.shifts],
+  );
+
+  const deleteShift = useCallback((id: string) => {
+    dispatch({ type: "deleteShift", id });
+  }, []);
+
+  const assignPerson = useCallback(
+    (shiftId: string, personId: string): { ok: boolean; error?: string } => {
+      const already = state.shiftAssignments.some(
+        (a) => a.shiftId === shiftId && a.personId === personId,
+      );
+      if (already) return { ok: false, error: "This person is already assigned to this shift." };
+      const assignment: ShiftAssignment = {
+        id: nextId("assignment"),
+        shiftId,
+        personId,
+        createdAt: new Date().toISOString(),
+      };
+      dispatch({ type: "addAssignment", assignment });
+      return { ok: true };
+    },
+    [state.shiftAssignments],
+  );
+
+  const removeAssignment = useCallback((id: string) => {
+    dispatch({ type: "removeAssignment", id });
+  }, []);
+
   const value = useMemo<CompanyContextValue>(
     () => ({
       ...state,
@@ -442,6 +679,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       updateLocation,
       deleteLocation,
       addClockEntry,
+      createShiftTemplate,
+      updateShiftTemplate,
+      deleteShiftTemplate,
+      getShiftTemplatesByTeam,
+      publishShifts,
+      deleteShift,
+      assignPerson,
+      removeAssignment,
     }),
     [
       state,
@@ -456,6 +701,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       updateLocation,
       deleteLocation,
       addClockEntry,
+      createShiftTemplate,
+      updateShiftTemplate,
+      deleteShiftTemplate,
+      getShiftTemplatesByTeam,
+      publishShifts,
+      deleteShift,
+      assignPerson,
+      removeAssignment,
     ],
   );
 

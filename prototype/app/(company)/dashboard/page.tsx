@@ -21,8 +21,8 @@ import {
 
 const QUICK_LINKS = [
   { label: "Team People", hint: "Invite and manage staff", icon: UsersIcon, href: "/people", soon: false },
-  { label: "Shift Templates", hint: "Reusable shifts with repeat rules", icon: ClockIcon, soon: true },
-  { label: "Schedule", hint: "Plan and publish the week", icon: CalendarIcon, soon: true },
+  { label: "Shift Templates", hint: "Reusable shifts with repeat rules", icon: ClockIcon, href: "/templates", soon: false },
+  { label: "Schedule", hint: "Plan and publish the week", icon: CalendarIcon, href: "/teams", soon: false },
   { label: "Company Settings", hint: "Timezone, branding, defaults", icon: SettingsIcon, href: "/settings", soon: false },
 ];
 

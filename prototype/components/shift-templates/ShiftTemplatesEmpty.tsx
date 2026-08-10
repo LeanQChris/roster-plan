@@ -1,0 +1,24 @@
+import { ClockIcon, PlusIcon } from "@/components/ui/icons";
+
+export default function ShiftTemplatesEmpty({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="mt-8 rounded-xl border border-hairline bg-surface-2 p-10 text-center">
+      <span className="mx-auto flex size-11 items-center justify-center rounded-xl border border-primary/25 bg-primary-weak text-primary">
+        <ClockIcon className="size-5" />
+      </span>
+      <h2 className="mt-3 text-[15px] font-semibold text-ink">No shift templates yet</h2>
+      <p className="mx-auto mt-1 max-w-sm text-xs text-ink-muted">
+        Create reusable shift templates with recurrence rules to quickly build
+        your weekly schedule.
+      </p>
+      <button
+        type="button"
+        onClick={onCreate}
+        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+      >
+        <PlusIcon className="size-3.5" />
+        Create a template
+      </button>
+    </div>
+  );
+}

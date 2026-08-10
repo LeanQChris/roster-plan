@@ -10,11 +10,18 @@ interface ModalProps {
   description?: string;
   tone?: "danger" | "primary" | "neutral";
   confirmLabel: string;
+  size?: "md" | "lg" | "xl";
   onConfirm: () => void;
   onClose: () => void;
   children?: ReactNode;
   hideFooter?: boolean;
 }
+
+const sizeClasses: Record<string, string> = {
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+};
 
 export default function Modal({
   open,
@@ -22,6 +29,7 @@ export default function Modal({
   description,
   tone = "primary",
   confirmLabel,
+  size = "md",
   onConfirm,
   onClose,
   children,
@@ -50,7 +58,7 @@ export default function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative w-full max-w-md rounded-xl border border-hairline bg-surface-2 p-6 shadow-[0_24px_64px_rgba(0,0,0,0.5)]"
+        className={`relative w-full ${sizeClasses[size]} rounded-xl border border-hairline bg-surface-2 p-6 shadow-[0_24px_64px_rgba(0,0,0,0.5)]`}
       >
         <div className="flex items-start gap-3">
           {danger && (
