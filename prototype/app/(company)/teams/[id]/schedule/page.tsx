@@ -7,6 +7,7 @@ import { useCompany } from "@/lib/company-data";
 import type { Shift } from "@/lib/company-data";
 import Modal from "@/components/ui/Modal";
 import ShiftCalendar from "@/components/schedule/ShiftCalendar";
+import PublishPreviewModal from "@/components/schedule/PublishPreviewModal";
 import AssignShiftModal from "@/components/schedule/AssignShiftModal";
 import CreateShiftModal from "@/components/schedule/CreateShiftModal";
 import EditShiftModal from "@/components/schedule/EditShiftModal";
@@ -61,6 +62,7 @@ export default function SchedulePage() {
     shifts,
     shiftAssignments,
     shiftTemplates,
+    previewShifts,
     publishShifts,
     createShift,
     updateShift,
@@ -77,7 +79,7 @@ export default function SchedulePage() {
 
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [modal, setModal] = useState<ModalMode>({ type: null });
-  const [publishConfirm, setPublishConfirm] = useState(false);
+  const [publishPreview, setPublishPreview] = useState<{ planned: Shift[]; skippedCount: number; dateRange: string } | null>(null);
   const [publishResult, setPublishResult] = useState<{ count: number } | null>(null);
 
   const weekEnd = useMemo(() => {
@@ -120,12 +122,20 @@ export default function SchedulePage() {
 
   const goToday = () => setWeekStart(getMonday(new Date()));
 
-  const handlePublish = () => {
+  const handlePublishClick = () => {
+    const rangeStart = weekStart.toISOString().slice(0, 10);
+    const rangeEnd = weekEnd.toISOString().slice(0, 10);
+    const result = previewShifts(params.id, rangeStart, rangeEnd);
+    setPublishPreview({ ...result, dateRange: formatDateRange(weekStart) });
+  };
+
+  const handleConfirmPublish = () => {
+    if (!publishPreview) return;
     const rangeStart = weekStart.toISOString().slice(0, 10);
     const rangeEnd = weekEnd.toISOString().slice(0, 10);
     const newShifts = publishShifts(params.id, rangeStart, rangeEnd);
     setPublishResult({ count: newShifts.length });
-    setPublishConfirm(false);
+    setPublishPreview(null);
   };
 
   const handleCreateShift = (shiftData: {
@@ -260,7 +270,7 @@ export default function SchedulePage() {
           {activeTemplates.length > 0 && (
             <button
               type="button"
-              onClick={() => setPublishConfirm(true)}
+              onClick={() => handlePublishClick()}
               className="flex h-8 items-center gap-2 rounded-lg bg-primary px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-primary-hover"
             >
               <PlusIcon className="size-3.5" />
@@ -421,22 +431,13 @@ export default function SchedulePage() {
         />
       )}
 
-      {publishConfirm && (
-        <Modal
-          open
-          title="Publish shifts?"
-          description={
-            "This will expand " +
-            activeTemplates.length +
-            " active template" +
-            (activeTemplates.length === 1 ? "" : "s") +
-            " into concrete shifts for " +
-            formatDateRange(weekStart) +
-            ". Shifts that already exist for the same date and time will be skipped."
-          }
-          confirmLabel="Publish"
-          onClose={() => setPublishConfirm(false)}
-          onConfirm={handlePublish}
+      {publishPreview && (
+        <PublishPreviewModal
+          planned={publishPreview.planned}
+          skippedCount={publishPreview.skippedCount}
+          dateRange={publishPreview.dateRange}
+          onPublish={handleConfirmPublish}
+          onClose={() => setPublishPreview(null)}
         />
       )}
 

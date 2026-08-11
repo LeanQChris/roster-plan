@@ -164,7 +164,7 @@ export default function ShiftCalendar({
                               onClick={() => onClickShift(shift)}
                               className={`w-full rounded-lg border px-3 py-2 text-left transition-colors hover:border-primary/40 ${
                                 isUnderstaffed
-                                  ? "border-warning/30 bg-warning-weak hover:bg-warning-weak/80"
+                                  ? "border-warning/80 bg-warning-weak hover:bg-warning-weak/80"
                                   : "border-hairline bg-surface-1 hover:bg-surface-3"
                               }`}
                             >

@@ -394,6 +394,7 @@ interface CompanyContextValue extends CompanyState {
   updateShiftTemplate: (id: string, patch: Partial<ShiftTemplate>) => boolean;
   deleteShiftTemplate: (id: string) => void;
   getShiftTemplatesByTeam: (teamId: string) => ShiftTemplate[];
+  previewShifts: (teamId: string, rangeStart: string, rangeEnd: string) => { planned: Shift[]; skippedCount: number };
   publishShifts: (teamId: string, rangeStart: string, rangeEnd: string) => Shift[];
   createShift: (input: {
     teamId: string;
@@ -612,14 +613,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     [state.shiftTemplates],
   );
 
-  const publishShifts = useCallback(
-    (teamId: string, rangeStart: string, rangeEnd: string): Shift[] => {
+  const previewShifts = useCallback(
+    (teamId: string, rangeStart: string, rangeEnd: string): { planned: Shift[]; skippedCount: number } => {
       const templates = state.shiftTemplates.filter(
         (t) => t.teamId === teamId && t.isActive && t.recurrenceRule,
       );
       const start = new Date(rangeStart + "T00:00:00");
       const end = new Date(rangeEnd + "T23:59:59");
-      const newShifts: Shift[] = [];
+      const planned: Shift[] = [];
+      let skippedCount = 0;
       const existingDates = new Set(
         state.shifts
           .filter((s) => s.teamId === teamId)
@@ -632,9 +634,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           for (const date of dates) {
             const dateStr = date.toISOString().slice(0, 10);
             const key = `${dateStr}|${template.startTime}`;
-            if (existingDates.has(key)) continue;
-            existingDates.add(key);
-            newShifts.push({
+            if (existingDates.has(key)) {
+              skippedCount++;
+              continue;
+            }
+            planned.push({
               id: nextId("shift"),
               teamId,
               templateId: template.id,
@@ -651,12 +655,20 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           // invalid RRULE — skip this template
         }
       }
-      if (newShifts.length > 0) {
-        dispatch({ type: "addShifts", shifts: newShifts });
-      }
-      return newShifts;
+      return { planned, skippedCount };
     },
     [state.shiftTemplates, state.shifts],
+  );
+
+  const publishShifts = useCallback(
+    (teamId: string, rangeStart: string, rangeEnd: string): Shift[] => {
+      const { planned } = previewShifts(teamId, rangeStart, rangeEnd);
+      if (planned.length > 0) {
+        dispatch({ type: "addShifts", shifts: planned });
+      }
+      return planned;
+    },
+    [previewShifts],
   );
 
   const createShift = useCallback(
@@ -751,6 +763,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       updateShiftTemplate,
       deleteShiftTemplate,
       getShiftTemplatesByTeam,
+      previewShifts,
       publishShifts,
       createShift,
       updateShift,
@@ -775,6 +788,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       updateShiftTemplate,
       deleteShiftTemplate,
       getShiftTemplatesByTeam,
+      previewShifts,
       publishShifts,
       createShift,
       updateShift,

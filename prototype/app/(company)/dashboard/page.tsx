@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { readCompanySetup } from "@/lib/company";
 import { useCompany } from "@/lib/company-data";
+import type { Shift } from "@/lib/company-data";
 import StatCard from "@/components/ui/StatCard";
 import {
   ArrowRightIcon,
@@ -20,11 +21,40 @@ import {
 } from "@/components/ui/icons";
 
 const QUICK_LINKS = [
+  { label: "My Schedule", hint: "View your shifts", icon: CalendarIcon, href: "/me/schedule", soon: false },
   { label: "Team People", hint: "Invite and manage staff", icon: UsersIcon, href: "/people", soon: false },
   { label: "Shift Templates", hint: "Reusable shifts with repeat rules", icon: ClockIcon, href: "/templates", soon: false },
   { label: "Schedule", hint: "Plan and publish the week", icon: CalendarIcon, href: "/teams", soon: false },
   { label: "Company Settings", hint: "Timezone, branding, defaults", icon: SettingsIcon, href: "/settings", soon: false },
 ];
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+function getEndTime(startTime: string, durationMinutes: number): string {
+  const [h, m] = startTime.split(":").map(Number);
+  const total = h * 60 + m + durationMinutes;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function formatDayLabel(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dTime = new Date(dateStr + "T00:00:00").getTime();
+  if (dTime === today.getTime()) return "Today";
+  if (dTime === tomorrow.getTime()) return "Tomorrow";
+  return `${DAY_NAMES[d.getDay()]}, ${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`;
+}
 
 function weekPhase(): string {
   const hour = new Date().getHours();
@@ -33,9 +63,18 @@ function weekPhase(): string {
   return "evening";
 }
 
+function getMonday(d: Date): Date {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { teams, people } = useCompany();
+  const { teams, people, shifts, shiftAssignments, clockEntries, addClockEntry } = useCompany();
   const [setup] = useState(() => readCompanySetup());
 
   if (!user) return null;
@@ -45,6 +84,73 @@ export default function DashboardPage() {
   const firstName = user.name.split(/\s+/)[0] ?? user.name;
   const activeMembers = people.filter((p) => p.status === "active").length;
   const pendingInvites = people.filter((p) => p.status === "invited").length;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const weekStart = getMonday(new Date());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  const weekStartStr = weekStart.toISOString().slice(0, 10);
+  const weekEndStr = weekEnd.toISOString().slice(0, 10);
+
+  const shiftsThisWeek = useMemo(
+    () => shifts.filter((s) => s.date >= weekStartStr && s.date <= weekEndStr),
+    [shifts, weekStartStr, weekEndStr],
+  );
+
+  const totalClockEntries = clockEntries.length;
+
+  const personMap = useMemo(() => {
+    const map = new Map<string, typeof people[0]>();
+    for (const p of people) map.set(p.id, p);
+    return map;
+  }, [people]);
+
+  const teamMap = useMemo(() => {
+    const map = new Map<string, typeof teams[0]>();
+    for (const t of teams) map.set(t.id, t);
+    return map;
+  }, [teams]);
+
+  const assignmentCountByShift = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const a of shiftAssignments) {
+      map.set(a.shiftId, (map.get(a.shiftId) ?? 0) + 1);
+    }
+    return map;
+  }, [shiftAssignments]);
+
+  const assignedPersonIdsByShift = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const a of shiftAssignments) {
+      const list = map.get(a.shiftId) ?? [];
+      list.push(a.personId);
+      map.set(a.shiftId, list);
+    }
+    return map;
+  }, [shiftAssignments]);
+
+  const latestClockByPerson = useMemo(() => {
+    const map = new Map<string, typeof clockEntries[0]>();
+    for (const entry of clockEntries) {
+      const existing = map.get(entry.personId);
+      if (!existing || entry.at > existing.at) {
+        map.set(entry.personId, entry);
+      }
+    }
+    return map;
+  }, [clockEntries]);
+
+  const upcomingShifts = useMemo(() => {
+    return shifts
+      .filter((s) => s.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
+      .slice(0, 8);
+  }, [shifts, today]);
+
+  const handleClockAction = (personId: string, action: "in" | "out") => {
+    addClockEntry(personId, action);
+  };
+
   const shownTeams = teams.slice(0, 3);
   const restTeams = teams.slice(3);
 
@@ -128,18 +234,112 @@ export default function DashboardPage() {
           }
         />
         <StatCard
-          label="Shifts published"
-          value="0"
+          label="Shifts this week"
+          value={shiftsThisWeek.length}
           icon={<ClockIcon className="size-4" />}
-          sub="this week"
+          sub={shiftsThisWeek.length === 0 ? "no shifts yet" : "published shifts"}
         />
         <StatCard
           label="Clock entries"
-          value="0"
+          value={totalClockEntries}
           tone="primary"
           icon={<CheckIcon className="size-4" />}
-          sub="across all teams"
+          sub="total recorded"
         />
+      </div>
+
+      {/* Upcoming shifts widget */}
+      <div className="mt-8 rounded-xl border border-hairline bg-surface-2 p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold tracking-tight text-ink">
+            Upcoming shifts
+          </h2>
+          <Link
+            href="/me/schedule"
+            className="text-[12px] font-medium text-primary transition-colors hover:text-primary-hover"
+          >
+            View all
+          </Link>
+        </div>
+
+        {upcomingShifts.length === 0 ? (
+          <div className="mt-4 rounded-lg border border-hairline bg-surface-3 p-6 text-center">
+            <CalendarIcon className="mx-auto size-5 text-ink-faint" />
+            <p className="mt-2 text-[13px] font-medium text-ink">No upcoming shifts</p>
+            <p className="mt-1 text-xs text-ink-muted">
+              Publish shift templates to see them here.
+            </p>
+            <Link
+              href="/teams"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+            >
+              Go to schedule
+            </Link>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-2">
+            {upcomingShifts.map((shift) => {
+              const count = assignmentCountByShift.get(shift.id) ?? 0;
+              const assignedIds = assignedPersonIdsByShift.get(shift.id) ?? [];
+              const assignedNames = assignedIds
+                .map((id) => personMap.get(id)?.name)
+                .filter(Boolean)
+                .slice(0, 3);
+              const overflow = assignedIds.length - 3;
+              const team = teamMap.get(shift.teamId);
+              const isUnderstaffed = count < shift.requiredCount;
+
+              return (
+                <div
+                  key={shift.id}
+                  className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+                    isUnderstaffed
+                      ? "border-warning/60 bg-warning-weak/50"
+                      : "border-hairline bg-surface-1"
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-[13px] font-medium text-ink">
+                        {shift.title}
+                      </p>
+                      {team && (
+                        <span className="shrink-0 rounded border border-hairline bg-surface-2 px-1.5 py-px text-[10px] text-ink-subtle">
+                          {team.name}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-ink-subtle">
+                      {formatDayLabel(shift.date)} · {shift.startTime} – {getEndTime(shift.startTime, shift.durationMinutes)} · {formatDuration(shift.durationMinutes)}
+                    </p>
+                    {assignedNames.length > 0 && (
+                      <p className="mt-1 text-[11px] text-ink-muted">
+                        {assignedNames.join(", ")}
+                        {overflow > 0 && ` +${overflow}`}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
+                      isUnderstaffed
+                        ? "border-warning/30 bg-surface-2 text-warning"
+                        : "border-hairline bg-surface-2 text-ink-muted"
+                    }`}>
+                      {count}/{shift.requiredCount}
+                    </span>
+                    {assignedIds.length > 0 && (
+                      <ClockInButton
+                        personId={assignedIds[0]}
+                        latestEntry={latestClockByPerson.get(assignedIds[0])}
+                        onClock={handleClockAction}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
@@ -240,5 +440,34 @@ export default function DashboardPage() {
         in your browser
       </p>
     </div>
+  );
+}
+
+function ClockInButton({
+  personId,
+  latestEntry,
+  onClock,
+}: {
+  personId: string;
+  latestEntry: { action: "in" | "out" } | undefined;
+  onClock: (personId: string, action: "in" | "out") => void;
+}) {
+  const isClockedIn = latestEntry?.action === "in";
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClock(personId, isClockedIn ? "out" : "in");
+      }}
+      className={`shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-colors ${
+        isClockedIn
+          ? "bg-danger/10 text-danger hover:bg-danger/20"
+          : "bg-primary/10 text-primary hover:bg-primary/20"
+      }`}
+    >
+      {isClockedIn ? "Clock out" : "Clock in"}
+    </button>
   );
 }

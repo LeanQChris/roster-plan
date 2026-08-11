@@ -9,6 +9,7 @@ import { DEFAULT_BRANDING, readCompanySetup } from "@/lib/company";
 import LogoMark from "@/components/ui/Logo";
 import {
   ActivityIcon,
+  CalendarIcon,
   ChevronDownIcon,
   ClockIcon,
   ListIcon,
@@ -21,6 +22,7 @@ import {
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: ActivityIcon, soon: false },
+  { href: "/me/schedule", label: "My Schedule", icon: CalendarIcon, soon: false },
   { href: "/teams", label: "Teams", icon: ListIcon, soon: false },
   { href: "/people", label: "People", icon: UsersIcon, soon: false },
   { href: "/templates", label: "Shift Templates", icon: ClockIcon, soon: false },
