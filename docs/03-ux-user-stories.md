@@ -285,6 +285,18 @@ POST /api/v1/shifts/:shiftId/assign
   → Email sent to Maya: "You've been assigned to Morning Line Prep on Mon, Jul 13"
 ```
 
+**Bulk assign:** James needs Maya on every Morning shift this month. Instead of clicking each slot, he clicks **Bulk Assign**, picks **Maya Johnson**, date range **Jul 13–31**, filters to the **Morning Line Prep** template, and confirms.
+
+```
+POST /api/v1/teams/:teamId/assignments/bulk
+  { person_id, template_id, start: "2026-07-13", end: "2026-07-31" }
+  → 15 shifts found, 15 assigned, 0 conflicts
+  → One shift_assignment row per shift (status = 'approved')
+  → Audit entry + shift-assigned email per assignment
+```
+
+A summary shows `Assigned 15 shifts. Maya already works a conflicting shift on Jul 15 — skipped.`
+
 ---
 
 ### Act 9: View Schedule — Maya (Employee)

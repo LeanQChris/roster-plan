@@ -155,6 +155,7 @@ A user with role level *N* can access any resource requiring role level *≤ N*.
 | 🗑️ Delete a shift | Cancels a scheduled shift. | Click shift block → "Delete" → confirm in modal. |
 | 🚀 Publish a schedule | Expands all active templates into materialized shifts for a date range. Shifts are immediately visible to employees. | Select date range → click "Publish" → confirmation shows shift count → grid populates. |
 | 👤 Assign a person to a shift | Assigns a team member to a shift. System sends a notification email. Force flag available to bypass conflict detection. | Click empty slot → person dropdown → select person → "Assign". Email sent automatically. |
+| 👥 Bulk assign | Assigns one person to every eligible shift in a date range (optionally filtered to one template) in a single action. Conflicting shifts are skipped and reported. | Click "Bulk Assign" on schedule → select person, date range, optional template → "Assign". Summary shows assigned/skipped/conflicts. |
 | ❌ Remove a person from a shift | Unassigns an individual from a shift. | Click assigned shift → "Remove" next to name → confirm. |
 | 👁️ View shift assignments | Shows all personnel assigned to a given shift. | Click shift block. Assigned names listed in detail modal. |
 

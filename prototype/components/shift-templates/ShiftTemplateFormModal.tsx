@@ -19,6 +19,9 @@ export interface ShiftTemplateFormInput {
   maxCount?: number;
   isActive: boolean;
   recurrenceRule?: string;
+  applyToExisting?: boolean;
+  applyStart?: string;
+  applyEnd?: string;
 }
 
 interface ShiftTemplateFormModalProps {
@@ -53,6 +56,9 @@ export default function ShiftTemplateFormModal({
   const [maxCount, setMaxCount] = useState(template?.maxCount?.toString() ?? "");
   const [isActive, setIsActive] = useState(template?.isActive ?? true);
   const [recurrenceRule, setRecurrenceRule] = useState(template?.recurrenceRule ?? "");
+  const [applyToExisting, setApplyToExisting] = useState(false);
+  const [applyStart, setApplyStart] = useState("");
+  const [applyEnd, setApplyEnd] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const computedEndTime = (() => {
@@ -76,6 +82,9 @@ export default function ShiftTemplateFormModal({
       maxCount: maxCount ? parseInt(maxCount) : undefined,
       isActive,
       recurrenceRule: recurrenceRule || undefined,
+      applyToExisting,
+      applyStart: applyToExisting ? applyStart || undefined : undefined,
+      applyEnd: applyToExisting ? applyEnd || undefined : undefined,
     });
     if (!result.ok) {
       setError(result.error ?? "Couldn't save — try again.");
@@ -269,6 +278,50 @@ export default function ShiftTemplateFormModal({
             <RecurrenceRuleInput value={recurrenceRule} onChange={setRecurrenceRule} />
           </div>
         </div>
+
+        {isEdit && (
+          <div className="rounded-lg border border-hairline bg-surface-1 p-3">
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <input
+                type="checkbox"
+                checked={applyToExisting}
+                onChange={(e) => setApplyToExisting(e.target.checked)}
+                className="mt-0.5 size-4 accent-primary"
+              />
+              <span className="text-[13px] leading-5 text-ink-muted">
+                Also update existing published shifts from this template
+              </span>
+            </label>
+            {applyToExisting && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted">
+                    From date{" "}
+                    <span className="font-normal text-ink-subtle">(optional)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={applyStart}
+                    onChange={(e) => setApplyStart(e.target.value)}
+                    className="mt-1.5 h-9 w-full rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink focus:border-primary/60 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted">
+                    To date{" "}
+                    <span className="font-normal text-ink-subtle">(optional)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={applyEnd}
+                    onChange={(e) => setApplyEnd(e.target.value)}
+                    className="mt-1.5 h-9 w-full rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink focus:border-primary/60 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {error && (
           <p className="rounded-lg border border-danger/30 bg-danger-weak px-3 py-2 text-[13px] font-medium text-danger">

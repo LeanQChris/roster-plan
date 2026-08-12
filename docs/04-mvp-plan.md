@@ -170,6 +170,7 @@ The full API spec has more; here is the exact MVP endpoint list.
 | Method | Path | Who | Description |
 |---|---|---|---|
 | POST | `/api/v1/shifts/:shiftId/assign` | Manager | Assign person to shift |
+| POST | `/api/v1/teams/:teamId/assignments/bulk` | Manager | Assign one person to all eligible shifts in a date range (optional `template_id` filter) |
 | DELETE | `/api/v1/shift-assignments/:id` | Manager | Remove assignment |
 | GET | `/api/v1/shifts/:shiftId/assignments` | Manager+ | List assignments for shift |
 
@@ -270,8 +271,8 @@ The full API spec has more; here is the exact MVP endpoint list.
 | 3 | Company Setup | `/company/setup` | Company admin | Timezone picker, locale, create first team |
 | 4 | Dashboard | `/dashboard` | All | Welcome message, upcoming shifts list (employee) with Clock In/Out button, shortcuts (manager) |
 | 5 | My Schedule | `/me/schedule` | Employee | Week view calendar, shift blocks with clock status (clocked in/out/missed) |
-| 6 | Team Schedule | `/teams/:id/schedule` | Manager+ | Week view, shift blocks, click shift to assign |
-| 7 | Assign Shift | *(modal on #6)* | Manager | Person picker dropdown, confirm button |
+| 6 | Team Schedule | `/teams/:id/schedule` | Manager+ | Week view, shift blocks, click shift to assign, bulk assign button |
+| 7 | Assign Shift | *(modal on #6)* | Manager | Person picker dropdown, confirm button; bulk mode: person picker + date range + optional template filter |
 | 8 | Shift Templates | `/teams/:id/templates` | Manager | List of templates, create/edit form, expand button |
 | 9 | Template Form | *(modal or page)* | Manager | Title, duration, start time, RRULE string, required count |
 | 10 | Team People | `/teams/:id/people` | Manager+ | List of members, invite button, remove |

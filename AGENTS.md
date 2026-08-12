@@ -68,7 +68,7 @@ NOTE: All endpoints use the `/api/v1` prefix. Full details in `spec/01-api-spec.
 **People**: `GET /api/v1/people`, `POST /api/v1/people`, `GET /api/v1/people/:id`, `PATCH /api/v1/people/:id`, `DELETE /api/v1/people/:id`, `POST /api/v1/people/:id/invite`
 **Shift Templates**: `GET /api/v1/teams/:tid/shift-templates`, `POST /api/v1/teams/:tid/shift-templates`, `PATCH /api/v1/shift-templates/:id`, `DELETE /api/v1/shift-templates/:id`
 **Shifts**: `GET /api/v1/shifts`, `GET /api/v1/shifts/:id`, `POST /api/v1/shifts`, `PATCH /api/v1/shifts/:id`, `DELETE /api/v1/shifts/:id`, `POST /api/v1/shift-templates/:tid/expand`, `POST /api/v1/teams/:tid/schedules/publish`
-**Assignments**: `POST /api/v1/shifts/:sid/assign`, `DELETE /api/v1/shift-assignments/:id`, `GET /api/v1/shifts/:sid/assignments`
+**Assignments**: `POST /api/v1/shifts/:sid/assign`, `POST /api/v1/teams/:tid/assignments/bulk`, `DELETE /api/v1/shift-assignments/:id`, `GET /api/v1/shifts/:sid/assignments`
 **Clock**: `POST /api/v1/clock/clock-in`, `POST /api/v1/clock/:cid/clock-out`, `GET /api/v1/people/:pid/clock-entries`
 **Admin**: `GET /api/v1/admin/companies`, `PATCH /api/v1/admin/companies/:cid`, `GET /api/v1/admin/audit-log`
 **Calendar**: `GET /api/v1/me/schedule`, `GET /api/v1/teams/:tid/schedule`

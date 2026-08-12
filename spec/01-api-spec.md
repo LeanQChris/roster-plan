@@ -375,6 +375,26 @@ List all people assigned to this shift.
 ```
 → `201` → status = `approved`. `force: true` bypasses conflict detection.
 
+### POST /api/v1/teams/:teamId/assignments/bulk (Manager) — MVP
+Assign one person to every eligible shift in a date range in a single call. Optional `template_id` restricts to shifts derived from a specific template.
+```json
+{
+  "person_id": "uuid",
+  "template_id": "uuid (optional)",
+  "start": "2026-07-13",
+  "end": "2026-07-19",
+  "force": false
+}
+```
+Selection rules:
+- Shifts belonging to the team, overlapping `[start, end]`, and not already assigned to `person_id`
+- When `template_id` is present, only shifts with that `template_id` are considered
+- Per-shift conflict check (person overlaps an existing assignment) → skipped unless `force: true`
+
+→ `201` → `{ "assigned": 5, "skipped": 0, "conflicts": [{ "shift_id": "uuid", "reason": "overlaps existing assignment on Jul 15" }] }`
+
+Creates one `shift_assignment` row per shift (status `approved`), one audit entry per assignment, and one shift-assigned email per assignment (reuses single-assign pipeline).
+
 ### PATCH /api/v1/shift-assignments/:assignmentId (Manager approve/deny)
 ```json
 { "status": "approved" }

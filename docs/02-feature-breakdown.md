@@ -80,6 +80,13 @@ This document breaks every feature into atomic units and organizes them into imp
 - [ ] Published schedule view (read-only for employees) — ✓ MVP
 - [ ] Re-publish triggers diff notification — MVP+
 
+### P2.5b — Bulk Assignment (MVP)
+- [ ] `POST /api/v1/teams/:teamId/assignments/bulk` — assign one person to all eligible shifts in a date range
+- [ ] Optional `template_id` filter (assign recurring person to a template's instances)
+- [ ] Per-shift conflict check; skip + report conflicting shifts unless `force: true`
+- [ ] Bulk Assign UI on Team Schedule: person picker + date range + template filter + result summary
+- [ ] Reuses single-assign pipeline (audit entry + shift-assigned email per assignment)
+
 ### P2.6 — Clock In/Out
 - [ ] Clock-in button on web UI (requires active shift assignment)
 - [ ] Clock-out button, records actual end time

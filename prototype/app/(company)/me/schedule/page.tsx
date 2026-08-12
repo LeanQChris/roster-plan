@@ -227,9 +227,9 @@ export default function MySchedulePage() {
                           <p className={`text-[11px] font-medium uppercase tracking-wide ${isToday ? "text-primary" : "text-ink-subtle"}`}>
                             {DAY_NAMES[day.getDay()]}
                           </p>
-                          <p className={`mt-0.5 text-[15px] font-semibold ${isToday ? "text-primary" : "text-ink"}`}>
+                          <span className={`mt-0.5 flex size-6 items-center justify-center rounded-full text-[15px] font-semibold ${isToday ? "bg-primary text-white" : "text-ink"}`}>
                             {day.getDate()}
-                          </p>
+                          </span>
                         </th>
                       );
                     })}

@@ -13,8 +13,14 @@ import PreviewShiftsModal from "@/components/shift-templates/PreviewShiftsModal"
 import { ClockIcon, PlusIcon } from "@/components/ui/icons";
 
 export default function ShiftTemplatesPage() {
-  const { teams, shiftTemplates, createShiftTemplate, updateShiftTemplate, deleteShiftTemplate } =
-    useCompany();
+  const {
+    teams,
+    shiftTemplates,
+    createShiftTemplate,
+    updateShiftTemplate,
+    deleteShiftTemplate,
+    applyTemplateToShifts,
+  } = useCompany();
 
   const allTemplates = useMemo(() => shiftTemplates ?? [], [shiftTemplates]);
   const [teamFilter, setTeamFilter] = useState<string>("all");
@@ -34,16 +40,35 @@ export default function ShiftTemplatesPage() {
   const [confirmDelete, setConfirmDelete] = useState<ShiftTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<ShiftTemplate | null>(null);
   const [saved, setSaved] = useState(false);
+  const [appliedCount, setAppliedCount] = useState<number | null>(null);
 
-  const flashSaved = () => {
+  const flashSaved = (applied = 0) => {
+    setAppliedCount(applied > 0 ? applied : null);
     setSaved(true);
-    window.setTimeout(() => setSaved(false), 2600);
+    window.setTimeout(() => {
+      setSaved(false);
+      setAppliedCount(null);
+    }, 2600);
   };
 
   const handleSave = (input: ShiftTemplateFormInput): { ok: boolean; error?: string } => {
+    let applied = 0;
     if (modalTemplate) {
       if (!updateShiftTemplate(modalTemplate.id, input)) {
         return { ok: false, error: "Couldn't save changes." };
+      }
+      if (input.applyToExisting) {
+        applied = applyTemplateToShifts(
+          modalTemplate.id,
+          {
+            title: input.title,
+            startTime: input.startTime,
+            durationMinutes: input.durationMinutes,
+            requiredCount: input.requiredCount,
+          },
+          input.applyStart || undefined,
+          input.applyEnd || undefined,
+        );
       }
     } else {
       if (!input.teamId) return { ok: false, error: "Please select a team." };
@@ -51,7 +76,7 @@ export default function ShiftTemplatesPage() {
       if (!result.ok) return { ok: false, error: result.error };
     }
     setModalTemplate(undefined);
-    flashSaved();
+    flashSaved(applied);
     return { ok: true };
   };
 
@@ -78,7 +103,9 @@ export default function ShiftTemplatesPage() {
         <div className="flex items-center gap-2.5">
           {saved && (
             <span className="rounded-lg border border-success/25 bg-success-weak px-2.5 py-1.5 text-xs font-medium text-success">
-              Saved
+              {appliedCount
+                ? `Saved · ${appliedCount} published ${appliedCount === 1 ? "shift" : "shifts"} updated`
+                : "Saved"}
             </span>
           )}
           <button

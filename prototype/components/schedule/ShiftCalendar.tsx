@@ -5,8 +5,29 @@ import type { Person, Shift, ShiftAssignment } from "@/lib/company-data";
 import { AlertTriangleIcon } from "@/components/ui/icons";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const FULL_DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const FULL_DAY_NAMES = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 function getWeekDays(weekStart: Date): Date[] {
   const days: Date[] = [];
@@ -55,6 +76,9 @@ interface ShiftCalendarProps {
   assignments: ShiftAssignment[];
   people: Person[];
   onClickShift: (shift: Shift) => void;
+  selectMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (shift: Shift) => void;
 }
 
 export default function ShiftCalendar({
@@ -63,6 +87,9 @@ export default function ShiftCalendar({
   assignments,
   people,
   onClickShift,
+  selectMode = false,
+  selectedIds,
+  onToggleSelect,
 }: ShiftCalendarProps) {
   const days = useMemo(() => getWeekDays(weekStart), [weekStart]);
   const today = new Date().toISOString().slice(0, 10);
@@ -146,16 +173,20 @@ export default function ShiftCalendar({
                       isToday ? "bg-primary-weak" : ""
                     }`}
                   >
-                    <p className={`text-[11px] font-medium uppercase tracking-wide ${
-                      isToday ? "text-primary" : "text-ink-subtle"
-                    }`}>
+                    <p
+                      className={`text-[11px] font-medium uppercase tracking-wide ${
+                        isToday ? "text-primary" : "text-ink-subtle"
+                      }`}
+                    >
                       {DAY_NAMES[i]}
                     </p>
-                    <p className={`mt-0.5 text-[15px] font-semibold ${
-                      isToday ? "text-primary" : "text-ink"
-                    }`}>
+                    <span
+                      className={`mt-0.5 flex size-6 items-center justify-center rounded-full text-[15px] font-semibold ${
+                        isToday ? "bg-primary text-white" : "text-ink"
+                      }`}
+                    >
                       {day.getDate()}
-                    </p>
+                    </span>
                   </th>
                 );
               })}
@@ -176,10 +207,7 @@ export default function ShiftCalendar({
                   <td className="px-3 py-2 text-[11px] text-ink-subtle">
                     {FULL_DAY_NAMES[dayIdx].slice(0, 3)}
                   </td>
-                  <td
-                    colSpan={6}
-                    className="px-2 py-1.5"
-                  >
+                  <td colSpan={6} className="px-2 py-1.5">
                     {dayShifts.length === 0 ? (
                       <p className="py-2 text-center text-[11px] text-ink-faint">
                         No shifts
@@ -187,8 +215,10 @@ export default function ShiftCalendar({
                     ) : (
                       <div className="space-y-1.5 py-1">
                         {dayShifts.map((shift) => {
-                          const count = assignmentCountByShift.get(shift.id) ?? 0;
-                          const assignedIds = assignedPersonIdsByShift.get(shift.id) ?? [];
+                          const count =
+                            assignmentCountByShift.get(shift.id) ?? 0;
+                          const assignedIds =
+                            assignedPersonIdsByShift.get(shift.id) ?? [];
                           const assignedNames = assignedIds
                             .map((id) => personMap.get(id)?.name)
                             .filter(Boolean)
@@ -196,18 +226,19 @@ export default function ShiftCalendar({
                           const overflow = assignedIds.length - 3;
                           const isUnderstaffed = count < shift.requiredCount;
                           const hasConflict = conflictShiftIds.has(shift.id);
+                          const isSelected =
+                            selectMode && selectedIds?.has(shift.id);
 
                           return (
                             <button
                               key={shift.id}
                               type="button"
-                              onClick={() => onClickShift(shift)}
-                              className={`w-full rounded-lg border px-3 py-2 text-left transition-colors hover:border-primary/40 ${
-                                hasConflict
-                                  ? "border-danger/80 bg-danger-weak hover:bg-danger-weak/80"
+                              className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${
+                                isSelected
+                                  ? "border-primary bg-primary-weak hover:bg-primary-weak/80"
                                   : isUnderstaffed
-                                  ? "border-warning/80 bg-warning-weak hover:bg-warning-weak/80"
-                                  : "border-hairline bg-surface-1 hover:bg-surface-3"
+                                    ? "border-warning/80 bg-warning-weak hover:bg-warning-weak/80"
+                                    : "border-hairline bg-surface-1 hover:bg-surface-3"
                               }`}
                             >
                               <div className="flex items-center justify-between gap-2">
@@ -216,7 +247,11 @@ export default function ShiftCalendar({
                                     {shift.title}
                                   </p>
                                   <p className="text-[11px] text-ink-subtle">
-                                    {shift.startTime} – {getEndTime(shift.startTime, shift.durationMinutes)}
+                                    {shift.startTime} –{" "}
+                                    {getEndTime(
+                                      shift.startTime,
+                                      shift.durationMinutes,
+                                    )}
                                     {" · "}
                                     {formatDuration(shift.durationMinutes)}
                                   </p>
@@ -228,16 +263,33 @@ export default function ShiftCalendar({
                                       Conflict
                                     </span>
                                   )}
-                                  <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
-                                    isUnderstaffed
-                                      ? "border-warning/30 bg-surface-2 text-warning"
-                                      : "border-hairline bg-surface-2 text-ink-muted"
-                                  }`}>
+                                  <span
+                                    className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
+                                      isUnderstaffed
+                                        ? "border-warning/30 bg-surface-2 text-warning"
+                                        : "border-hairline bg-surface-2 text-ink-muted"
+                                    }`}
+                                  >
                                     {count}/{shift.requiredCount}
                                   </span>
                                 </div>
+                                <span
+                                  className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
+                                    isSelected
+                                      ? "border-primary/40 bg-surface-2 text-primary"
+                                      : isUnderstaffed
+                                        ? "border-warning/30 bg-surface-2 text-warning"
+                                        : "border-hairline bg-surface-2 text-ink-muted"
+                                  }`}
+                                >
+                                  {selectMode
+                                    ? isSelected
+                                      ? "✓"
+                                      : ""
+                                    : `${count}/${shift.requiredCount}`}
+                                </span>
                               </div>
-                              {assignedNames.length > 0 && (
+                              {assignedNames.length > 0 && !selectMode && (
                                 <p className="mt-1 truncate text-[11px] text-ink-subtle">
                                   {assignedNames.join(", ")}
                                   {overflow > 0 && ` +${overflow}`}
