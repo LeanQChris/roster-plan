@@ -12,9 +12,12 @@ import type { ReactNode } from "react";
 export const DEMO_EMAIL = "superadmin@gmail.com";
 export const DEMO_PASSWORD = "superadmin";
 
+export const DEMO_MANAGER_EMAIL = "manager@gmail.com";
+export const DEMO_MANAGER_PASSWORD = "manager123";
+
 export const ADMINS_KEY = "roster.accounts";
 
-export type AuthRole = "super_admin" | "company_admin";
+export type AuthRole = "super_admin" | "company_admin" | "manager";
 
 export interface AuthUser {
   email: string;
@@ -81,6 +84,9 @@ function readStoredUser(): AuthUser | null {
     if (parsed.role === "super_admin") {
       return parsed.email.toLowerCase() === DEMO_EMAIL ? parsed : null;
     }
+    if (parsed.role === "manager") {
+      return parsed.email.toLowerCase() === DEMO_MANAGER_EMAIL ? parsed : null;
+    }
     if (
       parsed.role === "company_admin" &&
       readAccounts().some((a) => a.email.toLowerCase() === parsed.email.toLowerCase())
@@ -144,6 +150,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: DEMO_EMAIL,
           name: "Bishal Adhikari",
           role: "super_admin",
+        };
+        persistSession(session);
+        return { ok: true, user: session };
+      }
+
+      if (normalized === DEMO_MANAGER_EMAIL && password === DEMO_MANAGER_PASSWORD) {
+        const session: AuthUser = {
+          email: DEMO_MANAGER_EMAIL,
+          name: "Team Manager",
+          role: "manager",
         };
         persistSession(session);
         return { ok: true, user: session };
