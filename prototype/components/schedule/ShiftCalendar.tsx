@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { Person, Shift, ShiftAssignment } from "@/lib/company-data";
+import { AlertTriangleIcon } from "@/components/ui/icons";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const FULL_DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -32,6 +33,20 @@ function getEndTime(startTime: string, durationMinutes: number): string {
   const [h, m] = startTime.split(":").map(Number);
   const total = h * 60 + m + durationMinutes;
   return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function shiftsOverlap(a: Shift, b: Shift): boolean {
+  if (a.date !== b.date) return false;
+  const aStart = timeToMinutes(a.startTime);
+  const aEnd = aStart + a.durationMinutes;
+  const bStart = timeToMinutes(b.startTime);
+  const bEnd = bStart + b.durationMinutes;
+  return aStart < bEnd && bStart < aEnd;
 }
 
 interface ShiftCalendarProps {
@@ -89,6 +104,30 @@ export default function ShiftCalendar({
     }
     return map;
   }, [assignments]);
+
+  const conflictShiftIds = useMemo(() => {
+    const shiftMap = new Map(shifts.map((s) => [s.id, s]));
+    const shiftsByPerson = new Map<string, Shift[]>();
+    for (const a of assignments) {
+      const shift = shiftMap.get(a.shiftId);
+      if (!shift) continue;
+      const list = shiftsByPerson.get(a.personId) ?? [];
+      list.push(shift);
+      shiftsByPerson.set(a.personId, list);
+    }
+    const conflicts = new Set<string>();
+    for (const personShifts of shiftsByPerson.values()) {
+      for (let i = 0; i < personShifts.length; i++) {
+        for (let j = i + 1; j < personShifts.length; j++) {
+          if (shiftsOverlap(personShifts[i], personShifts[j])) {
+            conflicts.add(personShifts[i].id);
+            conflicts.add(personShifts[j].id);
+          }
+        }
+      }
+    }
+    return conflicts;
+  }, [assignments, shifts]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-hairline bg-surface-2">
@@ -156,6 +195,7 @@ export default function ShiftCalendar({
                             .slice(0, 3);
                           const overflow = assignedIds.length - 3;
                           const isUnderstaffed = count < shift.requiredCount;
+                          const hasConflict = conflictShiftIds.has(shift.id);
 
                           return (
                             <button
@@ -163,7 +203,9 @@ export default function ShiftCalendar({
                               type="button"
                               onClick={() => onClickShift(shift)}
                               className={`w-full rounded-lg border px-3 py-2 text-left transition-colors hover:border-primary/40 ${
-                                isUnderstaffed
+                                hasConflict
+                                  ? "border-danger/80 bg-danger-weak hover:bg-danger-weak/80"
+                                  : isUnderstaffed
                                   ? "border-warning/80 bg-warning-weak hover:bg-warning-weak/80"
                                   : "border-hairline bg-surface-1 hover:bg-surface-3"
                               }`}
@@ -179,13 +221,21 @@ export default function ShiftCalendar({
                                     {formatDuration(shift.durationMinutes)}
                                   </p>
                                 </div>
-                                <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
-                                  isUnderstaffed
-                                    ? "border-warning/30 bg-surface-2 text-warning"
-                                    : "border-hairline bg-surface-2 text-ink-muted"
-                                }`}>
-                                  {count}/{shift.requiredCount}
-                                </span>
+                                <div className="flex shrink-0 items-center gap-1">
+                                  {hasConflict && (
+                                    <span className="flex items-center gap-1 rounded-md border border-danger/30 bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-danger">
+                                      <AlertTriangleIcon className="size-3" />
+                                      Conflict
+                                    </span>
+                                  )}
+                                  <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
+                                    isUnderstaffed
+                                      ? "border-warning/30 bg-surface-2 text-warning"
+                                      : "border-hairline bg-surface-2 text-ink-muted"
+                                  }`}>
+                                    {count}/{shift.requiredCount}
+                                  </span>
+                                </div>
                               </div>
                               {assignedNames.length > 0 && (
                                 <p className="mt-1 truncate text-[11px] text-ink-subtle">

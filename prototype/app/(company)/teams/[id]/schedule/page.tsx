@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCompany } from "@/lib/company-data";
 import type { Shift } from "@/lib/company-data";
+import { formatDateTime } from "@/lib/format";
 import Modal from "@/components/ui/Modal";
 import ShiftCalendar from "@/components/schedule/ShiftCalendar";
 import PublishPreviewModal from "@/components/schedule/PublishPreviewModal";
@@ -62,6 +63,7 @@ export default function SchedulePage() {
     shifts,
     shiftAssignments,
     shiftTemplates,
+    auditLog,
     previewShifts,
     publishShifts,
     createShift,
@@ -79,7 +81,13 @@ export default function SchedulePage() {
 
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [modal, setModal] = useState<ModalMode>({ type: null });
-  const [publishPreview, setPublishPreview] = useState<{ planned: Shift[]; skippedCount: number; dateRange: string } | null>(null);
+  const [publishPreview, setPublishPreview] = useState<{
+    planned: Shift[];
+    skippedCount: number;
+    conflictIds: string[];
+    dateRange: string;
+  } | null>(null);
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
   const [publishResult, setPublishResult] = useState<{ count: number } | null>(null);
 
   const weekEnd = useMemo(() => {
@@ -108,6 +116,11 @@ export default function SchedulePage() {
     [shiftTemplates, params.id],
   );
 
+  const teamAuditLog = useMemo(
+    () => auditLog.filter((a) => a.teamId === params.id).slice(0, 8),
+    [auditLog, params.id],
+  );
+
   const goPrev = () => {
     const prev = new Date(weekStart);
     prev.setDate(prev.getDate() - 7);
@@ -126,16 +139,28 @@ export default function SchedulePage() {
     const rangeStart = weekStart.toISOString().slice(0, 10);
     const rangeEnd = weekEnd.toISOString().slice(0, 10);
     const result = previewShifts(params.id, rangeStart, rangeEnd);
+    setExcludedIds(new Set());
     setPublishPreview({ ...result, dateRange: formatDateRange(weekStart) });
+  };
+
+  const handleToggleExclude = (id: string) => {
+    setExcludedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleConfirmPublish = () => {
     if (!publishPreview) return;
     const rangeStart = weekStart.toISOString().slice(0, 10);
     const rangeEnd = weekEnd.toISOString().slice(0, 10);
-    const newShifts = publishShifts(params.id, rangeStart, rangeEnd);
+    const toPublish = publishPreview.planned.filter((s) => !excludedIds.has(s.id));
+    const newShifts = publishShifts(params.id, rangeStart, rangeEnd, toPublish);
     setPublishResult({ count: newShifts.length });
     setPublishPreview(null);
+    setExcludedIds(new Set());
   };
 
   const handleCreateShift = (shiftData: {
@@ -172,9 +197,9 @@ export default function SchedulePage() {
     setModal({ type: null });
   };
 
-  const handleAssign = (personId: string) => {
+  const handleAssign = (personId: string, override?: boolean) => {
     if (modal.type !== "assign") return { ok: false, error: "No shift selected." };
-    return assignPerson(modal.shift.id, personId);
+    return assignPerson(modal.shift.id, personId, override);
   };
 
   const handleRemoveAssignment = (assignmentId: string) => {
@@ -384,6 +409,40 @@ export default function SchedulePage() {
         </div>
       )}
 
+      {teamAuditLog.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
+            Recent activity
+          </p>
+          <div className="divide-y divide-hairline/60 rounded-lg border border-hairline bg-surface-2">
+            {teamAuditLog.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex items-center justify-between gap-4 px-3 py-2"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`size-1.5 shrink-0 rounded-full ${
+                      entry.tone === "success"
+                        ? "bg-success"
+                        : entry.tone === "warning"
+                          ? "bg-warning"
+                          : entry.tone === "danger"
+                            ? "bg-danger"
+                            : "bg-ink-subtle"
+                    }`}
+                  />
+                  <p className="truncate text-[12px] text-ink-muted">{entry.message}</p>
+                </div>
+                <span className="shrink-0 text-[11px] text-ink-subtle">
+                  {formatDateTime(entry.timestamp)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Modals */}
       {modal.type === "assign" && (
         <AssignShiftModal
@@ -435,9 +494,15 @@ export default function SchedulePage() {
         <PublishPreviewModal
           planned={publishPreview.planned}
           skippedCount={publishPreview.skippedCount}
+          conflictIds={publishPreview.conflictIds}
+          excludedIds={excludedIds}
+          onToggleExclude={handleToggleExclude}
           dateRange={publishPreview.dateRange}
           onPublish={handleConfirmPublish}
-          onClose={() => setPublishPreview(null)}
+          onClose={() => {
+            setPublishPreview(null);
+            setExcludedIds(new Set());
+          }}
         />
       )}
 

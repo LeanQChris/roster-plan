@@ -50,7 +50,7 @@ export interface Person {
   updatedAt: string;
 }
 
-export type ActivityAction = "invited" | "updated" | "resent";
+export type ActivityAction = "invited" | "updated" | "resent" | "notified";
 
 export interface ActivityEntry {
   id: string;
@@ -104,6 +104,19 @@ export interface ShiftAssignment {
   createdAt: string;
 }
 
+export type AuditTone = "neutral" | "success" | "warning" | "danger";
+
+export interface AuditEntry {
+  id: string;
+  timestamp: string;
+  action: string;
+  tone: AuditTone;
+  resource: string;
+  resourceId: string;
+  teamId?: string;
+  message: string;
+}
+
 interface CompanyState {
   teams: Team[];
   people: Person[];
@@ -113,6 +126,7 @@ interface CompanyState {
   shiftTemplates: ShiftTemplate[];
   shifts: Shift[];
   shiftAssignments: ShiftAssignment[];
+  auditLog: AuditEntry[];
 }
 
 type CompanyAction =
@@ -135,7 +149,9 @@ type CompanyAction =
   | { type: "updateShift"; id: string; patch: Partial<Shift> }
   | { type: "deleteShift"; id: string }
   | { type: "addAssignment"; assignment: ShiftAssignment }
-  | { type: "removeAssignment"; id: string };
+  | { type: "removeAssignment"; id: string }
+  | { type: "addActivity"; entry: ActivityEntry }
+  | { type: "addAudit"; entry: AuditEntry };
 
 const TEAMS_KEY = "roster.teams";
 const PEOPLE_KEY = "roster.people";
@@ -145,10 +161,28 @@ const CLOCK_KEY = "roster.clock";
 const TEMPLATES_KEY = "roster.shiftTemplates";
 const SHIFTS_KEY = "roster.shifts";
 const ASSIGNMENTS_KEY = "roster.shiftAssignments";
+const AUDIT_KEY = "roster.auditLog";
 
 let seq = 0;
 export const nextId = (prefix: string) =>
   `${prefix}_${Date.now().toString(36)}${(seq += 1).toString(36)}`;
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function shiftsOverlap(
+  a: { date: string; startTime: string; durationMinutes: number },
+  b: { date: string; startTime: string; durationMinutes: number },
+): boolean {
+  if (a.date !== b.date) return false;
+  const aStart = timeToMinutes(a.startTime);
+  const aEnd = aStart + a.durationMinutes;
+  const bStart = timeToMinutes(b.startTime);
+  const bEnd = bStart + b.durationMinutes;
+  return aStart < bEnd && bStart < aEnd;
+}
 
 function readStored<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -179,6 +213,7 @@ function initState(): CompanyState {
   const shiftTemplates = readStored<ShiftTemplate[]>(TEMPLATES_KEY, []);
   const shifts = readStored<Shift[]>(SHIFTS_KEY, []);
   const shiftAssignments = readStored<ShiftAssignment[]>(ASSIGNMENTS_KEY, []);
+  const auditLog = readStored<AuditEntry[]>(AUDIT_KEY, []);
 
   if (teams.length === 0) {
     const setup = readCompanySetup();
@@ -194,7 +229,7 @@ function initState(): CompanyState {
       writeStored(TEAMS_KEY, teams);
     }
   }
-  return { teams, people, locations, activity, clockEntries, shiftTemplates, shifts, shiftAssignments };
+  return { teams, people, locations, activity, clockEntries, shiftTemplates, shifts, shiftAssignments, auditLog };
 }
 
 const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
@@ -339,6 +374,10 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
         ...state,
         shiftAssignments: state.shiftAssignments.filter((a) => a.id !== action.id),
       };
+    case "addActivity":
+      return { ...state, activity: [action.entry, ...state.activity] };
+    case "addAudit":
+      return { ...state, auditLog: [action.entry, ...state.auditLog] };
   }
 };
 
@@ -394,8 +433,17 @@ interface CompanyContextValue extends CompanyState {
   updateShiftTemplate: (id: string, patch: Partial<ShiftTemplate>) => boolean;
   deleteShiftTemplate: (id: string) => void;
   getShiftTemplatesByTeam: (teamId: string) => ShiftTemplate[];
-  previewShifts: (teamId: string, rangeStart: string, rangeEnd: string) => { planned: Shift[]; skippedCount: number };
-  publishShifts: (teamId: string, rangeStart: string, rangeEnd: string) => Shift[];
+  previewShifts: (
+    teamId: string,
+    rangeStart: string,
+    rangeEnd: string,
+  ) => { planned: Shift[]; skippedCount: number; conflictIds: string[] };
+  publishShifts: (
+    teamId: string,
+    rangeStart: string,
+    rangeEnd: string,
+    shiftsToPublish?: Shift[],
+  ) => Shift[];
   createShift: (input: {
     teamId: string;
     title: string;
@@ -406,7 +454,11 @@ interface CompanyContextValue extends CompanyState {
   }) => { ok: boolean; error?: string; shift?: Shift };
   updateShift: (id: string, patch: Partial<Shift>) => { ok: boolean; error?: string };
   deleteShift: (id: string) => void;
-  assignPerson: (shiftId: string, personId: string) => { ok: boolean; error?: string };
+  assignPerson: (
+    shiftId: string,
+    personId: string,
+    override?: boolean,
+  ) => { ok: boolean; error?: string; conflict?: boolean };
   removeAssignment: (id: string) => void;
 }
 
@@ -447,6 +499,10 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     writeStored(ASSIGNMENTS_KEY, state.shiftAssignments);
   }, [state.shiftAssignments]);
 
+  useEffect(() => {
+    writeStored(AUDIT_KEY, state.auditLog);
+  }, [state.auditLog]);
+
   const createTeam = useCallback(
     (name: string, description?: string, locationId?: string | null): Team | null => {
       const trimmed = name.trim();
@@ -486,20 +542,31 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       if (state.people.some((p) => p.email.toLowerCase() === email)) {
         return { ok: false, error: "Someone with that email is already in this company." };
       }
+      const person: Person = {
+        id: nextId("person"),
+        name: input.name.trim(),
+        email,
+        phone: input.phone?.trim() || undefined,
+        role: input.role,
+        teamId: input.teamId,
+        locationId: input.locationId,
+        timezone: input.timezone,
+        status: "invited",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      dispatch({ type: "addPerson", person });
       dispatch({
-        type: "addPerson",
-        person: {
-          id: nextId("person"),
-          name: input.name.trim(),
-          email,
-          phone: input.phone?.trim() || undefined,
-          role: input.role,
-          teamId: input.teamId,
-          locationId: input.locationId,
-          timezone: input.timezone,
-          status: "invited",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+        type: "addAudit",
+        entry: {
+          id: nextId("audit"),
+          timestamp: new Date().toISOString(),
+          action: "person.invited",
+          tone: "success",
+          resource: "Person",
+          resourceId: person.id,
+          teamId: input.teamId ?? undefined,
+          message: `${person.name} invited as ${person.role}`,
         },
       });
       return { ok: true };
@@ -593,20 +660,71 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         updatedAt: now,
       };
       dispatch({ type: "createShiftTemplate", template });
+      dispatch({
+        type: "addAudit",
+        entry: {
+          id: nextId("audit"),
+          timestamp: new Date().toISOString(),
+          action: "template.created",
+          tone: "success",
+          resource: "ShiftTemplate",
+          resourceId: template.id,
+          teamId: template.teamId,
+          message: `Template "${template.title}" created`,
+        },
+      });
       return { ok: true, template };
     },
     [],
   );
 
-  const updateShiftTemplate = useCallback((id: string, patch: Partial<ShiftTemplate>) => {
-    if (patch.title !== undefined && !patch.title.trim()) return false;
-    dispatch({ type: "updateShiftTemplate", id, patch });
-    return true;
-  }, []);
+  const updateShiftTemplate = useCallback(
+    (id: string, patch: Partial<ShiftTemplate>) => {
+      if (patch.title !== undefined && !patch.title.trim()) return false;
+      const existing = state.shiftTemplates.find((t) => t.id === id);
+      dispatch({ type: "updateShiftTemplate", id, patch });
+      if (existing) {
+        dispatch({
+          type: "addAudit",
+          entry: {
+            id: nextId("audit"),
+            timestamp: new Date().toISOString(),
+            action: "template.updated",
+            tone: "neutral",
+            resource: "ShiftTemplate",
+            resourceId: id,
+            teamId: existing.teamId,
+            message: `Template "${patch.title ?? existing.title}" updated`,
+          },
+        });
+      }
+      return true;
+    },
+    [state.shiftTemplates],
+  );
 
-  const deleteShiftTemplate = useCallback((id: string) => {
-    dispatch({ type: "deleteShiftTemplate", id });
-  }, []);
+  const deleteShiftTemplate = useCallback(
+    (id: string) => {
+      const existing = state.shiftTemplates.find((t) => t.id === id);
+      dispatch({ type: "deleteShiftTemplate", id });
+      if (existing) {
+        dispatch({
+          type: "addAudit",
+          entry: {
+            id: nextId("audit"),
+            timestamp: new Date().toISOString(),
+            action: "template.deleted",
+            tone: "warning",
+            resource: "ShiftTemplate",
+            resourceId: id,
+            teamId: existing.teamId,
+            message: `Template "${existing.title}" deleted`,
+          },
+        });
+      }
+    },
+    [state.shiftTemplates],
+  );
 
   const getShiftTemplatesByTeam = useCallback(
     (teamId: string) => state.shiftTemplates.filter((t) => t.teamId === teamId),
@@ -614,7 +732,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   );
 
   const previewShifts = useCallback(
-    (teamId: string, rangeStart: string, rangeEnd: string): { planned: Shift[]; skippedCount: number } => {
+    (
+      teamId: string,
+      rangeStart: string,
+      rangeEnd: string,
+    ): { planned: Shift[]; skippedCount: number; conflictIds: string[] } => {
       const templates = state.shiftTemplates.filter(
         (t) => t.teamId === teamId && t.isActive && t.recurrenceRule,
       );
@@ -655,20 +777,69 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           // invalid RRULE — skip this template
         }
       }
-      return { planned, skippedCount };
+
+      // Conflict detection: a planned shift conflicts if its time overlaps
+      // an existing shift on the same team/date, or another planned shift.
+      const conflictIds = new Set<string>();
+      const existingShifts = state.shifts.filter((s) => s.teamId === teamId);
+      for (let i = 0; i < planned.length; i++) {
+        const p = planned[i];
+        if (existingShifts.some((ex) => shiftsOverlap(p, ex))) {
+          conflictIds.add(p.id);
+        }
+        for (let j = i + 1; j < planned.length; j++) {
+          if (shiftsOverlap(p, planned[j])) {
+            conflictIds.add(p.id);
+            conflictIds.add(planned[j].id);
+          }
+        }
+      }
+
+      return { planned, skippedCount, conflictIds: Array.from(conflictIds) };
     },
     [state.shiftTemplates, state.shifts],
   );
 
   const publishShifts = useCallback(
-    (teamId: string, rangeStart: string, rangeEnd: string): Shift[] => {
-      const { planned } = previewShifts(teamId, rangeStart, rangeEnd);
-      if (planned.length > 0) {
-        dispatch({ type: "addShifts", shifts: planned });
+    (teamId: string, rangeStart: string, rangeEnd: string, shiftsToPublish?: Shift[]): Shift[] => {
+      const toPublish = shiftsToPublish ?? previewShifts(teamId, rangeStart, rangeEnd).planned;
+      if (toPublish.length > 0) {
+        dispatch({ type: "addShifts", shifts: toPublish });
+
+        const team = state.teams.find((t) => t.id === teamId);
+        dispatch({
+          type: "addAudit",
+          entry: {
+            id: nextId("audit"),
+            timestamp: new Date().toISOString(),
+            action: "shift.published",
+            tone: "success",
+            resource: "Shift",
+            resourceId: teamId,
+            teamId,
+            message: `${toPublish.length} shift${toPublish.length === 1 ? "" : "s"} published for ${team?.name ?? "team"} (${rangeStart} \u2013 ${rangeEnd})`,
+          },
+        });
+
+        const teamMembers = state.people.filter(
+          (p) => p.teamId === teamId && p.status !== "inactive",
+        );
+        for (const person of teamMembers) {
+          dispatch({
+            type: "addActivity",
+            entry: {
+              id: nextId("activity"),
+              personId: person.id,
+              action: "notified",
+              message: `New shifts published for ${rangeStart} \u2013 ${rangeEnd}`,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        }
       }
-      return planned;
+      return toPublish;
     },
-    [previewShifts],
+    [previewShifts, state.teams, state.people],
   );
 
   const createShift = useCallback(
@@ -724,11 +895,37 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   );
 
   const assignPerson = useCallback(
-    (shiftId: string, personId: string): { ok: boolean; error?: string } => {
+    (
+      shiftId: string,
+      personId: string,
+      override = false,
+    ): { ok: boolean; error?: string; conflict?: boolean } => {
       const already = state.shiftAssignments.some(
         (a) => a.shiftId === shiftId && a.personId === personId,
       );
       if (already) return { ok: false, error: "This person is already assigned to this shift." };
+
+      const targetShift = state.shifts.find((s) => s.id === shiftId);
+      if (!targetShift) return { ok: false, error: "Shift not found." };
+
+      if (!override) {
+        const personShiftIds = new Set(
+          state.shiftAssignments
+            .filter((a) => a.personId === personId)
+            .map((a) => a.shiftId),
+        );
+        const conflictingShift = state.shifts.find(
+          (s) => s.id !== shiftId && personShiftIds.has(s.id) && shiftsOverlap(s, targetShift),
+        );
+        if (conflictingShift) {
+          return {
+            ok: false,
+            conflict: true,
+            error: `Conflicts with "${conflictingShift.title}" on ${conflictingShift.date} at ${conflictingShift.startTime}.`,
+          };
+        }
+      }
+
       const assignment: ShiftAssignment = {
         id: nextId("assignment"),
         shiftId,
@@ -736,9 +933,36 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       dispatch({ type: "addAssignment", assignment });
+
+      dispatch({
+        type: "addActivity",
+        entry: {
+          id: nextId("activity"),
+          personId,
+          action: "notified",
+          message: `Assigned to "${targetShift.title}" on ${targetShift.date} at ${targetShift.startTime}`,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      const person = state.people.find((p) => p.id === personId);
+      dispatch({
+        type: "addAudit",
+        entry: {
+          id: nextId("audit"),
+          timestamp: new Date().toISOString(),
+          action: override ? "shift.assigned.override" : "shift.assigned",
+          tone: override ? "warning" : "success",
+          resource: "ShiftAssignment",
+          resourceId: assignment.id,
+          teamId: targetShift.teamId,
+          message: `${person?.name ?? "Someone"} assigned to "${targetShift.title}" on ${targetShift.date}${override ? " (conflict overridden)" : ""}`,
+        },
+      });
+
       return { ok: true };
     },
-    [state.shiftAssignments],
+    [state.shiftAssignments, state.shifts, state.people],
   );
 
   const removeAssignment = useCallback((id: string) => {

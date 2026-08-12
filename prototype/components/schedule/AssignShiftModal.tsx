@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import type { Person, Shift, ShiftAssignment } from "@/lib/company-data";
-import { CheckIcon, PlusIcon, TrashIcon, UsersIcon } from "@/components/ui/icons";
+import { AlertTriangleIcon, PlusIcon, TrashIcon, UsersIcon } from "@/components/ui/icons";
 
 function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -26,7 +26,7 @@ interface AssignShiftModalProps {
   assignments: ShiftAssignment[];
   people: Person[];
   teamPeople: Person[];
-  onAssign: (personId: string) => { ok: boolean; error?: string };
+  onAssign: (personId: string, override?: boolean) => { ok: boolean; error?: string; conflict?: boolean };
   onRemove: (assignmentId: string) => void;
   onClose: () => void;
 }
@@ -40,6 +40,34 @@ export default function AssignShiftModal({
   onRemove,
   onClose,
 }: AssignShiftModalProps) {
+  const [conflict, setConflict] = useState<{
+    personId: string;
+    personName: string;
+    message: string;
+  } | null>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
+
+  const handleAssignClick = (person: Person) => {
+    setAssignError(null);
+    const result = onAssign(person.id);
+    if (result.ok) return;
+    if (result.conflict) {
+      setConflict({
+        personId: person.id,
+        personName: person.name,
+        message: result.error ?? "Scheduling conflict detected.",
+      });
+    } else {
+      setAssignError(result.error ?? "Could not assign this person.");
+    }
+  };
+
+  const handleOverride = () => {
+    if (!conflict) return;
+    onAssign(conflict.personId, true);
+    setConflict(null);
+  };
+
   const personMap = useMemo(() => {
     const map = new Map<string, Person>();
     for (const p of people) map.set(p.id, p);
@@ -83,6 +111,40 @@ export default function AssignShiftModal({
             </span>
           )}
         </div>
+
+        {assignError && (
+          <div className="rounded-lg border border-danger/30 bg-danger-weak px-3 py-2 text-[12px] text-danger">
+            {assignError}
+          </div>
+        )}
+
+        {conflict && (
+          <div className="space-y-2.5 rounded-lg border border-warning/30 bg-warning-weak p-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-warning" />
+              <p className="text-[12px] leading-5 text-warning">
+                <span className="font-medium">{conflict.personName}</span> has a scheduling
+                conflict: {conflict.message}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConflict(null)}
+                className="h-7 rounded-md border border-hairline bg-surface-2 px-2.5 text-[12px] font-medium text-ink transition-colors hover:bg-surface-3"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleOverride}
+                className="h-7 rounded-md bg-warning px-2.5 text-[12px] font-medium text-white transition-colors hover:bg-warning/85"
+              >
+                Override &amp; assign
+              </button>
+            </div>
+          </div>
+        )}
 
         {assignedPersonIds.length > 0 && (
           <div>
@@ -142,7 +204,7 @@ export default function AssignShiftModal({
                 <button
                   key={person.id}
                   type="button"
-                  onClick={() => onAssign(person.id)}
+                  onClick={() => handleAssignClick(person)}
                   className="flex w-full items-center justify-between rounded-lg border border-hairline bg-surface-1 px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-surface-3"
                 >
                   <div className="flex items-center gap-2.5">

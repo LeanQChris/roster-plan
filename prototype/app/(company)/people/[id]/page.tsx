@@ -54,6 +54,7 @@ const activityLabel: Record<string, string> = {
   invited: "Invited",
   updated: "Updated",
   resent: "Invite resent",
+  notified: "Notification",
 };
 
 export default function PersonDetailPage() {
@@ -64,6 +65,7 @@ export default function PersonDetailPage() {
     people,
     locations,
     activity,
+    clockEntries,
     updatePerson,
     resendInvite,
     deletePerson,
@@ -89,11 +91,14 @@ export default function PersonDetailPage() {
     [activity, params.id],
   );
 
-  const personClockLogs = [
-    { id: "clock-1", action: "in" as const, at: "2026-08-05T09:02:00Z" },
-    { id: "clock-2", action: "out" as const, at: "2026-08-05T17:34:00Z" },
-    { id: "clock-3", action: "in" as const, at: "2026-08-06T08:47:00Z" },
-  ];
+  const personClockLogs = useMemo(
+    () =>
+      clockEntries
+        .filter((c) => c.personId === params.id)
+        .sort((a, b) => b.at.localeCompare(a.at))
+        .slice(0, 5),
+    [clockEntries, params.id],
+  );
 
   if (!person) {
     return (
@@ -349,23 +354,35 @@ export default function PersonDetailPage() {
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-subtle">
             Time clock logs
           </p>
+          <Link
+            href={`/time-tracking?person=${person.id}`}
+            className="text-[11px] font-medium text-primary hover:underline"
+          >
+            View all
+          </Link>
         </div>
-        <ul className="divide-y divide-hairline/60">
-          {personClockLogs.map((c) => (
-            <li
-              key={c.id}
-              className="flex items-center justify-between gap-4 px-4 py-2.5"
-            >
-              <span className="flex items-center gap-2 text-[13px] font-medium text-ink">
-                <ClockIcon className="size-3.5 text-ink-subtle" />
-                {c.action === "in" ? "Clocked in" : "Clocked out"}
-              </span>
-              <span className="text-xs text-ink-subtle">
-                {formatDateTime(c.at)}
-              </span>
-            </li>
-          ))}
-        </ul>
+        {personClockLogs.length === 0 ? (
+          <p className="px-4 py-6 text-center text-[13px] text-ink-muted">
+            No clock entries recorded yet.
+          </p>
+        ) : (
+          <ul className="divide-y divide-hairline/60">
+            {personClockLogs.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-4 px-4 py-2.5"
+              >
+                <span className="flex items-center gap-2 text-[13px] font-medium text-ink">
+                  <ClockIcon className="size-3.5 text-ink-subtle" />
+                  {c.action === "in" ? "Clocked in" : "Clocked out"}
+                </span>
+                <span className="text-xs text-ink-subtle">
+                  {formatDateTime(c.at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {editing && (

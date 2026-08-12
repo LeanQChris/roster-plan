@@ -2,7 +2,7 @@
 
 import Modal from "@/components/ui/Modal";
 import type { Shift } from "@/lib/company-data";
-import { CalendarIcon } from "@/components/ui/icons";
+import { AlertTriangleIcon, CalendarIcon } from "@/components/ui/icons";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -32,6 +32,9 @@ function formatDateShort(dateStr: string): string {
 interface PublishPreviewModalProps {
   planned: Shift[];
   skippedCount: number;
+  conflictIds: string[];
+  excludedIds: Set<string>;
+  onToggleExclude: (id: string) => void;
   dateRange: string;
   onPublish: () => void;
   onClose: () => void;
@@ -40,6 +43,9 @@ interface PublishPreviewModalProps {
 export default function PublishPreviewModal({
   planned,
   skippedCount,
+  conflictIds,
+  excludedIds,
+  onToggleExclude,
   dateRange,
   onPublish,
   onClose,
@@ -50,21 +56,35 @@ export default function PublishPreviewModal({
     return acc;
   }, {});
 
+  const conflictSet = new Set(conflictIds);
+  const publishCount = planned.filter((s) => !excludedIds.has(s.id)).length;
+
   return (
     <Modal
       open
       title="Preview shifts to publish"
       description={
         planned.length > 0
-          ? `${planned.length} new shift${planned.length === 1 ? "" : "s"} will be created for ${dateRange}.`
+          ? `${publishCount} new shift${publishCount === 1 ? "" : "s"} will be created for ${dateRange}.`
           : `No new shifts to create for ${dateRange}.`
       }
-      confirmLabel={planned.length > 0 ? "Publish" : "OK"}
+      confirmLabel={publishCount > 0 ? "Publish" : "OK"}
       size="lg"
       onClose={onClose}
-      onConfirm={planned.length > 0 ? onPublish : onClose}
+      onConfirm={publishCount > 0 ? onPublish : onClose}
     >
       <div className="mt-4 space-y-3">
+        {conflictSet.size > 0 && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning-weak px-3 py-2.5">
+            <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-warning" />
+            <p className="text-[12px] leading-5 text-warning">
+              {conflictSet.size} shift{conflictSet.size === 1 ? "" : "s"} conflict with existing or
+              other planned shifts (overlapping time). Review below and exclude any you don&apos;t
+              want to publish.
+            </p>
+          </div>
+        )}
+
         {planned.length === 0 && skippedCount === 0 && (
           <div className="rounded-lg border border-hairline bg-surface-3 p-6 text-center">
             <CalendarIcon className="mx-auto size-5 text-ink-faint" />
@@ -95,29 +115,57 @@ export default function PublishPreviewModal({
                     {template.title} · {formatDuration(template.durationMinutes)} · {template.startTime}
                   </p>
                   <div className="space-y-1">
-                    {shifts.map((shift) => (
-                      <div
-                        key={shift.id}
-                        className="flex items-center justify-between rounded-lg border border-hairline bg-surface-1 px-3 py-2"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-4 text-[10px] font-semibold text-ink">
-                            {new Date(shift.date + "T00:00:00").getDate()}
-                          </span>
-                          <div>
-                            <p className="text-[13px] font-medium text-ink">
-                              {formatDateShort(shift.date)}
-                            </p>
-                            <p className="text-[11px] text-ink-subtle">
-                              {formatTime(shift.startTime, shift.durationMinutes)}
-                            </p>
+                    {shifts.map((shift) => {
+                      const conflicted = conflictSet.has(shift.id);
+                      const excluded = excludedIds.has(shift.id);
+                      return (
+                        <div
+                          key={shift.id}
+                          className={`flex items-center justify-between rounded-lg border px-3 py-2 ${
+                            conflicted
+                              ? "border-warning/30 bg-warning-weak"
+                              : "border-hairline bg-surface-1"
+                          } ${excluded ? "opacity-50" : ""}`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-4 text-[10px] font-semibold text-ink">
+                              {new Date(shift.date + "T00:00:00").getDate()}
+                            </span>
+                            <div>
+                              <p className="text-[13px] font-medium text-ink">
+                                {formatDateShort(shift.date)}
+                                {excluded && (
+                                  <span className="ml-1.5 text-[11px] font-normal text-ink-subtle">
+                                    (excluded)
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-[11px] text-ink-subtle">
+                                {formatTime(shift.startTime, shift.durationMinutes)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[11px] text-ink-subtle">
+                              {shift.requiredCount} {shift.requiredCount === 1 ? "slot" : "slots"}
+                            </span>
+                            {conflicted && (
+                              <button
+                                type="button"
+                                onClick={() => onToggleExclude(shift.id)}
+                                className={`rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${
+                                  excluded
+                                    ? "border-hairline bg-surface-2 text-ink-muted hover:bg-surface-3"
+                                    : "border-warning/40 bg-warning text-white hover:bg-warning/85"
+                                }`}
+                              >
+                                {excluded ? "Include" : "Exclude"}
+                              </button>
+                            )}
                           </div>
                         </div>
-                        <span className="text-[11px] text-ink-subtle">
-                          {shift.requiredCount} {shift.requiredCount === 1 ? "slot" : "slots"}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
