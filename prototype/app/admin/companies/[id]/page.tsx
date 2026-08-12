@@ -225,6 +225,7 @@ export default function CompanyDetailPage() {
             {[
               ["Plan", company.plan],
               ["Region", regionLabel[company.region] ?? company.region],
+              ["Contact email", company.contactEmail ?? "—"],
               ["Slug", company.slug],
               ["Company ID", company.id],
               ["Created", formatDate(company.createdAt)],

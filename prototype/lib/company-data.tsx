@@ -20,6 +20,7 @@ export interface Team {
   name: string;
   description?: string;
   locationId: string | null;
+  managerId: string | null;
   createdAt: string;
 }
 
@@ -243,7 +244,10 @@ function writeStored(key: string, value: unknown) {
 }
 
 function initState(): CompanyState {
-  const teams = readStored<Team[]>(TEAMS_KEY, []);
+  const teams = readStored<Team[]>(TEAMS_KEY, []).map((t) => ({
+    ...t,
+    managerId: t.managerId ?? null,
+  }));
   const people = readStored<Person[]>(PEOPLE_KEY, []);
   const locations = readStored<Location[]>(LOCATIONS_KEY, []);
   const activity = readStored<ActivityEntry[]>(ACTIVITY_KEY, []);
@@ -261,6 +265,7 @@ function initState(): CompanyState {
         name: setup.team,
         description: "Your first team",
         locationId: null,
+        managerId: null,
         createdAt: new Date().toISOString(),
       };
       teams.push(first);
@@ -314,9 +319,32 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
           ...state.activity,
         ],
       };
-    case "updatePerson":
+    case "updatePerson": {
+      const target = state.people.find((p) => p.id === action.id);
+      if (!target) return state;
+      const promoting =
+        action.patch.role === "manager" && target.role !== "manager";
+      const demoting =
+        action.patch.role !== undefined &&
+        action.patch.role !== "manager" &&
+        target.role === "manager";
+      let teams = state.teams;
+      if (promoting && target.teamId) {
+        // Only fill an unmanaged team — don't steal from an existing manager.
+        teams = teams.map((t) =>
+          t.id === target.teamId && !t.managerId
+            ? { ...t, managerId: target.id }
+            : t,
+        );
+      }
+      if (demoting) {
+        teams = teams.map((t) =>
+          t.managerId === target.id ? { ...t, managerId: null } : t,
+        );
+      }
       return {
         ...state,
+        teams,
         people: state.people.map((p) =>
           p.id === action.id
             ? { ...p, ...action.patch, updatedAt: new Date().toISOString() }
@@ -333,6 +361,7 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
           ...state.activity,
         ],
       };
+    }
     case "resendInvite":
       return {
         ...state,
@@ -358,6 +387,10 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
         people: state.people.filter((p) => p.id !== action.id),
         clockEntries: state.clockEntries.filter(
           (c) => c.personId !== action.id,
+        ),
+        // Clear any team where this person was the manager.
+        teams: state.teams.map((t) =>
+          t.managerId === action.id ? { ...t, managerId: null } : t,
         ),
       };
     case "createLocation":
@@ -495,6 +528,7 @@ interface CompanyContextValue extends CompanyState {
     name: string,
     description?: string,
     locationId?: string | null,
+    managerId?: string | null,
   ) => Team | null;
   updateTeam: (id: string, patch: Partial<Team>) => boolean;
   deleteTeam: (id: string) => void;
@@ -608,6 +642,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       name: string,
       description?: string,
       locationId?: string | null,
+      managerId?: string | null,
     ): Team | null => {
       const trimmed = name.trim();
       if (!trimmed) return null;
@@ -621,6 +656,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         name: trimmed,
         description: description?.trim() || undefined,
         locationId: locationId ?? null,
+        managerId: managerId ?? null,
         createdAt: new Date().toISOString(),
       };
       dispatch({ type: "createTeam", team });

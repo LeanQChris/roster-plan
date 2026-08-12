@@ -42,6 +42,7 @@ export default function TeamDetailPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [locationId, setLocationId] = useState<string | null>(null);
+  const [managerId, setManagerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -50,6 +51,17 @@ export default function TeamDetailPage() {
     for (const l of locations) map.set(l.id, l.name);
     return map;
   }, [locations]);
+
+  const managerName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of people) map.set(p.id, p.name);
+    return map;
+  }, [people]);
+
+  const managers = useMemo(
+    () => people.filter((p) => p.role === "manager"),
+    [people],
+  );
 
   const members = useMemo(
     () => people.filter((p) => p.teamId === team?.id),
@@ -79,6 +91,7 @@ export default function TeamDetailPage() {
     setName(team.name);
     setDescription(team.description ?? "");
     setLocationId(team.locationId);
+    setManagerId(team.managerId);
     setError(null);
     setEditing(true);
   };
@@ -91,6 +104,7 @@ export default function TeamDetailPage() {
         name,
         description: description || undefined,
         locationId,
+        managerId,
       })
     ) {
       setError("Team names can't be empty or duplicate an existing team.");
@@ -190,6 +204,12 @@ export default function TeamDetailPage() {
           <dl className="divide-y divide-hairline/60 px-4">
             {[
               ["Description", team.description || "—"],
+              [
+                "Manager",
+                team.managerId
+                  ? (managerName.get(team.managerId) ?? "—")
+                  : "Unassigned",
+              ],
               [
                 "Location",
                 team.locationId
@@ -319,6 +339,35 @@ export default function TeamDetailPage() {
                 </select>
                 <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
               </div>
+            </div>
+            <div>
+              <label
+                htmlFor="team-manager"
+                className="block text-xs font-medium text-ink-muted"
+              >
+                Team manager
+              </label>
+              <div className="relative">
+                <select
+                  id="team-manager"
+                  value={managerId ?? ""}
+                  onChange={(e) => setManagerId(e.target.value || null)}
+                  className={selectClass}
+                >
+                  <option value="">Unassigned</option>
+                  {managers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
+              </div>
+              {managers.length === 0 && (
+                <p className="mt-1 text-[11px] text-ink-subtle">
+                  No people with the manager role yet — invite one from People.
+                </p>
+              )}
             </div>
             {error && (
               <p className="rounded-lg border border-danger/30 bg-danger-weak px-3 py-2 text-[13px] font-medium text-danger">

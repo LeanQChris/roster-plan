@@ -8,9 +8,10 @@ import {
   useReducer,
 } from "react";
 import type { ReactNode } from "react";
-import { seedAudit, seedCompanies, ts } from "./data";
+import { seedAudit, ts, COMPANY_COLORS } from "./data";
 import type { AuditEntry, AuditTone, Company, CompanyStatus } from "./data";
-import { useAuth } from "./auth";
+import { useAuth, readAccounts } from "./auth";
+import type { RegisteredAdmin } from "./auth";
 
 export interface Toast {
   id: string;
@@ -81,13 +82,86 @@ let seq = 0;
 const nextId = (prefix: string) =>
   `${prefix}_${Date.now().toString(36)}_${(seq += 1).toString(36)}`;
 
+const hash = (s: string) => {
+  let h = 0;
+  for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return Math.abs(h);
+};
+
+const slugify = (name: string) =>
+  name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+const readStored = <T,>(key: string, fallback: T): T => {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return fallback;
+    return (JSON.parse(raw) as T) ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+// Real numbers come from the company console data this browser holds.
+// Company data is single-workspace per browser in the prototype.
+const liveStats = () => {
+  const people = readStored<{ role: string }[]>("roster.people", []);
+  const teams = readStored<unknown[]>("roster.teams", []);
+  const shifts = readStored<unknown[]>("roster.shifts", []);
+  return {
+    members: people.length,
+    teams: teams.length,
+    managers: people.filter((p) => p.role === "manager").length,
+    shifts: shifts.length,
+  };
+};
+
+const regId = (email: string) =>
+  `reg_${email.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+
+// Registered companies come from real signups (roster.accounts in localStorage).
+const registeredToCompany = (a: RegisteredAdmin): Company => ({
+  id: regId(a.email),
+  name: a.company,
+  slug: slugify(a.company),
+  status: "active",
+  region: "us-east",
+  plan: "free",
+  contactEmail: a.email,
+  ...liveStats(),
+  createdAt: a.createdAt,
+  updatedAt: a.createdAt,
+  color: COMPANY_COLORS[hash(a.email) % COMPANY_COLORS.length],
+});
+
+const initialCompanies = (): Company[] => readAccounts().map(registeredToCompany);
+
+const initialAudit = (): AuditEntry[] => [
+  ...readAccounts().map(
+    (a): AuditEntry => ({
+      id: `evt_reg_${regId(a.email)}`,
+      timestamp: a.createdAt,
+      actor: a.email,
+      actorRole: "company_admin",
+      action: "company.registration",
+      tone: "success",
+      resource: a.company,
+      resourceId: `company:${regId(a.email)}`,
+      companyId: regId(a.email),
+      company: a.company,
+      ip: "198.51.100.23",
+    }),
+  ),
+  ...seedAudit,
+];
+
 export function AdminProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [state, dispatch] = useReducer(reducer, {
-    companies: seedCompanies,
-    audit: seedAudit,
+  const [state, dispatch] = useReducer(reducer, undefined, () => ({
+    companies: initialCompanies(),
+    audit: initialAudit(),
     toasts: [],
-  });
+  }));
 
   const setCompanyStatus = useCallback(
     (id: string, status: CompanyStatus) =>
