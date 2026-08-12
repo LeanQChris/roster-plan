@@ -3,9 +3,8 @@
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCompany } from "@/lib/company-data";
-import type { ClockAction } from "@/lib/company-data";
 import { formatDateTime, initials } from "@/lib/format";
-import { ClockIcon, PauseIcon, PlayIcon, SearchIcon, UsersIcon } from "@/components/ui/icons";
+import { ClockIcon, SearchIcon, UsersIcon } from "@/components/ui/icons";
 
 const inputClass =
   "h-9 rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none";
@@ -22,7 +21,7 @@ function daysAgoStr(days: number): string {
 
 function TimeTrackingContent() {
   const searchParams = useSearchParams();
-  const { people, teams, clockEntries, addClockEntry } = useCompany();
+  const { people, teams, clockEntries } = useCompany();
 
   const [personId, setPersonId] = useState<string>(searchParams.get("person") ?? "");
   const [query, setQuery] = useState("");
@@ -63,12 +62,6 @@ function TimeTrackingContent() {
   };
 
   const handleLoad = () => setLoaded(true);
-
-  const handleQuickClock = (action: ClockAction) => {
-    if (!selectedPerson) return;
-    addClockEntry(selectedPerson.id, action);
-    setLoaded(true);
-  };
 
   return (
     <div>
@@ -144,24 +137,6 @@ function TimeTrackingContent() {
                     <p className="text-[13px] font-medium text-ink">{selectedPerson.name}</p>
                     <p className="text-[11px] text-ink-subtle">{selectedPerson.email}</p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickClock("in")}
-                    className="flex h-8 items-center gap-1.5 rounded-lg border border-hairline bg-surface-3 px-3 text-[12px] font-medium text-ink transition-colors hover:bg-surface-4"
-                  >
-                    <PlayIcon className="size-3.5" />
-                    Clock in
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickClock("out")}
-                    className="flex h-8 items-center gap-1.5 rounded-lg border border-hairline bg-surface-3 px-3 text-[12px] font-medium text-ink transition-colors hover:bg-surface-4"
-                  >
-                    <PauseIcon className="size-3.5" />
-                    Clock out
-                  </button>
                 </div>
               </div>
 
