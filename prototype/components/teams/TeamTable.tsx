@@ -41,6 +41,12 @@ export default function TeamTable({
     return counts;
   }, [people]);
 
+  const managerName = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const p of people) names.set(p.id, p.name);
+    return names;
+  }, [people]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return teams;
@@ -89,7 +95,7 @@ export default function TeamTable({
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="border-b border-hairline">
-                  {["Name", "Description", "Members", "Location", "Created"].map(
+                  {["Name", "Description", "Manager", "Members", "Location", "Created"].map(
                     (h) => (
                       <th
                         key={h}
@@ -125,6 +131,9 @@ export default function TeamTable({
                         <span className="line-clamp-2">
                           {team.description || "—"}
                         </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-ink">
+                        {team.managerId ? managerName.get(team.managerId) ?? "—" : "—"}
                       </td>
                       <td className="px-4 py-3 text-xs text-ink-muted">
                         {members}

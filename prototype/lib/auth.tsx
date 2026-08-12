@@ -59,7 +59,7 @@ interface AuthContextValue {
 
 const STORAGE_KEY = "roster.session";
 
-function readAccounts(): RegisteredAdmin[] {
+export function readAccounts(): RegisteredAdmin[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(ADMINS_KEY);

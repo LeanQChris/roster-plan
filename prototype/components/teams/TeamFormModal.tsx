@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
-import type { Location, Team } from "@/lib/company-data";
+import type { Location, Person, Team } from "@/lib/company-data";
 import { ChevronDownIcon } from "@/components/ui/icons";
 
 const inputClass =
@@ -16,11 +16,13 @@ export interface TeamFormInput {
   name: string;
   description?: string;
   locationId: string | null;
+  managerId: string | null;
 }
 
 interface TeamFormModalProps {
   team: Team | null;
   locations: Location[];
+  people: Person[];
   onClose: () => void;
   onSave: (input: TeamFormInput) => { ok: boolean; error?: string };
 }
@@ -28,14 +30,19 @@ interface TeamFormModalProps {
 export default function TeamFormModal({
   team,
   locations,
+  people,
   onClose,
   onSave,
 }: TeamFormModalProps) {
   const isEdit = team !== null;
+  const managers = people.filter((p) => p.role === "manager");
   const [name, setName] = useState(team?.name ?? "");
   const [description, setDescription] = useState(team?.description ?? "");
   const [locationId, setLocationId] = useState<string | null>(
     team?.locationId ?? null,
+  );
+  const [managerId, setManagerId] = useState<string | null>(
+    team?.managerId ?? null,
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +53,7 @@ export default function TeamFormModal({
       name: name.trim(),
       description: description.trim() || undefined,
       locationId,
+      managerId,
     });
     if (!result.ok) {
       setError(result.error ?? "Couldn't save — try again.");
@@ -126,6 +134,39 @@ export default function TeamFormModal({
             </select>
             <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
           </div>
+        </div>
+
+        <div>
+          <label
+            htmlFor="team-manager"
+            className="block text-xs font-medium text-ink-muted"
+          >
+            Team manager
+          </label>
+          <div className="relative">
+            <select
+              id="team-manager"
+              value={managerId ?? ""}
+              onChange={(e) => setManagerId(e.target.value || null)}
+              className={selectClass}
+            >
+              <option value="">Unassigned</option>
+              {managers.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
+          </div>
+          {managers.length === 0 && (
+            <p className="mt-1 text-[11px] text-ink-subtle">
+              No people with the manager role yet — invite one from People.
+            </p>
+          )}
+          <p className="mt-1 text-[11px] text-ink-subtle">
+            One manager can lead multiple teams.
+          </p>
         </div>
 
         {error && (

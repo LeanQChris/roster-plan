@@ -31,10 +31,24 @@ export default function TeamsPage() {
 
   const handleSave = (input: TeamFormInput): { ok: boolean; error?: string } => {
     if (modalTeam) {
-      if (!updateTeam(modalTeam.id, input)) {
+      if (
+        !updateTeam(modalTeam.id, {
+          name: input.name,
+          description: input.description,
+          locationId: input.locationId,
+          managerId: input.managerId,
+        })
+      ) {
         return { ok: false, error: "Team names can't be empty or duplicate an existing team." };
       }
-    } else if (!createTeam(input.name, input.description, input.locationId)) {
+    } else if (
+      !createTeam(
+        input.name,
+        input.description,
+        input.locationId,
+        input.managerId,
+      )
+    ) {
       return { ok: false, error: "Team name can't be empty or match an existing team." };
     }
     setModalTeam(undefined);
@@ -91,6 +105,7 @@ export default function TeamsPage() {
           key={modalTeam?.id ?? "create"}
           team={modalTeam}
           locations={locations}
+          people={people}
           onClose={() => setModalTeam(undefined)}
           onSave={handleSave}
         />

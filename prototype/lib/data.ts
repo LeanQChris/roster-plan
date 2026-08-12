@@ -9,6 +9,7 @@ export interface Company {
   status: CompanyStatus;
   region: CompanyRegion;
   plan: CompanyPlan;
+  contactEmail?: string;
   members: number;
   teams: number;
   managers: number;

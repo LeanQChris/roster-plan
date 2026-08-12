@@ -74,7 +74,7 @@ function getMonday(d: Date): Date {
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { teams, people, shifts, shiftAssignments, clockEntries, addClockEntry } = useCompany();
+  const { teams, people, shifts, shiftAssignments, clockEntries } = useCompany();
   const [setup] = useState(() => readCompanySetup());
 
   if (!user) return null;
@@ -129,27 +129,11 @@ export default function DashboardPage() {
     return map;
   }, [shiftAssignments]);
 
-  const latestClockByPerson = useMemo(() => {
-    const map = new Map<string, typeof clockEntries[0]>();
-    for (const entry of clockEntries) {
-      const existing = map.get(entry.personId);
-      if (!existing || entry.at > existing.at) {
-        map.set(entry.personId, entry);
-      }
-    }
-    return map;
-  }, [clockEntries]);
-
   const upcomingShifts = useMemo(() => {
     return shifts
       .filter((s) => s.date >= today)
-      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
-      .slice(0, 8);
+      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
   }, [shifts, today]);
-
-  const handleClockAction = (personId: string, action: "in" | "out") => {
-    addClockEntry(personId, action);
-  };
 
   const shownTeams = teams.slice(0, 3);
   const restTeams = teams.slice(3);
@@ -277,7 +261,7 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 max-h-80 space-y-2 overflow-y-auto pr-1">
             {upcomingShifts.map((shift) => {
               const count = assignmentCountByShift.get(shift.id) ?? 0;
               const assignedIds = assignedPersonIdsByShift.get(shift.id) ?? [];
@@ -327,13 +311,6 @@ export default function DashboardPage() {
                     }`}>
                       {count}/{shift.requiredCount}
                     </span>
-                    {assignedIds.length > 0 && (
-                      <ClockInButton
-                        personId={assignedIds[0]}
-                        latestEntry={latestClockByPerson.get(assignedIds[0])}
-                        onClock={handleClockAction}
-                      />
-                    )}
                   </div>
                 </div>
               );
@@ -440,34 +417,5 @@ export default function DashboardPage() {
         in your browser
       </p>
     </div>
-  );
-}
-
-function ClockInButton({
-  personId,
-  latestEntry,
-  onClock,
-}: {
-  personId: string;
-  latestEntry: { action: "in" | "out" } | undefined;
-  onClock: (personId: string, action: "in" | "out") => void;
-}) {
-  const isClockedIn = latestEntry?.action === "in";
-
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClock(personId, isClockedIn ? "out" : "in");
-      }}
-      className={`shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-colors ${
-        isClockedIn
-          ? "bg-danger/10 text-danger hover:bg-danger/20"
-          : "bg-primary/10 text-primary hover:bg-primary/20"
-      }`}
-    >
-      {isClockedIn ? "Clock out" : "Clock in"}
-    </button>
   );
 }

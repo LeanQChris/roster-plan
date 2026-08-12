@@ -191,6 +191,11 @@ export default function CompaniesPage() {
                         <span className="block truncate font-mono text-[11px] text-ink-subtle">
                           {c.slug}
                         </span>
+                        {c.id.startsWith("reg_") && (
+                          <span className="mt-0.5 inline-block rounded border border-primary/25 bg-primary-weak px-1 py-px text-[10px] font-medium uppercase tracking-wide text-primary">
+                            Registered
+                          </span>
+                        )}
                       </span>
                     </Link>
                   </td>
