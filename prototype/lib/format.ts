@@ -37,6 +37,10 @@ export function timeAgo(iso: string): string {
   return `${months}mo`;
 }
 
+export function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export function formatCount(n: number): string {
   return n.toLocaleString("en-US");
 }

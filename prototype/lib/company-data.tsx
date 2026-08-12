@@ -59,6 +59,7 @@ export interface ActivityEntry {
   action: ActivityAction;
   message: string;
   timestamp: string;
+  read: boolean;
 }
 
 export type ClockAction = "in" | "out";
@@ -68,6 +69,7 @@ export interface ClockEntry {
   personId: string;
   action: ClockAction;
   at: string;
+  note?: string;
 }
 
 export interface ShiftTemplate {
@@ -160,6 +162,8 @@ type CompanyAction =
   | { type: "updateLocation"; id: string; patch: Partial<Location> }
   | { type: "deleteLocation"; id: string }
   | { type: "addClockEntry"; entry: ClockEntry }
+  | { type: "markActivityRead"; id: string }
+  | { type: "markAllActivityRead"; personId: string }
   | { type: "createShiftTemplate"; template: ShiftTemplate }
   | { type: "updateShiftTemplate"; id: string; patch: Partial<ShiftTemplate> }
   | { type: "deleteShiftTemplate"; id: string }
@@ -315,6 +319,7 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
             action: "invited",
             message: "Invited to the company",
             timestamp: new Date().toISOString(),
+            read: false,
           },
           ...state.activity,
         ],
@@ -357,6 +362,7 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
             action: "updated",
             message: "Profile updated",
             timestamp: new Date().toISOString(),
+            read: false,
           },
           ...state.activity,
         ],
@@ -377,6 +383,7 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
             action: "resent",
             message: "Invite resent",
             timestamp: new Date().toISOString(),
+            read: false,
           },
           ...state.activity,
         ],
@@ -486,6 +493,20 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
       };
     case "addActivity":
       return { ...state, activity: [action.entry, ...state.activity] };
+    case "markActivityRead":
+      return {
+        ...state,
+        activity: state.activity.map((a) =>
+          a.id === action.id ? { ...a, read: true } : a,
+        ),
+      };
+    case "markAllActivityRead":
+      return {
+        ...state,
+        activity: state.activity.map((a) =>
+          a.personId === action.personId ? { ...a, read: true } : a,
+        ),
+      };
     case "addAudit":
       return { ...state, auditLog: [action.entry, ...state.auditLog] };
   }
@@ -539,7 +560,9 @@ interface CompanyContextValue extends CompanyState {
   createLocation: (input: LocationInput) => Location | null;
   updateLocation: (id: string, patch: Partial<Location>) => boolean;
   deleteLocation: (id: string) => void;
-  addClockEntry: (personId: string, action: ClockAction) => void;
+  addClockEntry: (personId: string, action: ClockAction, note?: string) => void;
+  markActivityRead: (id: string) => void;
+  markAllActivityRead: (personId: string) => void;
   createShiftTemplate: (input: ShiftTemplateInput) => {
     ok: boolean;
     error?: string;
@@ -770,16 +793,28 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "deleteLocation", id });
   }, []);
 
-  const addClockEntry = useCallback((personId: string, action: ClockAction) => {
-    dispatch({
-      type: "addClockEntry",
-      entry: {
-        id: nextId("clock"),
-        personId,
-        action,
-        at: new Date().toISOString(),
-      },
-    });
+  const addClockEntry = useCallback(
+    (personId: string, action: ClockAction, note?: string) => {
+      dispatch({
+        type: "addClockEntry",
+        entry: {
+          id: nextId("clock"),
+          personId,
+          action,
+          at: new Date().toISOString(),
+          note: note?.trim() || undefined,
+        },
+      });
+    },
+    [],
+  );
+
+  const markActivityRead = useCallback((id: string) => {
+    dispatch({ type: "markActivityRead", id });
+  }, []);
+
+  const markAllActivityRead = useCallback((personId: string) => {
+    dispatch({ type: "markAllActivityRead", personId });
   }, []);
 
   const createShiftTemplate = useCallback(
@@ -996,6 +1031,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
               action: "notified",
               message: `New shifts published for ${rangeStart} \u2013 ${rangeEnd}`,
               timestamp: new Date().toISOString(),
+              read: false,
             },
           });
         }
@@ -1189,6 +1225,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           action: "notified",
           message: `Assigned to "${targetShift.title}" on ${targetShift.date} at ${targetShift.startTime}`,
           timestamp: new Date().toISOString(),
+          read: false,
         },
       });
 
@@ -1287,6 +1324,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       updateLocation,
       deleteLocation,
       addClockEntry,
+      markActivityRead,
+      markAllActivityRead,
       createShiftTemplate,
       updateShiftTemplate,
       deleteShiftTemplate,
@@ -1316,6 +1355,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       updateLocation,
       deleteLocation,
       addClockEntry,
+      markActivityRead,
+      markAllActivityRead,
       createShiftTemplate,
       updateShiftTemplate,
       deleteShiftTemplate,

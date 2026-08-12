@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { readCompanySetup } from "@/lib/company";
 import { useCompany } from "@/lib/company-data";
 import type { Shift } from "@/lib/company-data";
+import { localDateStr } from "@/lib/format";
 import StatCard from "@/components/ui/StatCard";
 import {
   ArrowRightIcon,
@@ -85,12 +86,12 @@ export default function DashboardPage() {
   const activeMembers = people.filter((p) => p.status === "active").length;
   const pendingInvites = people.filter((p) => p.status === "invited").length;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateStr(new Date());
   const weekStart = getMonday(new Date());
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
-  const weekStartStr = weekStart.toISOString().slice(0, 10);
-  const weekEndStr = weekEnd.toISOString().slice(0, 10);
+  const weekStartStr = localDateStr(weekStart);
+  const weekEndStr = localDateStr(weekEnd);
 
   const shiftsThisWeek = useMemo(
     () => shifts.filter((s) => s.date >= weekStartStr && s.date <= weekEndStr),

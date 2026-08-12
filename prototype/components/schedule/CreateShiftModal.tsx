@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
+import { localDateStr } from "@/lib/format";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -23,7 +24,7 @@ export default function CreateShiftModal({
   onCreate,
   onClose,
 }: CreateShiftModalProps) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateStr(new Date());
   const [date, setDate] = useState(defaultDate ?? today);
   const [startTime, setStartTime] = useState("09:00");
   const [durationHours, setDurationHours] = useState("8");

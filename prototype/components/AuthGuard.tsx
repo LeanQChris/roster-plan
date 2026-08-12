@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useAuth } from "@/lib/auth";
+import { homeForRole, useAuth } from "@/lib/auth";
 import type { AuthRole } from "@/lib/auth";
 
 interface AuthGuardProps {
@@ -27,7 +27,7 @@ export default function AuthGuard({
       return;
     }
     if (allowedRoles && !allowedRoles.includes(user.role)) {
-      router.replace(user.role === "super_admin" ? "/admin" : "/dashboard");
+      router.replace(homeForRole(user.role));
     }
   }, [ready, user, router, allowedRoles, redirectTo]);
 

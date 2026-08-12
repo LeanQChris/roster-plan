@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { Person, Shift, ShiftAssignment } from "@/lib/company-data";
+import { localDateStr } from "@/lib/format";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -12,7 +13,7 @@ function getEndTime(startTime: string, durationMinutes: number): string {
 }
 
 function dateKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return localDateStr(d);
 }
 
 function getMonthGrid(monthStart: Date): Date[][] {
@@ -53,7 +54,7 @@ export default function MonthCalendar({
   onDayClick,
 }: MonthCalendarProps) {
   const weeks = useMemo(() => getMonthGrid(monthStart), [monthStart]);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateStr(new Date());
   const monthKey = dateKey(monthStart);
 
   const personMap = useMemo(() => {

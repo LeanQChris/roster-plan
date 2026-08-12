@@ -3,20 +3,20 @@
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCompany } from "@/lib/company-data";
-import { formatDateTime, initials } from "@/lib/format";
+import { formatDateTime, initials, localDateStr } from "@/lib/format";
 import { ClockIcon, SearchIcon, UsersIcon } from "@/components/ui/icons";
 
 const inputClass =
   "h-9 rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none";
 
 function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateStr(new Date());
 }
 
 function daysAgoStr(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+  return localDateStr(d);
 }
 
 function TimeTrackingContent() {

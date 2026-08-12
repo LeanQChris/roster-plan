@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCompany } from "@/lib/company-data";
 import type { Shift } from "@/lib/company-data";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, localDateStr } from "@/lib/format";
 import Modal from "@/components/ui/Modal";
 import ShiftCalendar from "@/components/schedule/ShiftCalendar";
 import MonthCalendar from "@/components/schedule/MonthCalendar";
@@ -153,11 +153,11 @@ export default function SchedulePage() {
   }, [weekStart]);
 
   const weekKey =
-    weekStart.toISOString().slice(0, 10) +
+    localDateStr(weekStart) +
     "|" +
-    weekEnd.toISOString().slice(0, 10);
+    localDateStr(weekEnd);
 
-  const dstr = (d: Date) => d.toISOString().slice(0, 10);
+  const dstr = (d: Date) => localDateStr(d);
 
   const viewRange = useMemo(() => {
     if (view === "week") return { start: weekStart, end: weekEnd };

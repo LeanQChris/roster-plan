@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useCompany } from "@/lib/company-data";
 import type { Shift, Team } from "@/lib/company-data";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, localDateStr } from "@/lib/format";
 import Modal from "@/components/ui/Modal";
 import ShiftCalendar from "@/components/schedule/ShiftCalendar";
 import PublishPreviewModal from "@/components/schedule/PublishPreviewModal";
@@ -104,11 +104,11 @@ export default function TeamScheduleView({
     return end;
   }, [weekStart]);
 
-  const weekKey = weekStart.toISOString().slice(0, 10) + "|" + weekEnd.toISOString().slice(0, 10);
+  const weekKey = localDateStr(weekStart) + "|" + localDateStr(weekEnd);
 
   const visibleShifts = useMemo(() => {
-    const startStr = weekStart.toISOString().slice(0, 10);
-    const endStr = weekEnd.toISOString().slice(0, 10);
+    const startStr = localDateStr(weekStart);
+    const endStr = localDateStr(weekEnd);
     return shifts.filter(
       (s) => s.teamId === team.id && s.date >= startStr && s.date <= endStr,
     );
@@ -144,8 +144,8 @@ export default function TeamScheduleView({
   const goToday = () => setWeekStart(getMonday(new Date()));
 
   const handlePublishClick = () => {
-    const rangeStart = weekStart.toISOString().slice(0, 10);
-    const rangeEnd = weekEnd.toISOString().slice(0, 10);
+    const rangeStart = localDateStr(weekStart);
+    const rangeEnd = localDateStr(weekEnd);
     const result = previewShifts(team.id, rangeStart, rangeEnd);
     setExcludedIds(new Set());
     setPublishPreview({ ...result, dateRange: formatDateRange(weekStart) });
@@ -162,8 +162,8 @@ export default function TeamScheduleView({
 
   const handleConfirmPublish = () => {
     if (!publishPreview) return;
-    const rangeStart = weekStart.toISOString().slice(0, 10);
-    const rangeEnd = weekEnd.toISOString().slice(0, 10);
+    const rangeStart = localDateStr(weekStart);
+    const rangeEnd = localDateStr(weekEnd);
     const toPublish = publishPreview.planned.filter((s) => !excludedIds.has(s.id));
     const newShifts = publishShifts(team.id, rangeStart, rangeEnd, toPublish);
     setPublishResult({ count: newShifts.length });

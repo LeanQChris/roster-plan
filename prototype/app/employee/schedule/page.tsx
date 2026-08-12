@@ -1,16 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useCompany } from "@/lib/company-data";
 import type { Shift } from "@/lib/company-data";
 import { localDateStr } from "@/lib/format";
+import Modal from "@/components/ui/Modal";
 import {
-  ArrowLeftIcon,
   CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  UsersIcon,
 } from "@/components/ui/icons";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -63,17 +63,19 @@ function dateKey(d: Date): string {
   return localDateStr(d);
 }
 
-export default function MySchedulePage() {
+export default function EmployeeSchedulePage() {
   const { user } = useAuth();
-  const {
-    people,
-    shifts,
-    shiftAssignments,
-    teams,
-  } = useCompany();
-
+  const { people, shifts, shiftAssignments, teams } = useCompany();
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
-  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+
+  const myPerson = useMemo(
+    () =>
+      people.find(
+        (p) => p.role === "employee" && p.email.toLowerCase() === user?.email.toLowerCase(),
+      ) ?? null,
+    [people, user?.email],
+  );
 
   const weekEnd = useMemo(() => {
     const end = new Date(weekStart);
@@ -85,23 +87,14 @@ export default function MySchedulePage() {
   const weekEndStr = localDateStr(weekEnd);
   const today = localDateStr(new Date());
 
-  const matchedPerson = useMemo(() => {
-    if (selectedPersonId) {
-      return people.find((p) => p.id === selectedPersonId) ?? null;
-    }
-    return null;
-  }, [people, selectedPersonId]);
-
   const myAssignmentShiftIds = useMemo(() => {
-    if (!matchedPerson) return new Set<string>();
+    if (!myPerson) return new Set<string>();
     const ids = new Set<string>();
     for (const a of shiftAssignments) {
-      if (a.personId === matchedPerson.id) {
-        ids.add(a.shiftId);
-      }
+      if (a.personId === myPerson.id) ids.add(a.shiftId);
     }
     return ids;
-  }, [shiftAssignments, matchedPerson]);
+  }, [shiftAssignments, myPerson]);
 
   const myShifts = useMemo(() => {
     return shifts
@@ -110,7 +103,7 @@ export default function MySchedulePage() {
   }, [shifts, myAssignmentShiftIds, weekStartStr, weekEndStr]);
 
   const teamMap = useMemo(() => {
-    const map = new Map<string, typeof teams[0]>();
+    const map = new Map<string, (typeof teams)[0]>();
     for (const t of teams) map.set(t.id, t);
     return map;
   }, [teams]);
@@ -137,50 +130,35 @@ export default function MySchedulePage() {
     shiftsByDate.set(s.date, list);
   }
 
+  const selectedTeam = selectedShift ? teamMap.get(selectedShift.teamId) : null;
+
   return (
     <div>
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-muted transition-colors hover:text-ink"
-      >
-        <ArrowLeftIcon className="size-4" />
-        Dashboard
-      </Link>
-
-      <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary-weak text-primary">
-            <CalendarIcon className="size-5" />
-          </span>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-ink">
-              My Schedule
-            </h1>
-            <p className="mt-0.5 text-xs text-ink-subtle">
-              {matchedPerson ? matchedPerson.name : "Select a person to view their schedule"}
-            </p>
-          </div>
+      <div className="flex items-center gap-4">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary-weak text-primary">
+          <CalendarIcon className="size-5" />
+        </span>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-ink">
+            My Schedule
+          </h1>
+          <p className="mt-0.5 text-xs text-ink-subtle">
+            {myPerson ? myPerson.name : "No linked team member record"}
+          </p>
         </div>
       </div>
 
-      {/* Person selector — always visible */}
-      <div className="mt-6 rounded-xl border border-hairline bg-surface-2 p-4">
-        <label className="block text-[13px] font-medium text-ink">
-          Viewing schedule for
-        </label>
-        <select
-          className="mt-2 h-9 w-full max-w-sm rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink focus:border-primary/60 focus:outline-none"
-          value={selectedPersonId ?? ""}
-          onChange={(e) => setSelectedPersonId(e.target.value || null)}
-        >
-          <option value="">Choose a person...</option>
-          {people.filter((p) => p.status === "active" || p.status === "invited").map((p) => (
-            <option key={p.id} value={p.id}>{p.name} ({p.email})</option>
-          ))}
-        </select>
-      </div>
-
-      {matchedPerson && (
+      {!myPerson ? (
+        <div className="mt-8 rounded-xl border border-hairline bg-surface-2 p-10 text-center">
+          <UsersIcon className="mx-auto size-11 text-ink-faint" />
+          <h2 className="mt-3 text-[15px] font-semibold text-ink">
+            You&apos;re not linked to a team member record yet
+          </h2>
+          <p className="mx-auto mt-1 max-w-sm text-xs text-ink-muted">
+            Ask your manager to invite you with the employee role.
+          </p>
+        </div>
+      ) : (
         <>
           {/* Week navigation */}
           <div className="mt-6 flex items-center gap-2">
@@ -247,7 +225,7 @@ export default function MySchedulePage() {
                         className={`border-b border-hairline/60 last:border-b-0 ${isToday ? "bg-primary-weak/30" : ""}`}
                       >
                         <td className="px-3 py-2 text-[11px] text-ink-subtle">
-                          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][day.getDay()]}
+                          {DAY_NAMES[day.getDay()]}
                         </td>
                         <td colSpan={6} className="px-2 py-1.5">
                           {dayShifts.length === 0 ? (
@@ -259,9 +237,11 @@ export default function MySchedulePage() {
                               {dayShifts.map((shift) => {
                                 const team = teamMap.get(shift.teamId);
                                 return (
-                                  <div
+                                  <button
                                     key={shift.id}
-                                    className="flex items-center justify-between gap-3 rounded-lg border border-hairline bg-surface-1 px-3 py-2.5 transition-colors"
+                                    type="button"
+                                    onClick={() => setSelectedShift(shift)}
+                                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-hairline bg-surface-1 px-3 py-2.5 text-left transition-colors hover:bg-surface-3"
                                   >
                                     <div className="min-w-0 flex-1">
                                       <div className="flex items-center gap-2">
@@ -280,7 +260,7 @@ export default function MySchedulePage() {
                                         {formatDuration(shift.durationMinutes)}
                                       </p>
                                     </div>
-                                  </div>
+                                  </button>
                                 );
                               })}
                             </div>
@@ -294,36 +274,6 @@ export default function MySchedulePage() {
             </div>
           </div>
 
-          {/* Shift list below calendar */}
-          {myShifts.length > 0 && (
-            <div className="mt-6">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
-                All shifts this week ({myShifts.length})
-              </p>
-              <div className="mt-2 space-y-1.5">
-                {myShifts.map((shift) => {
-                  const team = teamMap.get(shift.teamId);
-                  return (
-                    <div
-                      key={shift.id}
-                      className="flex items-center justify-between rounded-lg border border-hairline bg-surface-2 px-3 py-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-medium text-ink">
-                          {shift.title}
-                        </p>
-                        <p className="text-[11px] text-ink-subtle">
-                          {shift.date} · {shift.startTime} – {getEndTime(shift.startTime, shift.durationMinutes)}
-                          {team && ` · ${team.name}`}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {myShifts.length === 0 && (
             <div className="mt-8 rounded-xl border border-hairline bg-surface-2 p-10 text-center">
               <CalendarIcon className="mx-auto size-11 text-ink-faint" />
@@ -335,6 +285,55 @@ export default function MySchedulePage() {
           )}
         </>
       )}
+
+      <Modal
+        open={!!selectedShift}
+        title="Shift details"
+        confirmLabel="Close"
+        hideFooter
+        onConfirm={() => setSelectedShift(null)}
+        onClose={() => setSelectedShift(null)}
+      >
+        {selectedShift && (
+          <div className="mt-4 space-y-3">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Title</p>
+              <p className="mt-0.5 text-[13px] text-ink">{selectedShift.title}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Date</p>
+              <p className="mt-0.5 text-[13px] text-ink">{selectedShift.date}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Time</p>
+              <p className="mt-0.5 text-[13px] text-ink">
+                {selectedShift.startTime} – {getEndTime(selectedShift.startTime, selectedShift.durationMinutes)}
+                {" · "}
+                {formatDuration(selectedShift.durationMinutes)}
+              </p>
+            </div>
+            {selectedTeam && (
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Team</p>
+                <p className="mt-0.5 text-[13px] text-ink">{selectedTeam.name}</p>
+              </div>
+            )}
+            {selectedShift.description && (
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Notes</p>
+                <p className="mt-0.5 text-[13px] text-ink">{selectedShift.description}</p>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelectedShift(null)}
+              className="mt-2 h-8 w-full rounded-lg border border-hairline bg-surface-3 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4"
+            >
+              Close
+            </button>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

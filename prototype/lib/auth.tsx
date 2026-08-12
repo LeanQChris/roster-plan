@@ -17,9 +17,20 @@ export const DEMO_PASSWORD = "superadmin";
 export const DEMO_MANAGER_EMAIL = "manager@gmail.com";
 export const DEMO_MANAGER_PASSWORD = "manager123";
 
-export const ADMINS_KEY = "roster.accounts";
+export const DEMO_EMPLOYEE_EMAIL = "employee@gmail.com";
+export const DEMO_EMPLOYEE_PASSWORD = "employee123";
 
-export type AuthRole = "super_admin" | "company_admin" | "manager";
+export const ADMINS_KEY = "roster.accounts";
+export const EMPLOYEE_ACCOUNTS_KEY = "roster.employeeAccounts";
+
+export type AuthRole = "super_admin" | "company_admin" | "manager" | "employee";
+
+export function homeForRole(role: string | undefined): string {
+  if (role === "super_admin") return "/admin";
+  if (role === "manager") return "/manager/dashboard";
+  if (role === "employee") return "/employee/dashboard";
+  return "/dashboard";
+}
 
 export interface AuthUser {
   email: string;
@@ -37,6 +48,14 @@ export interface RegisteredAdmin {
   createdAt: string;
 }
 
+export interface RegisteredEmployee {
+  email: string;
+  password: string;
+  personId: string;
+  name: string;
+  createdAt: string;
+}
+
 export interface SignInResult {
   ok: boolean;
   error?: string;
@@ -49,12 +68,20 @@ export type RegisterInput = {
   company: string;
 };
 
+export type RegisterEmployeeInput = {
+  email: string;
+  password: string;
+  personId: string;
+  name: string;
+};
+
 interface AuthContextValue {
   user: AuthUser | null;
   ready: boolean;
   signIn: (email: string, password: string) => SignInResult;
   signOut: () => void;
   registerAdmin: (input: RegisterInput) => SignInResult;
+  registerEmployee: (input: RegisterEmployeeInput) => SignInResult;
 }
 
 const STORAGE_KEY = "roster.session";
@@ -65,6 +92,20 @@ export function readAccounts(): RegisteredAdmin[] {
     const raw = window.localStorage.getItem(ADMINS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as RegisteredAdmin[];
+    return Array.isArray(parsed)
+      ? parsed.filter((a) => a?.email && a?.password)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function readEmployeeAccounts(): RegisteredEmployee[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(EMPLOYEE_ACCOUNTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as RegisteredEmployee[];
     return Array.isArray(parsed)
       ? parsed.filter((a) => a?.email && a?.password)
       : [];
@@ -89,6 +130,13 @@ function readStoredUser(): AuthUser | null {
     }
     if (parsed.role === "manager") {
       return parsed.email.toLowerCase() === DEMO_MANAGER_EMAIL ? parsed : null;
+    }
+    if (parsed.role === "employee") {
+      const email = parsed.email.toLowerCase();
+      if (email === DEMO_EMPLOYEE_EMAIL) return parsed;
+      return readEmployeeAccounts().some((a) => a.email.toLowerCase() === email)
+        ? parsed
+        : null;
     }
     if (
       parsed.role === "company_admin" &&
@@ -174,6 +222,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: true, user: session };
       }
 
+      if (normalized === DEMO_EMPLOYEE_EMAIL && password === DEMO_EMPLOYEE_PASSWORD) {
+        const session: AuthUser = {
+          email: DEMO_EMPLOYEE_EMAIL,
+          name: "Team Employee",
+          role: "employee",
+        };
+        persistSession(session);
+        return { ok: true, user: session };
+      }
+
       const account = readAccounts().find((a) => a.email === normalized);
       if (account && account.password === password) {
         const session: AuthUser = {
@@ -181,6 +239,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: account.name,
           role: account.role,
           company: account.company,
+        };
+        persistSession(session);
+        return { ok: true, user: session };
+      }
+
+      const employeeAccount = readEmployeeAccounts().find(
+        (a) => a.email === normalized,
+      );
+      if (employeeAccount && employeeAccount.password === password) {
+        const session: AuthUser = {
+          email: employeeAccount.email,
+          name: employeeAccount.name,
+          role: "employee",
         };
         persistSession(session);
         return { ok: true, user: session };
@@ -234,6 +305,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, []);
 
+  const registerEmployee = useCallback(
+    (input: RegisterEmployeeInput): SignInResult => {
+      const email = input.email.trim().toLowerCase();
+
+      if (!email || !input.password || !input.personId) {
+        return { ok: false, error: "Please fill out every field." };
+      }
+      if (email === DEMO_EMPLOYEE_EMAIL) {
+        return { ok: false, error: "That email is already in use." };
+      }
+      if (input.password.length < 8) {
+        return { ok: false, error: "Password must be at least 8 characters." };
+      }
+      if (readEmployeeAccounts().some((a) => a.email === email)) {
+        return { ok: false, error: "An account with that email already exists." };
+      }
+      try {
+        const employee: RegisteredEmployee = {
+          email,
+          password: input.password,
+          personId: input.personId,
+          name: input.name,
+          createdAt: new Date().toISOString(),
+        };
+        window.localStorage.setItem(
+          EMPLOYEE_ACCOUNTS_KEY,
+          JSON.stringify([...readEmployeeAccounts(), employee]),
+        );
+        persistSession({
+          email,
+          name: employee.name,
+          role: "employee",
+        });
+      } catch {
+        return { ok: false, error: "Storage unavailable. Try again in a private tab." };
+      }
+      return { ok: true };
+    },
+    [],
+  );
+
   const signOut = useCallback(() => {
     try {
       window.localStorage.removeItem(STORAGE_KEY);
@@ -245,8 +357,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, ready, signIn, signOut, registerAdmin }),
-    [user, ready, signIn, signOut, registerAdmin],
+    () => ({ user, ready, signIn, signOut, registerAdmin, registerEmployee }),
+    [user, ready, signIn, signOut, registerAdmin, registerEmployee],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

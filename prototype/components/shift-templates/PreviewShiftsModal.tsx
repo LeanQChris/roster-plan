@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { RRule } from "rrule";
 import Modal from "@/components/ui/Modal";
 import type { ShiftTemplate } from "@/lib/company-data";
+import { localDateStr } from "@/lib/format";
 import { CalendarIcon } from "@/components/ui/icons";
 
 function formatDuration(minutes: number): string {
@@ -48,8 +49,8 @@ export default function PreviewShiftsModal({
   weekEnd.setDate(weekStart.getDate() + 6);
   weekEnd.setHours(23, 59, 59, 999);
 
-  const [rangeStart, setRangeStart] = useState(weekStart.toISOString().slice(0, 10));
-  const [rangeEnd, setRangeEnd] = useState(weekEnd.toISOString().slice(0, 10));
+  const [rangeStart, setRangeStart] = useState(localDateStr(weekStart));
+  const [rangeEnd, setRangeEnd] = useState(localDateStr(weekEnd));
 
   const generatedShifts = useMemo(() => {
     if (!template.recurrenceRule || !rangeStart || !rangeEnd) return [];

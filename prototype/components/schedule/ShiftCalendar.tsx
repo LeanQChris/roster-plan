@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { Person, Shift, ShiftAssignment } from "@/lib/company-data";
+import { localDateStr } from "@/lib/format";
 import { AlertTriangleIcon } from "@/components/ui/icons";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -40,7 +41,7 @@ function getWeekDays(weekStart: Date): Date[] {
 }
 
 function dateKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return localDateStr(d);
 }
 
 function formatDuration(minutes: number): string {
@@ -92,7 +93,7 @@ export default function ShiftCalendar({
   onToggleSelect,
 }: ShiftCalendarProps) {
   const days = useMemo(() => getWeekDays(weekStart), [weekStart]);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateStr(new Date());
 
   const personMap = useMemo(() => {
     const map = new Map<string, Person>();

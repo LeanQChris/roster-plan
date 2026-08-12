@@ -2,19 +2,16 @@
 
 import { useMemo, useState } from "react";
 import Modal from "@/components/ui/Modal";
+import { localDateStr } from "@/lib/format";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-function toDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 function enumerateDates(start: string, end: string): string[] {
   const dates: string[] = [];
   const cursor = new Date(start + "T00:00:00");
   const stop = new Date(end + "T00:00:00");
   while (cursor <= stop) {
-    dates.push(toDateStr(cursor));
+    dates.push(localDateStr(cursor));
     cursor.setDate(cursor.getDate() + 1);
   }
   return dates;
@@ -37,7 +34,7 @@ export default function BulkCreateShiftModal({
   onCreate,
   onClose,
 }: BulkCreateShiftModalProps) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateStr(new Date());
   const [title, setTitle] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [durationHours, setDurationHours] = useState("8");
