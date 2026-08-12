@@ -2,20 +2,40 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useCompany } from "@/lib/company-data";
 import { useTheme } from "@/lib/theme";
 import LogoMark from "@/components/ui/Logo";
-import { ChevronDownIcon, MoonIcon, SunIcon } from "@/components/ui/icons";
+import {
+  ActivityIcon,
+  CalendarIcon,
+  ChevronDownIcon,
+  ClockIcon,
+  MoonIcon,
+  SunIcon,
+  UsersIcon,
+} from "@/components/ui/icons";
 
 export default function ManagerNav() {
   const router = useRouter();
+  const pathname = usePathname();
+  const params = useParams<{ id?: string }>();
   const { user, signOut } = useAuth();
   const { teams, people } = useCompany();
   const { theme, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const inTeamDetail = pathname.startsWith("/manager/teams/") && !!params.id;
+  const teamTabs = inTeamDetail
+    ? [
+        { href: `/manager/teams/${params.id}`, label: "Members", icon: UsersIcon },
+        { href: `/manager/teams/${params.id}/templates`, label: "Templates", icon: ClockIcon },
+        { href: `/manager/teams/${params.id}/schedule`, label: "Schedule", icon: CalendarIcon },
+        { href: `/manager/teams/${params.id}/audit`, label: "Audit", icon: ActivityIcon },
+      ]
+    : [];
 
   const myTeam = useMemo(() => {
     const myPerson = people.find(
@@ -60,7 +80,36 @@ export default function ManagerNav() {
         </Link>
       </div>
 
-      <div className="flex-1" />
+      {inTeamDetail ? (
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+          {teamTabs.map((item) => {
+            const active =
+              item.label === "Members"
+                ? pathname === item.href || pathname.startsWith(`${item.href}/people/`)
+                : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+                  active
+                    ? "bg-primary-weak text-primary"
+                    : "text-ink-muted hover:bg-surface-3 hover:text-ink"
+                }`}
+              >
+                <item.icon className="size-4" />
+                {item.label}
+                {active && (
+                  <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      ) : (
+        <div className="flex-1" />
+      )}
 
       <div className="border-t border-hairline p-3">
         <div ref={menuRef} className="relative">

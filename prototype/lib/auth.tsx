@@ -4,7 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useState,
   useSyncExternalStore,
 } from "react";
 import type { ReactNode } from "react";
@@ -49,6 +51,7 @@ export type RegisterInput = {
 
 interface AuthContextValue {
   user: AuthUser | null;
+  ready: boolean;
   signIn: (email: string, password: string) => SignInResult;
   signOut: () => void;
   registerAdmin: (input: RegisterInput) => SignInResult;
@@ -140,6 +143,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const user = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  // Guards against acting on the SSR-only `null` snapshot before the
+  // client has synced with localStorage on hydration.
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setReady(true);
+  }, []);
 
   const signIn = useCallback(
     (email: string, password: string): SignInResult => {
@@ -236,8 +245,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, signIn, signOut, registerAdmin }),
-    [user, signIn, signOut, registerAdmin],
+    () => ({ user, ready, signIn, signOut, registerAdmin }),
+    [user, ready, signIn, signOut, registerAdmin],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

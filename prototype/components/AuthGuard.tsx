@@ -17,10 +17,11 @@ export default function AuthGuard({
   allowedRoles,
   redirectTo = "/login",
 }: AuthGuardProps) {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    if (!ready) return; // wait for localStorage session to hydrate on mount
     if (!user) {
       router.replace(redirectTo);
       return;
@@ -28,8 +29,9 @@ export default function AuthGuard({
     if (allowedRoles && !allowedRoles.includes(user.role)) {
       router.replace(user.role === "super_admin" ? "/admin" : "/dashboard");
     }
-  }, [user, router, allowedRoles, redirectTo]);
+  }, [ready, user, router, allowedRoles, redirectTo]);
 
+  if (!ready) return null;
   if (!user) return null;
   if (allowedRoles && !allowedRoles.includes(user.role)) return null;
 
