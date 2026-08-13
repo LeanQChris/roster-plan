@@ -53,6 +53,7 @@ export interface RegisteredEmployee {
   password: string;
   personId: string;
   name: string;
+  role?: "employee" | "manager";
   createdAt: string;
 }
 
@@ -73,6 +74,7 @@ export type RegisterEmployeeInput = {
   password: string;
   personId: string;
   name: string;
+  role?: "employee" | "manager";
 };
 
 interface AuthContextValue {
@@ -129,7 +131,14 @@ function readStoredUser(): AuthUser | null {
       return parsed.email.toLowerCase() === DEMO_EMAIL ? parsed : null;
     }
     if (parsed.role === "manager") {
-      return parsed.email.toLowerCase() === DEMO_MANAGER_EMAIL ? parsed : null;
+      if (parsed.email.toLowerCase() === DEMO_MANAGER_EMAIL) return parsed;
+      return readEmployeeAccounts().some(
+        (a) =>
+          a.email.toLowerCase() === parsed.email.toLowerCase() &&
+          a.role === "manager",
+      )
+        ? parsed
+        : null;
     }
     if (parsed.role === "employee") {
       const email = parsed.email.toLowerCase();
@@ -251,7 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const session: AuthUser = {
           email: employeeAccount.email,
           name: employeeAccount.name,
-          role: "employee",
+          role: employeeAccount.role ?? "employee",
         };
         persistSession(session);
         return { ok: true, user: session };
@@ -327,6 +336,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password: input.password,
           personId: input.personId,
           name: input.name,
+          role: input.role ?? "employee",
           createdAt: new Date().toISOString(),
         };
         window.localStorage.setItem(
@@ -336,7 +346,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         persistSession({
           email,
           name: employee.name,
-          role: "employee",
+          role: employee.role ?? "employee",
         });
       } catch {
         return { ok: false, error: "Storage unavailable. Try again in a private tab." };

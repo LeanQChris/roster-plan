@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { homeForRole, useAuth } from "@/lib/auth";
 import { CompanyProvider, useCompany } from "@/lib/company-data";
 import type { Person } from "@/lib/company-data";
 import { useTheme } from "@/lib/theme";
@@ -87,7 +87,6 @@ function AcceptInviteContent() {
     const match = people.find(
       (p) =>
         p.email.toLowerCase() === normalized &&
-        p.role === "employee" &&
         p.status === "invited",
     );
     if (!match) {
@@ -117,12 +116,13 @@ function AcceptInviteContent() {
       password,
       personId: person.id,
       name: person.name,
+      role: person.role,
     });
     if (!result.ok) {
       setPasswordError(result.error ?? "Unable to activate your account.");
       return;
     }
-    router.replace("/employee/dashboard");
+    router.replace(homeForRole(person.role));
   };
 
   return (
