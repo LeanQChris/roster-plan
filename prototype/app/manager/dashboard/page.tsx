@@ -8,6 +8,7 @@ import StatCard from "@/components/ui/StatCard";
 import {
   ActivityIcon,
   CalendarIcon,
+  CalendarOffIcon,
   ClockIcon,
   MailIcon,
   UsersIcon,
@@ -16,8 +17,14 @@ import { formatTime, localDateStr } from "@/lib/format";
 
 export default function ManagerDashboardPage() {
   const { myPerson, selectedTeam } = useManager();
-  const { people, shifts, shiftAssignments, shiftTemplates, auditLog } =
-    useCompany();
+  const {
+    people,
+    shifts,
+    shiftAssignments,
+    shiftTemplates,
+    auditLog,
+    leaveRequests,
+  } = useCompany();
 
   const teamPeople = useMemo(
     () => people.filter((p) => p.teamId === selectedTeam?.id),
@@ -33,6 +40,13 @@ export default function ManagerDashboardPage() {
     () => auditLog.filter((a) => a.teamId === selectedTeam?.id),
     [auditLog, selectedTeam?.id],
   );
+
+  const pendingLeaveCount = useMemo(() => {
+    const memberIds = new Set(teamPeople.map((p) => p.id));
+    return leaveRequests.filter(
+      (l) => memberIds.has(l.personId) && l.status === "pending",
+    ).length;
+  }, [leaveRequests, teamPeople]);
 
   const today = localDateStr(new Date());
   const upcomingShifts = useMemo(
@@ -175,6 +189,42 @@ export default function ManagerDashboardPage() {
           </Link>
         ))}
       </div>
+
+      <Link
+        href={`/manager/teams/${selectedTeam.id}/leave-requests`}
+        className={`mt-6 flex items-center justify-between gap-4 rounded-xl border px-4 py-3 transition-colors ${
+          pendingLeaveCount > 0
+            ? "border-primary/25 bg-primary-weak hover:bg-primary-weak/70"
+            : "border-hairline bg-surface-2 hover:bg-surface-3/70"
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <span
+            className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+              pendingLeaveCount > 0
+                ? "bg-primary text-white"
+                : "bg-surface-3 text-ink-subtle"
+            }`}
+          >
+            <CalendarOffIcon className="size-4" />
+          </span>
+          <div>
+            <p className="text-[13px] font-medium text-ink">
+              {pendingLeaveCount > 0
+                ? `${pendingLeaveCount} pending leave request${pendingLeaveCount === 1 ? "" : "s"}`
+                : "No pending leave requests"}
+            </p>
+            <p className="text-xs text-ink-subtle">
+              {pendingLeaveCount > 0
+                ? "Review and approve or deny"
+                : "All team leave requests are reviewed"}
+            </p>
+          </div>
+        </div>
+        <span className="shrink-0 text-xs font-medium text-primary">
+          {pendingLeaveCount > 0 ? "Review →" : "View all"}
+        </span>
+      </Link>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-hairline bg-surface-2">
         <div className="flex items-center justify-between border-b border-hairline px-4 py-2.5">
