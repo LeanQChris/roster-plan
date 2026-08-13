@@ -227,6 +227,15 @@ export const CalendarIcon = ({ ...p }: IconProps) => (
   </svg>
 );
 
+export const CalendarOffIcon = ({ ...p }: IconProps) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+    <path d="m5 19 5-5M10 19l-5-5" />
+    <path d="M18 15v4M16 17h4" />
+  </svg>
+);
+
 export const FingerprintIcon = ({ ...p }: IconProps) => (
   <svg {...base} {...p}>
     <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />

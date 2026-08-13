@@ -94,6 +94,18 @@ This document breaks every feature into atomic units and organizes them into imp
 - [ ] Grace period / late clock-in handling
 - [ ] Clock status indicator on schedule view
 
+### P2.7 — Leave Requests (MVP)
+- [ ] `POST /api/v1/people/:personId/time-off` — employee submits request (self only)
+- [ ] `GET /api/v1/people/:personId/time-off` — view own requests, filter by status/date
+- [ ] `PATCH` / `DELETE /api/v1/time-off/:requestId` — edit/cancel own pending request
+- [ ] `GET /api/v1/teams/:teamId/time-off` — manager views team queue (own teams only via `teams.manager_id`)
+- [ ] `PATCH /api/v1/time-off/:requestId/approve` / `/deny` — manager decision, scoped to own team members
+- [ ] Deny stores `reviewer_comment` separate from employee `reason`
+- [ ] `GET /api/v1/time-off` — company admin views all requests (`?team_id=&status=&from=&to=`)
+- [ ] Assignment conflict: approved leave overlaps shift → `TIME_OFF_CONFLICT` (single + bulk assign)
+- [ ] Email to employee on approve/deny (time-off status template)
+- [ ] UI: Request Leave modal (employee), Leave Requests queue (manager), company-wide view (admin)
+
 ---
 
 ## Phase 3: Reports

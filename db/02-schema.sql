@@ -9,7 +9,6 @@
 -- MVP tables to SKIP (create but don't use):
 --   - team_memberships (single team per person in MVP)
 --   - shift_swap_requests (no swap workflow in MVP)
---   - time_off_requests (deferred)
 --   - integrations (deferred)
 --   - compliance_violations (deferred)
 --   - region_routing (Phase D)
@@ -432,6 +431,7 @@ CREATE TABLE time_off_requests (
     reason        TEXT,
     document_url  TEXT,
     status        time_off_status NOT NULL DEFAULT 'pending',
+    reviewer_comment TEXT,
     reviewed_by   UUID REFERENCES people(id) ON DELETE SET NULL,
     reviewed_at   TIMESTAMPTZ,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),

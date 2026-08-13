@@ -142,13 +142,14 @@ View your schedule: {schedule_link}
 | **Subject** | `Your schedule for tomorrow ({date})` |
 | **Variables** | `name`, `shifts` (array of title, time, team) |
 
-### 2.8 Time-Off Status (MVP+)
+### 2.8 Time-Off Status (MVP)
 
 | Field | Value |
 |-------|-------|
 | **Trigger** | `PATCH /api/v1/time-off/:requestId/approve` or `/deny` |
 | **To** | Requestor |
 | **Subject** | `Time-off {status}: {type} — {date_range}` |
+| **Variables** | `name`, `type`, `date_range`, `status`, `reviewer_comment` (denial only) |
 
 ### 2.9 Swap Status (MVP+)
 

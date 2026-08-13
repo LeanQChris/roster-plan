@@ -36,10 +36,10 @@ Greenfield design/spec project. Nothing implemented. All `.md` (requirements, sp
 The full MVP scope, deferred features, schema simplifications, UI screens, and effort estimate are defined **once** in `docs/04-mvp-plan.md`. That document is the single source of truth. Key highlights:
 
 ### What's IN (MVP)
-Multi-tenant auth (register, login, logout), company settings, teams CRUD, people CRUD + email invite, shift templates + RRULE, shift publish (expand templates → instances), manager assigns people to shifts, basic week calendar view (read-only for employees), clock in/out, 1 notification email (shift assigned), role gating (4 roles, hardcoded middleware), super admin module (list companies, suspend/activate, platform audit).
+Multi-tenant auth (register, login, logout), company settings, teams CRUD, people CRUD + email invite, shift templates + RRULE, shift publish (expand templates → instances), manager assigns people to shifts, basic week calendar view (read-only for employees), clock in/out, leave requests (employee requests → manager approves/denies own team → admin views all), 1 notification email (shift assigned), role gating (4 roles, hardcoded middleware), super admin module (list companies, suspend/activate, platform audit).
 
 ### What's DEFERRED (MVP+)
-Self-scheduling, break tracking, time-off requests, shift swaps, positions CRUD, skills/certifications, locations/sites, attendance reports, calendar export (iCal/webcal), notification upgrades (reminders, digest, preferences, Slack/Teams), integrations, timezone toggle, coverage heatmap, conflict detection UI, audit log UI, compliance UI, password reset, rate limiting, webcal.
+Self-scheduling, break tracking, shift swaps, positions CRUD, skills/certifications, locations/sites, attendance reports, calendar export (iCal/webcal), notification upgrades (reminders, digest, preferences, Slack/Teams), integrations, timezone toggle, coverage heatmap, conflict detection UI, audit log UI, compliance UI, password reset, rate limiting, webcal.
 
 ### MVP Auth Details
 - Session tokens stored in DB (SHA256 hash), not JWT
@@ -57,8 +57,8 @@ Permissions hardcoded in middleware, no join table. `super_admin` is seeded in D
 ### MVP Schema Simplifications
 See `docs/04-mvp-plan.md §Schema Simplifications` for authoritative list. Note: the full schema (`db/02-schema.sql`) defines all tables/columns for forward-compat — MVP simply ignores deferred columns (they're nullable/unused, not dropped).
 
-### MVP UI Screens (14 — no new pages, clock integrated into Dashboard + My Schedule)
-Login, Signup, Company Setup, Dashboard, My Schedule, Team Schedule, Assign Shift (modal), Shift Templates, Template Form, Team People, Invite People, Company Settings, Employees List, Admin Dashboard.
+### MVP UI Screens (17 — clock integrated into Dashboard + My Schedule, leave via modal + 2 pages)
+Login, Signup, Company Setup, Dashboard, My Schedule, Team Schedule, Assign Shift (modal), Shift Templates, Template Form, Team People, Invite People, Company Settings, Employees List, Leave Requests (manager, `/teams/:id/leave-requests`), Leave Requests (company-wide, `/leave-requests`), Request Leave (modal), Admin Dashboard.
 
 ### MVP API Endpoints (subset of spec/01-api-spec.md)
 NOTE: All endpoints use the `/api/v1` prefix. Full details in `spec/01-api-spec.md`.
@@ -70,11 +70,20 @@ NOTE: All endpoints use the `/api/v1` prefix. Full details in `spec/01-api-spec.
 **Shifts**: `GET /api/v1/shifts`, `GET /api/v1/shifts/:id`, `POST /api/v1/shifts`, `PATCH /api/v1/shifts/:id`, `DELETE /api/v1/shifts/:id`, `POST /api/v1/shift-templates/:tid/expand`, `POST /api/v1/teams/:tid/schedules/publish`
 **Assignments**: `POST /api/v1/shifts/:sid/assign`, `POST /api/v1/teams/:tid/assignments/bulk`, `DELETE /api/v1/shift-assignments/:id`, `GET /api/v1/shifts/:sid/assignments`
 **Clock**: `POST /api/v1/clock/clock-in`, `POST /api/v1/clock/:cid/clock-out`, `GET /api/v1/people/:pid/clock-entries`
+**Leave Requests**: `POST /api/v1/people/:pid/time-off`, `GET /api/v1/people/:pid/time-off`, `PATCH /api/v1/time-off/:rid`, `DELETE /api/v1/time-off/:rid`, `GET /api/v1/teams/:tid/time-off`, `PATCH /api/v1/time-off/:rid/approve`, `PATCH /api/v1/time-off/:rid/deny`, `GET /api/v1/time-off` (company admin+)
 **Admin**: `GET /api/v1/admin/companies`, `PATCH /api/v1/admin/companies/:cid`, `GET /api/v1/admin/audit-log`
 **Calendar**: `GET /api/v1/me/schedule`, `GET /api/v1/teams/:tid/schedule`
 
 ### MVP Effort Estimate
-~38.5 days / 8 weeks (19 backend, 19.5 frontend)
+~41.5 days / 9 weeks (20.5 backend, 21 frontend)
+
+## Leave requests (MVP) — key rules
+
+- Employee submits for self only (type, dates, reason). Partial-day not in MVP.
+- Manager approves/denies **only** for members of teams they manage (`teams.manager_id = current user`), enforced in middleware.
+- Company admin/super admin view all requests via `GET /api/v1/time-off`; company admin also inherits `time_off.*` per RBAC matrix.
+- Deny stores `reviewer_comment` — separate from employee `reason`.
+- Approved leave blocks overlapping assignment: `TIME_OFF_CONFLICT` (single + bulk assign).
 
 ## Post-MVP Phases
 

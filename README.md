@@ -39,7 +39,7 @@ See [MVP Plan](docs/04-mvp-plan.md). Core deliverable:
 
 > Manager signs up → creates teams → invites people → builds shift templates with recurrence → publishes schedule → assigns people → employees view their week. Clock in/out included for attendance tracking.
 
-Estimated effort: **~38.5 days / 8 weeks** (19 backend, 19.5 frontend).
+Estimated effort: **~41.5 days / 9 weeks** (20.5 backend, 21 frontend).
 
 ## Phases
 

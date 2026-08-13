@@ -23,12 +23,13 @@ Load this skill when evaluating feature requests against MVP scope, planning imp
 | Manager assigns shifts | Core value — who works when |
 | Basic calendar view | Core value — see the schedule |
 | Clock in/out | Core value — track actual hours |
+| Leave requests (time-off) | Employee requests; manager approves own team; admin views all |
 | 1 notification email | Essential feedback loop (shift assigned) |
 | Role gating (4 roles) | Security, with super admin oversight |
 | Super admin module | Platform management |
 
 ### What's deferred (MVP+)
-Self-scheduling, attendance reports, calendar export, timezone toggle, coverage heatmap, conflict detection UI, audit log UI, compliance UI, password reset, rate limiting, webcal, break tracking, time-off requests, shift swaps
+Self-scheduling, attendance reports, calendar export, timezone toggle, coverage heatmap, conflict detection UI, audit log UI, compliance UI, password reset, rate limiting, webcal, break tracking, shift swaps
 
 ### Schema simplifications for MVP
 Per `docs/04-mvp-plan.md` §Schema Simplifications: the full schema is kept intact — deferred columns remain nullable/unused rather than dropped.
@@ -49,7 +50,7 @@ Per `docs/04-mvp-plan.md` §Schema Simplifications: the full schema is kept inta
 - Week view only (no month/day toggle)
 - Single company timezone (no per-user toggle)
 - Read-only for employees (no edit/delete)
-- 14 screens total (see MVP plan for exact list)
+- 17 screens total (see MVP plan for exact list)
 
 ## Implementation phases
 
@@ -57,12 +58,12 @@ Per `docs/04-mvp-plan.md` §Schema Simplifications: the full schema is kept inta
 ```
 Week 1-2: Auth, Teams, People (foundation)
 Week 3-4: Templates, RRULE, Shifts, Assignments (core scheduling)
-Week 5-6: Calendar view, Clock, Dashboard, Emails (employee experience)
+Week 5-6: Calendar view, Clock, Leave Requests, Dashboard, Emails (employee experience)
 Week 7:   Super admin module, Admin UI
-Week 8:   Polish, bug fixes, deployment, dogfooding
+Week 8-9: Polish, bug fixes, deployment, dogfooding
 ```
 
-Total: ~38.5 days / 8 weeks (19 backend + 19.5 frontend)
+Total: ~41.5 days / 9 weeks (20.5 backend + 21 frontend)
 
 ### Key architectual decisions to honor
 - Session tokens stored in DB (not JWT) — allows invalidation
@@ -81,6 +82,8 @@ Total: ~38.5 days / 8 weeks (19 backend + 19.5 frontend)
 - [ ] Manager publishes schedule
 - [ ] Employee logs in → sees assigned shifts on week calendar
 - [ ] Employee receives email when assigned to shift
+- [ ] Employee submits leave request; manager (own team) approves/denies; admin views all
+- [ ] Approved leave blocks overlapping assignment (TIME_OFF_CONFLICT)
 - [ ] Company admin edits company settings
 - [ ] All state changes recorded in audit log
 - [ ] Session persists across reloads

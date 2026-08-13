@@ -29,6 +29,7 @@ Sign up company → Add teams → Invite employees
 | Manager assigns shifts | Core value — who works when |
 | Basic calendar view | Core value — see the schedule |
 | Clock in / out | Core value — track attendance |
+| Leave requests (time-off) | Employee requests leave; manager approves/denies for own team only; admin sees all |
 | 1 notification email | Essential feedback loop (shift assigned) |
 | Role gating (admin/manager/employee) | Security, but simplified |
 | Super admin module | Platform ops — list companies, suspend/activate, platform audit |
@@ -39,7 +40,6 @@ Sign up company → Add teams → Invite employees
 | Self-scheduling (employee picks shifts) | Manager-assign is simpler, unblocks initial use |
 | Self-scheduling approvals workflow | Builds on self-scheduling |
 | Break tracking (meal/rest breaks) | Basic clock in/out sufficient for MVP |
-| Time-off / leave requests | Requires approval workflow, separate from scheduling |
 | Shift swaps / trades | Builds on shift assignments, requires conflict detection |
 | Positions CRUD | Nice-to-have, shifts can be created without named positions |
 | Skills / Certifications | Qualification tracking adds scope; MVP doesn't validate skill match |
@@ -80,7 +80,7 @@ Only these tables are needed for MVP. The full schema in `db/02-schema.sql` has 
 | `positions` | ❌ | Role-agnostic shifts work without positions |
 | `skills` | ❌ | No qualification validation in MVP |
 | `shift_swap_requests` | ❌ | No swap workflow in MVP |
-| `time_off_requests` | ❌ | Deferred with time-off feature |
+| `time_off_requests` | ✅ | Employee requests leave; manager approves/denies (own team); admin views all |
 | `clock_entries` | ✅ | Basic clock in/out (no break tracking) |
 | `integrations` | ❌ | Deferred |
 | `feature_flags` | ❌ | Deferred |
@@ -108,6 +108,9 @@ ALTER TABLE shift_assignments DROP COLUMN IF EXISTS approved_by;
 -- clock_entries: no break tracking for MVP. break_in_at/break_out_at columns
 -- exist in schema for forward-compat but are not used in MVP.
 -- GPS coordinates are optional (no enforcement).
+
+-- time_off_requests: full table used (type, dates, reason, status, reviewer_comment).
+-- Reviewed leave that is approved blocks shift assignment (TIME_OFF_CONFLICT).
 ```
 
 ---
@@ -180,6 +183,18 @@ The full API spec has more; here is the exact MVP endpoint list.
 | POST | `/api/v1/clock/clock-in` | Employee | Clock in to an assigned shift |
 | POST | `/api/v1/clock/:clockEntryId/clock-out` | Employee | Clock out from shift |
 | GET | `/api/v1/people/:personId/clock-entries` | Self, Manager+ | View clock entries for range (`?from=&to=`) |
+
+### Leave Requests (Time-Off)
+| Method | Path | Who | Description |
+|---|---|---|---|
+| POST | `/api/v1/people/:personId/time-off` | Self | Request leave (type, start, end, reason) |
+| GET | `/api/v1/people/:personId/time-off` | Self, Manager+ | List requests (`?status=&from=&to=`) |
+| PATCH | `/api/v1/time-off/:requestId` | Self | Edit own pending request |
+| DELETE | `/api/v1/time-off/:requestId` | Self | Cancel own pending request |
+| GET | `/api/v1/teams/:teamId/time-off` | Manager | Team requests (own team only) |
+| PATCH | `/api/v1/time-off/:requestId/approve` | Manager | Approve (own team member only) |
+| PATCH | `/api/v1/time-off/:requestId/deny` | Manager | Deny with reviewer_comment (own team member only) |
+| GET | `/api/v1/time-off` | Company admin+ | All company requests (`?team_id=&status=&from=&to=`) |
 
 ### Admin (Super Admin)
 | Method | Path | Who | Description |
@@ -260,6 +275,21 @@ The full API spec has more; here is the exact MVP endpoint list.
 7. "Audit Log" tab → platform-wide event log (read-only)
 ```
 
+### Flow 6: Leave Request Cycle (per request)
+
+```
+1. Employee logs in → clicks "Request Leave" (Dashboard or My Schedule)
+2. Fills: type (vacation/sick/personal), start date, end date, reason
+3. Submits → status = pending, manager of their team notified
+4. Manager opens "Leave Requests" for their team → sees pending queue
+5. Manager approves or denies (with optional comment) — only for members
+   of teams they manage
+6. Employee sees status update (pending → approved/denied) and gets email
+7. Company admin can view all requests across teams (filter by team/status)
+8. If approved and overlapping an assigned shift, assigning is blocked
+   with TIME_OFF_CONFLICT (server-side)
+```
+
 ---
 
 ## MVP UI Screens (Exact List)
@@ -279,7 +309,10 @@ The full API spec has more; here is the exact MVP endpoint list.
 | 11 | Invite People | `/invite` | Company admin | Email input(s), team selector, send button |
 | 12 | Company Settings | `/company/settings` | Company admin | Company name, timezone, branding (optional) |
 | 13 | Employees List | `/people` | Company admin | Full company people list, filter by team |
-| 14 | Admin Dashboard | `/admin` | Super admin | Companies list with stats, status toggle, platform audit log |
+| 14 | Leave Requests | `/teams/:id/leave-requests` | Manager | Team leave queue, approve/deny with comment (own team members only) |
+| 15 | Leave Requests (All) | `/leave-requests` | Company admin+ | All company requests, filter by team/status/date |
+| 16 | Request Leave | *(modal on #4/#5)* | Employee | Type, start/end date, reason, submit |
+| 17 | Admin Dashboard | `/admin` | Super admin | Companies list with stats, status toggle, platform audit log |
 
 **Not included in MVP**: Audit log UI (company-level), export buttons, timezone toggle, coverage heatmap, notification preferences, profile page, break tracking, attendance live view.
 
@@ -361,6 +394,15 @@ const roleHierarchy = {
 - Clock entries are append-only (enforced by DB triggers).
 - No grace period enforcement (configured but not validated in MVP).
 - Manager can view clock entries for their team via `GET /api/v1/people/:personId/clock-entries`.
+
+### Leave Requests (Simplified)
+- Employee submits request for self only (type, start_at, end_at, reason). No partial-day logic for MVP (`is_partial_day` stays false).
+- Manager scope: a manager can only view/approve/deny requests from people whose `team_id` is a team with `teams.manager_id = current user`. Enforced in middleware.
+- Company admin (and super admin) can view all requests via `GET /api/v1/time-off`.
+- Approve/deny sets `status`, `reviewed_by`, `reviewed_at`; deny stores `reviewer_comment` (separate from the employee's `reason`).
+- Approved leave blocks shift assignment: assigning a person to a shift overlapping their approved time-off returns `TIME_OFF_CONFLICT` (server-side only, no conflict UI).
+- Employee can edit/cancel only their own `pending` requests.
+- Email sent to employee on approve/deny (uses existing time-off status template).
 
 ---
 
@@ -771,6 +813,12 @@ After product-market fit, these unlock larger customers.
 - [ ] Employee can clock out, recording actual end time
 - [ ] Employee can see clock status (clocked in/out) on their schedule
 - [ ] Manager can view clock entries for their team members
+- [ ] Employee can submit a leave request (type, dates, reason)
+- [ ] Manager sees pending leave requests from their own team members only
+- [ ] Manager can approve or deny leave requests with an optional comment
+- [ ] Employee receives an email when their leave request is decided
+- [ ] Company admin can view all leave requests company-wide (filter by team/status)
+- [ ] Assigning a person to a shift overlapping approved leave is blocked (`TIME_OFF_CONFLICT`)
 - [ ] Company admin can edit company settings
 - [ ] All state changes are recorded in the audit log (no company-level UI needed)
 - [ ] Session persists across page reloads
@@ -792,13 +840,14 @@ After product-market fit, these unlock larger customers.
 | Assignments | 1 | 1 | Assign modal + backend |
 | Schedule calendar view | 1 | 4 | Week grid most complex UI |
 | Clock in/out | 1.5 | 2 | Clock in/out endpoints, timer UI, clock status on schedule |
+| Leave requests | 1.5 | 1.5 | Request/approve/deny endpoints, team scope check, admin view, modal UI |
 | Dashboard | 0.5 | 2 | Upcoming shifts, quick links |
 | Emails | 1 | 0 | Template + send logic |
 | Super admin module | 1.5 | 2 | Admin endpoints, companies list, suspend/activate, platform audit |
 | Audit log | 1 | 0 | DB triggers only |
 | Company settings | 0.5 | 0.5 | Form + API |
 | Infrastructure | 2 | 1 | Deployment, DB, CI, env |
-| **Total** | **19** | **19.5** | **~38.5 days / 8 weeks** |
+| **Total** | **20.5** | **21** | **~41.5 days / 9 weeks** |
 
 ---
 

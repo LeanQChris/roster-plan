@@ -376,6 +376,56 @@ POST /api/v1/clock/:clockEntryId/clock-out
 
 ---
 
+### Act 10b: Request Leave — Maya (Employee) + James (Manager)
+
+Two weeks later, Maya wants to take Friday, July 31 off. On her Dashboard she clicks **Request Leave**:
+
+```
+POST /api/v1/people/:mayaId/time-off
+{ "type": "vacation", "start_at": "2026-07-31T00:00:00Z",
+  "end_at": "2026-07-31T23:59:59Z", "reason": "Family trip" }
+  → Validates end_at > start_at, type in enum
+  → Creates time_off_requests row (status = 'pending')
+  → Audit entry logged (action = 'time_off.create')
+  → Returns 201
+```
+
+Maya's request appears in James's team queue:
+
+```
+┌────────────────────────────────────────────────────────────┐
+│  Leave Requests — Kitchen                          [James] │
+│  ┌────────┬──────────┬─────────────┬────────┬────────────┐ │
+│  │ Person │ Type     │ Dates       │ Status │ Action     │ │
+│  ├────────┼──────────┼─────────────┼────────┼────────────┤ │
+│  │ Maya   │ Vacation │ Jul 31      │ Pending│ [Approve]  │ │
+│  │        │          │             │        │ [Deny]     │ │
+│  └────────┴──────────┴─────────────┴────────┴────────────┘ │
+└────────────────────────────────────────────────────────────┘
+```
+
+James clicks **Approve**:
+
+```
+PATCH /api/v1/time-off/:requestId/approve
+  → Middleware: Maya.team_id is a team where teams.manager_id = James? ✅
+  → Sets status = 'approved', reviewed_by = James, reviewed_at = now
+  → Audit entry logged (action = 'time_off.approve')
+  → Time-off status email sent to Maya
+```
+
+Sarah (company admin) can also see every request across teams at `/leave-requests`, filtered by team/status — read and oversight only.
+
+Later, James tries to assign Maya to a shift on July 31:
+
+```
+POST /api/v1/shifts/:shiftId/assign
+  → Maya has approved time-off overlapping shift period
+  → Returns 409 TIME_OFF_CONFLICT — assignment blocked
+```
+
+---
+
 ### Act 11: Super Admin Oversight — Alex
 
 Meanwhile, Alex (super admin) logs in and checks `/admin`. Now there's a company:
@@ -414,6 +464,8 @@ Alex clicks the **Audit Log** tab and sees the full chain:
 │ │ 13:40  │ James    │ shift.assign   │ Maya → Mon Morning   │ │
 │ │ 14:00  │ Maya     │ clock.clock_in │ Morning Line Prep    │ │
 │ │ 14:00  │ Maya     │ clock.clock_out│ 8h 00m               │ │
+│ │ Jul 30 │ Maya     │ time_off.create│ Vacation Jul 31      │ │
+│ │ Jul 30 │ James    │ time_off.approve│ Vacation Jul 31     │ │
 │ └────────┴──────────┴──────────────┴──────────────────────┘ │
 │                                                            │
 │  [Page 1 of 1]  [Verify HMAC Chain]                        │
@@ -431,16 +483,17 @@ Alex (super admin) seeds platform
   └─ Sarah (company admin) signs up → invites James
        └─ James (manager) creates templates → publishes schedule → assigns Maya
             └─ Maya (employee) views schedule → clocks in → clocks out
-                 └─ Alex (super admin) monitors all tenants + audit log
+                 └─ Maya requests leave → James approves (own team) → Sarah views all
+                      └─ Alex (super admin) monitors all tenants + audit log
 ```
 
 Each role has a clear boundary:
 
 | Role | Sees | Can Do |
 |------|------|--------|
-| Employee | Own shifts, own profile | View schedule, clock in/out, update own profile |
-| Manager | Team schedule, team people, all templates | Create/assign/publish shifts, invite employees, manage templates |
-| Company Admin | All teams, all people, company settings | Everything manager can + edit company, manage all people, delete teams |
+| Employee | Own shifts, own profile | View schedule, clock in/out, update own profile, request/edit/cancel own leave |
+| Manager | Team schedule, team people, all templates | Create/assign/publish shifts, invite employees, manage templates, approve/deny own team's leave |
+| Company Admin | All teams, all people, company settings, all leave requests | Everything manager can + edit company, manage all people, delete teams, view all leave |
 | Super Admin | All companies, platform audit log | Suspend/activate companies, view any tenant's audit log |
 
 

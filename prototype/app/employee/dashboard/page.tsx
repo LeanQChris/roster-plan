@@ -1,14 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useCompany } from "@/lib/company-data";
 import { localDateStr } from "@/lib/format";
+import RequestLeaveModal from "@/components/leave/RequestLeaveModal";
+import LeaveStatusBadge from "@/components/leave/LeaveStatusBadge";
+import { LEAVE_TYPES } from "@/components/leave/RequestLeaveModal";
 import {
   ArrowRightIcon,
   BellIcon,
   CalendarIcon,
+  CalendarOffIcon,
   ClockIcon,
   UsersIcon,
 } from "@/components/ui/icons";
@@ -48,9 +52,19 @@ const QUICK_LINKS = [
   { label: "Notifications", hint: "Updates from your manager", icon: BellIcon, href: "/employee/notifications" },
 ];
 
+function formatShortDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function typeLabel(type: string): string {
+  return LEAVE_TYPES.find((t) => t.value === type)?.label ?? type;
+}
+
 export default function EmployeeDashboardPage() {
   const { user } = useAuth();
-  const { people, teams, shifts, shiftAssignments, clockEntries } = useCompany();
+  const { people, teams, shifts, shiftAssignments, clockEntries, leaveRequests, cancelLeaveRequest } = useCompany();
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
 
   const myPerson = useMemo(
     () =>
@@ -87,6 +101,13 @@ export default function EmployeeDashboardPage() {
         .sort((a, b) => b.at.localeCompare(a.at))[0] ?? null
     );
   }, [clockEntries, myPerson]);
+
+  const myLeaveRequests = useMemo(() => {
+    if (!myPerson) return [];
+    return leaveRequests
+      .filter((l) => l.personId === myPerson.id)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }, [leaveRequests, myPerson]);
 
   const isClockedIn = latestClockEntry?.action === "in";
 
@@ -172,9 +193,19 @@ export default function EmployeeDashboardPage() {
 
           {/* Quick links */}
           <div className="mt-6 rounded-xl border border-hairline bg-surface-2 p-5">
-            <h2 className="text-[15px] font-semibold tracking-tight text-ink">
-              Quick links
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-[15px] font-semibold tracking-tight text-ink">
+                Quick links
+              </h2>
+              <button
+                type="button"
+                onClick={() => setLeaveModalOpen(true)}
+                className="flex h-8 items-center gap-2 rounded-lg bg-primary px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-primary-hover"
+              >
+                <CalendarOffIcon className="size-3.5" />
+                Request leave
+              </button>
+            </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {QUICK_LINKS.map((q) => (
                 <Link
@@ -198,8 +229,75 @@ export default function EmployeeDashboardPage() {
               ))}
             </div>
           </div>
+
+          {/* My leave requests */}
+          <div className="mt-6 rounded-xl border border-hairline bg-surface-2 p-5">
+            <h2 className="text-[15px] font-semibold tracking-tight text-ink">
+              My leave requests
+            </h2>
+            {myLeaveRequests.length === 0 ? (
+              <div className="mt-4 rounded-lg border border-hairline bg-surface-3 p-6 text-center">
+                <CalendarOffIcon className="mx-auto size-5 text-ink-faint" />
+                <p className="mt-2 text-[13px] font-medium text-ink">
+                  No leave requests yet
+                </p>
+                <p className="mt-1 text-xs text-ink-muted">
+                  Request time off and your manager will review it.
+                </p>
+              </div>
+            ) : (
+              <ul className="mt-4 space-y-2">
+                {myLeaveRequests.map((l) => (
+                  <li
+                    key={l.id}
+                    className="rounded-lg border border-hairline bg-surface-1 px-3 py-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-ink">
+                          {typeLabel(l.type)}
+                          <span className="text-ink-subtle">
+                            {" "}· {formatShortDate(l.startDate)} –{" "}
+                            {formatShortDate(l.endDate)}
+                          </span>
+                        </p>
+                        {l.reason && (
+                          <p className="mt-0.5 truncate text-[11px] text-ink-muted">
+                            {l.reason}
+                          </p>
+                        )}
+                        {l.status === "denied" && l.reviewerComment && (
+                          <p className="mt-0.5 text-[11px] text-danger">
+                            Manager: {l.reviewerComment}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <LeaveStatusBadge status={l.status} />
+                        {l.status === "pending" && (
+                          <button
+                            type="button"
+                            onClick={() => cancelLeaveRequest(l.id)}
+                            className="rounded-md border border-hairline bg-surface-3 px-2 py-1 text-[11px] font-medium text-ink-muted transition-colors hover:bg-surface-4 hover:text-ink"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </>
       )}
+
+      <RequestLeaveModal
+        open={leaveModalOpen}
+        personId={myPerson?.id ?? ""}
+        onClose={() => setLeaveModalOpen(false)}
+      />
     </div>
   );
 }

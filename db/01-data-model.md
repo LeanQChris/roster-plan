@@ -354,6 +354,7 @@ No UPDATE/DELETE allowed — enforced by database trigger.
 | reason | TEXT nullable |  |
 | document_url | TEXT nullable | Sick note / doctor certificate attachment |
 | status | ENUM('pending','approved','denied','cancelled') NOT NULL DEFAULT 'pending' |  |
+| reviewer_comment | TEXT nullable | Manager's denial comment, kept separate from employee `reason` |
 | reviewed_by | UUID FK → people.id, nullable | Manager who reviewed |
 | reviewed_at | TIMESTAMPTZ nullable |  |
 | created_at | TIMESTAMPTZ NOT NULL DEFAULT NOW() |  |

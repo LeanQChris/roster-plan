@@ -72,6 +72,24 @@ export interface ClockEntry {
   note?: string;
 }
 
+export type LeaveType = "vacation" | "sick" | "personal" | "bereavement" | "other";
+export type LeaveStatus = "pending" | "approved" | "denied" | "cancelled";
+
+export interface LeaveRequest {
+  id: string;
+  personId: string;
+  type: LeaveType;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  status: LeaveStatus;
+  reviewerComment?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ShiftTemplate {
   id: string;
   teamId: string;
@@ -144,6 +162,7 @@ interface CompanyState {
   locations: Location[];
   activity: ActivityEntry[];
   clockEntries: ClockEntry[];
+  leaveRequests: LeaveRequest[];
   shiftTemplates: ShiftTemplate[];
   shifts: Shift[];
   shiftAssignments: ShiftAssignment[];
@@ -164,6 +183,16 @@ type CompanyAction =
   | { type: "addClockEntry"; entry: ClockEntry }
   | { type: "markActivityRead"; id: string }
   | { type: "markAllActivityRead"; personId: string }
+  | { type: "addLeaveRequest"; request: LeaveRequest }
+  | { type: "updateLeaveRequest"; id: string; patch: Partial<LeaveRequest> }
+  | { type: "cancelLeaveRequest"; id: string }
+  | {
+      type: "reviewLeaveRequest";
+      id: string;
+      status: "approved" | "denied";
+      reviewerComment?: string;
+      reviewedBy: string;
+    }
   | { type: "createShiftTemplate"; template: ShiftTemplate }
   | { type: "updateShiftTemplate"; id: string; patch: Partial<ShiftTemplate> }
   | { type: "deleteShiftTemplate"; id: string }
@@ -189,6 +218,7 @@ const PEOPLE_KEY = "roster.people";
 const LOCATIONS_KEY = "roster.locations";
 const ACTIVITY_KEY = "roster.activity";
 const CLOCK_KEY = "roster.clock";
+const LEAVE_KEY = "roster.leaveRequests";
 const TEMPLATES_KEY = "roster.shiftTemplates";
 const SHIFTS_KEY = "roster.shifts";
 const ASSIGNMENTS_KEY = "roster.shiftAssignments";
@@ -227,6 +257,20 @@ function shiftTimesOverlap(
   return a1 < b1 + bDuration && b1 < a1 + aDuration;
 }
 
+function hasApprovedLeaveOn(
+  personId: string,
+  date: string,
+  leaveRequests: LeaveRequest[],
+): LeaveRequest | undefined {
+  return leaveRequests.find(
+    (l) =>
+      l.personId === personId &&
+      l.status === "approved" &&
+      l.startDate <= date &&
+      date <= l.endDate,
+  );
+}
+
 function readStored<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
@@ -256,6 +300,7 @@ function initState(): CompanyState {
   const locations = readStored<Location[]>(LOCATIONS_KEY, []);
   const activity = readStored<ActivityEntry[]>(ACTIVITY_KEY, []);
   const clockEntries = readStored<ClockEntry[]>(CLOCK_KEY, []);
+  const leaveRequests = readStored<LeaveRequest[]>(LEAVE_KEY, []);
   const shiftTemplates = readStored<ShiftTemplate[]>(TEMPLATES_KEY, []);
   const shifts = readStored<Shift[]>(SHIFTS_KEY, []);
   const shiftAssignments = readStored<ShiftAssignment[]>(ASSIGNMENTS_KEY, []);
@@ -282,6 +327,7 @@ function initState(): CompanyState {
     locations,
     activity,
     clockEntries,
+    leaveRequests,
     shiftTemplates,
     shifts,
     shiftAssignments,
@@ -395,6 +441,9 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
         clockEntries: state.clockEntries.filter(
           (c) => c.personId !== action.id,
         ),
+        leaveRequests: state.leaveRequests.filter(
+          (l) => l.personId !== action.id,
+        ),
         // Clear any team where this person was the manager.
         teams: state.teams.map((t) =>
           t.managerId === action.id ? { ...t, managerId: null } : t,
@@ -422,6 +471,46 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
       };
     case "addClockEntry":
       return { ...state, clockEntries: [action.entry, ...state.clockEntries] };
+    case "addLeaveRequest":
+      return { ...state, leaveRequests: [action.request, ...state.leaveRequests] };
+    case "updateLeaveRequest":
+      return {
+        ...state,
+        leaveRequests: state.leaveRequests.map((l) =>
+          l.id === action.id
+            ? { ...l, ...action.patch, updatedAt: new Date().toISOString() }
+            : l,
+        ),
+      };
+    case "cancelLeaveRequest":
+      return {
+        ...state,
+        leaveRequests: state.leaveRequests.map((l) =>
+          l.id === action.id
+            ? {
+                ...l,
+                status: "cancelled" as const,
+                updatedAt: new Date().toISOString(),
+              }
+            : l,
+        ),
+      };
+    case "reviewLeaveRequest":
+      return {
+        ...state,
+        leaveRequests: state.leaveRequests.map((l) =>
+          l.id === action.id
+            ? {
+                ...l,
+                status: action.status,
+                reviewerComment: action.reviewerComment,
+                reviewedBy: action.reviewedBy,
+                reviewedAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              }
+            : l,
+        ),
+      };
     case "createShiftTemplate":
       return {
         ...state,
@@ -561,6 +650,19 @@ interface CompanyContextValue extends CompanyState {
   updateLocation: (id: string, patch: Partial<Location>) => boolean;
   deleteLocation: (id: string) => void;
   addClockEntry: (personId: string, action: ClockAction, note?: string) => void;
+  requestLeave: (
+    personId: string,
+    input: {
+      type: LeaveType;
+      startDate: string;
+      endDate: string;
+      reason?: string;
+    },
+  ) => { ok: boolean; error?: string };
+  updateLeaveRequest: (id: string, patch: Partial<LeaveRequest>) => boolean;
+  cancelLeaveRequest: (id: string) => void;
+  approveLeave: (id: string, reviewedBy: string) => void;
+  denyLeave: (id: string, reviewedBy: string, comment?: string) => void;
   markActivityRead: (id: string) => void;
   markAllActivityRead: (personId: string) => void;
   createShiftTemplate: (input: ShiftTemplateInput) => {
@@ -643,6 +745,10 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     writeStored(CLOCK_KEY, state.clockEntries);
   }, [state.clockEntries]);
+
+  useEffect(() => {
+    writeStored(LEAVE_KEY, state.leaveRequests);
+  }, [state.leaveRequests]);
 
   useEffect(() => {
     writeStored(TEMPLATES_KEY, state.shiftTemplates);
@@ -807,6 +913,132 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       });
     },
     [],
+  );
+
+  const requestLeave = useCallback(
+    (
+      personId: string,
+      input: {
+        type: LeaveType;
+        startDate: string;
+        endDate: string;
+        reason?: string;
+      },
+    ): { ok: boolean; error?: string } => {
+      if (!input.startDate || !input.endDate) {
+        return { ok: false, error: "Start and end dates are required." };
+      }
+      if (input.endDate < input.startDate) {
+        return { ok: false, error: "End date must be on or after start date." };
+      }
+      const now = new Date().toISOString();
+      const request: LeaveRequest = {
+        id: nextId("leave"),
+        personId,
+        type: input.type,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        reason: input.reason?.trim() || undefined,
+        status: "pending",
+        createdAt: now,
+        updatedAt: now,
+      };
+      dispatch({ type: "addLeaveRequest", request });
+      const person = state.people.find((p) => p.id === personId);
+      dispatch({
+        type: "addAudit",
+        entry: {
+          id: nextId("audit"),
+          timestamp: now,
+          action: "time_off.create",
+          tone: "neutral",
+          resource: "LeaveRequest",
+          resourceId: request.id,
+          teamId: person?.teamId ?? undefined,
+          message: `${person?.name ?? "Someone"} requested ${request.type} leave (${request.startDate} \u2013 ${request.endDate})`,
+        },
+      });
+      return { ok: true };
+    },
+    [state.people],
+  );
+
+  const updateLeaveRequest = useCallback(
+    (id: string, patch: Partial<LeaveRequest>): boolean => {
+      const existing = state.leaveRequests.find((l) => l.id === id);
+      if (!existing) return false;
+      if (existing.status !== "pending") return false;
+      if (patch.endDate !== undefined && patch.startDate !== undefined) {
+        const start = patch.startDate ?? existing.startDate;
+        const end = patch.endDate ?? existing.endDate;
+        if (end < start) return false;
+      }
+      dispatch({ type: "updateLeaveRequest", id, patch });
+      return true;
+    },
+    [state.leaveRequests],
+  );
+
+  const cancelLeaveRequest = useCallback((id: string) => {
+    dispatch({ type: "cancelLeaveRequest", id });
+  }, []);
+
+  const reviewLeave = useCallback(
+    (
+      id: string,
+      status: "approved" | "denied",
+      reviewedBy: string,
+      reviewerComment?: string,
+    ) => {
+      dispatch({
+        type: "reviewLeaveRequest",
+        id,
+        status,
+        reviewerComment,
+        reviewedBy,
+      });
+      const request = state.leaveRequests.find((l) => l.id === id);
+      if (!request) return;
+      const person = state.people.find((p) => p.id === request.personId);
+      dispatch({
+        type: "addActivity",
+        entry: {
+          id: nextId("activity"),
+          personId: request.personId,
+          action: "notified",
+          message: `Your ${request.type} leave (${request.startDate} \u2013 ${request.endDate}) was ${status}${
+            reviewerComment ? ` \u2014 ${reviewerComment}` : ""
+          }`,
+          timestamp: new Date().toISOString(),
+          read: false,
+        },
+      });
+      dispatch({
+        type: "addAudit",
+        entry: {
+          id: nextId("audit"),
+          timestamp: new Date().toISOString(),
+          action: `time_off.${status}`,
+          tone: status === "approved" ? "success" : "warning",
+          resource: "LeaveRequest",
+          resourceId: request.id,
+          teamId: person?.teamId ?? undefined,
+          message: `${reviewedBy} ${status} ${person?.name ?? "someone"}'s ${request.type} leave (${request.startDate} \u2013 ${request.endDate})`,
+        },
+      });
+    },
+    [state.leaveRequests, state.people],
+  );
+
+  const approveLeave = useCallback(
+    (id: string, reviewedBy: string) => reviewLeave(id, "approved", reviewedBy),
+    [reviewLeave],
+  );
+
+  const denyLeave = useCallback(
+    (id: string, reviewedBy: string, comment?: string) =>
+      reviewLeave(id, "denied", reviewedBy, comment?.trim() || undefined),
+    [reviewLeave],
   );
 
   const markActivityRead = useCallback((id: string) => {
@@ -1189,6 +1421,19 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       if (!targetShift) return { ok: false, error: "Shift not found." };
 
       if (!override) {
+        const approvedLeave = hasApprovedLeaveOn(
+          personId,
+          targetShift.date,
+          state.leaveRequests,
+        );
+        if (approvedLeave) {
+          return {
+            ok: false,
+            conflict: true,
+            error: `TIME_OFF_CONFLICT: ${approvedLeave.type} leave approved ${approvedLeave.startDate} \u2013 ${approvedLeave.endDate}.`,
+          };
+        }
+
         const personShiftIds = new Set(
           state.shiftAssignments
             .filter((a) => a.personId === personId)
@@ -1246,7 +1491,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       return { ok: true };
     },
-    [state.shiftAssignments, state.shifts, state.people],
+    [state.shiftAssignments, state.shifts, state.people, state.leaveRequests],
   );
 
   const removeAssignment = useCallback((id: string) => {
@@ -1275,6 +1520,18 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           continue;
         }
         if (!input.force) {
+          const approvedLeave = hasApprovedLeaveOn(
+            input.personId,
+            shift.date,
+            state.leaveRequests,
+          );
+          if (approvedLeave) {
+            skipped.push({
+              shiftId: shift.id,
+              reason: "approved time-off on this date",
+            });
+            continue;
+          }
           const overlaps = personAssignments.some((a) => {
             const other = state.shifts.find((s) => s.id === a.shiftId);
             return (
@@ -1307,7 +1564,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       }
       return { assigned, skipped };
     },
-    [state.shifts, state.shiftAssignments],
+    [state.shifts, state.shiftAssignments, state.leaveRequests],
   );
 
   const value = useMemo<CompanyContextValue>(
@@ -1324,6 +1581,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       updateLocation,
       deleteLocation,
       addClockEntry,
+      requestLeave,
+      updateLeaveRequest,
+      cancelLeaveRequest,
+      approveLeave,
+      denyLeave,
       markActivityRead,
       markAllActivityRead,
       createShiftTemplate,
@@ -1355,6 +1617,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       updateLocation,
       deleteLocation,
       addClockEntry,
+      requestLeave,
+      updateLeaveRequest,
+      cancelLeaveRequest,
+      approveLeave,
+      denyLeave,
       markActivityRead,
       markAllActivityRead,
       createShiftTemplate,

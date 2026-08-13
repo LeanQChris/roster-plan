@@ -90,7 +90,7 @@ Each permission is a string `resource:action` where resource is a domain entity 
 
 ## 3. Role → Permission Mapping
 
-For MVP, only a subset of these permissions is enforced. Permissions for swap, time-off, positions, skills, locations, integrations, holidays, reports, notification preferences, and MFA are defined here for forward-planning but are **not implemented in MVP middleware**. Clock in/out permissions (`clock.clock_in`, `clock.clock_out`, `clock.read`) **are** implemented in MVP. See `docs/04-mvp-plan.md` for the exact MVP endpoint list.
+For MVP, only a subset of these permissions is enforced. Permissions for swap, positions, skills, locations, integrations, holidays, reports, notification preferences, and MFA are defined here for forward-planning but are **not implemented in MVP middleware**. Time-off permissions (`time_off.*`) **are** implemented in MVP (employee requests for self, manager approves for own team, admin views all). Clock in/out permissions (`clock.clock_in`, `clock.clock_out`, `clock.read`) **are** implemented in MVP. See `docs/04-mvp-plan.md` for the exact MVP endpoint list.
 
 ### super_admin
 | Permission | Granted |
@@ -180,6 +180,8 @@ For MVP, only a subset of these permissions is enforced. Permissions for swap, t
 | `audit_log.read` | ✅ (own team scope) |
 | `mfa.enroll` | ✅ |
 
+> **Scope rule**: "own team" = a team where `teams.manager_id` is the current user's `people.id`. A manager can only view/approve/deny leave requests from people whose `team_id` is such a team. Enforced in middleware (and reflected in the time-off RLS path via company scoping at DB level).
+
 ### Employee
 | Permission | Granted | MVP? |
 |---|---|---|
@@ -198,10 +200,10 @@ For MVP, only a subset of these permissions is enforced. Permissions for swap, t
 | `clock.break_in` | ✅ | ❌ MVP+ |
 | `clock.break_out` | ✅ | ❌ MVP+ |
 | `clock.read` | ✅ (self only) | ✅ |
-| `time_off.create` | ✅ | ❌ MVP+ |
-| `time_off.read` | ✅ (self only) | ❌ MVP+ |
-| `time_off.update` | ✅ (own pending only) | ❌ MVP+ |
-| `time_off.delete` | ✅ (own pending only) | ❌ MVP+ |
+| `time_off.create` | ✅ | ✅ |
+| `time_off.read` | ✅ (self only) | ✅ |
+| `time_off.update` | ✅ (own pending only) | ✅ |
+| `time_off.delete` | ✅ (own pending only) | ✅ |
 | `holiday.read` | ✅ | ❌ MVP+ |
 | `notification.read` | ✅ | ✅ |
 | `notification.update` | ✅ | ✅ |

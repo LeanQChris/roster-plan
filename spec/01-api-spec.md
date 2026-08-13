@@ -471,23 +471,25 @@ Query: `?date=2026-07-13`.
 
 ---
 
-## 13. Time-Off Requests
+## 13. Time-Off Requests (Leave)
 
-> **⚠ MVP STATUS**: Time-off requests are deferred to MVP+. Do not implement during MVP.
+> **✅ MVP STATUS**: Leave requests are part of MVP. Employee requests leave; manager approves/denies for their own team members only; company admin (and super admin) can view all requests. Approved leave blocks overlapping shift assignment (`TIME_OFF_CONFLICT`).
 
 ### GET /api/v1/people/:personId/time-off
 List time-off for a person. `?status=approved&from=DATE&to=DATE`.
-→ `200` → `{ "requests": [{ id, type, start_at, end_at, status, reason, reviewed_by }] }`
+Access: self, or manager/admin of the same company.
+→ `200` → `{ "requests": [{ id, type, start_at, end_at, status, reason, reviewer_comment, reviewed_by }] }`
 
 ### POST /api/v1/people/:personId/time-off
-Request time-off. `?status=approved&from=DATE&to=DATE`.
+Request time-off. Self only (a user cannot request leave on behalf of another person).
 ```json
 { "type": "vacation", "start_at": "2026-08-01T00:00:00Z", "end_at": "2026-08-07T23:59:59Z", "reason": "Family vacation" }
 ```
 → `201`
+Validation: `end_at > start_at`; `type` in `time_off_type` enum (`vacation`, `sick`, `personal`, `bereavement`, `other`). Status starts as `pending`. Partial-day requests (`is_partial_day`) are not supported in MVP.
 
 ### PATCH /api/v1/time-off/:requestId
-Update own pending request.
+Update own pending request (type, dates, reason). Not allowed once reviewed.
 → `200`
 
 ### DELETE /api/v1/time-off/:requestId
@@ -495,20 +497,27 @@ Cancel own pending request.
 → `200`
 
 ### GET /api/v1/teams/:teamId/time-off (Manager)
-View all time-off for a team, filter by status/date.
+View all time-off for a team, filter by status/date. **Scoped**: manager can only access teams where `teams.manager_id = current user`.
 → `200` → `{ "requests": [...], "coverage_gaps": [{ date, affected_count }] }`
 
+### GET /api/v1/time-off (Company admin+)
+View all leave requests in the company. Query: `?team_id=&status=&from=&to=`.
+Access: company admin, super admin.
+→ `200` → `{ "requests": [{ id, person_id, person_name, team_id, team_name, type, start_at, end_at, status, reason, reviewer_comment, reviewed_by, created_at }] }`
+
 ### PATCH /api/v1/time-off/:requestId/approve (Manager)
-```json
-{ "status": "approved" }
-```
-→ `200`
+Scoped: the request's person must belong to a team managed by the current user.
+→ `200` → `{ "status": "approved", "reviewed_at": "..." }`
 
 ### PATCH /api/v1/time-off/:requestId/deny (Manager)
 ```json
-{ "status": "denied", "reason": "Insufficient coverage that day" }
+{ "reviewer_comment": "Insufficient coverage that day" }
 ```
-→ `200`
+Scoped: the request's person must belong to a team managed by the current user. `reviewer_comment` is stored separately from the employee's `reason` and is never overwritten.
+→ `200` → `{ "status": "denied", "reviewer_comment": "Insufficient coverage that day" }`
+
+### Conflict rule (assignment time)
+`POST /api/v1/shifts/:shiftId/assign` and `POST /api/v1/teams/:teamId/assignments/bulk` return `TIME_OFF_CONFLICT` if the person has an **approved** time-off request overlapping the shift's `start_at`/`end_at`. The request is not deleted — only assignment is blocked (server-side validation, no conflict UI in MVP).
 
 ---
 

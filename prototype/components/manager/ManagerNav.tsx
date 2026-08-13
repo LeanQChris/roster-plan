@@ -10,6 +10,7 @@ import LogoMark from "@/components/ui/Logo";
 import {
   ActivityIcon,
   CalendarIcon,
+  CalendarOffIcon,
   CheckIcon,
   ChevronDownIcon,
   ClockIcon,
@@ -31,12 +32,13 @@ export default function ManagerNav() {
   const teamMenuRef = useRef<HTMLDivElement>(null);
 
   const inTeamDetail = pathname.startsWith("/manager/teams/") && !!params.id;
-  const teamTabs = inTeamDetail
+  const teamTabs = selectedTeam
     ? [
-        { href: `/manager/teams/${params.id}`, label: "Members", icon: UsersIcon },
-        { href: `/manager/teams/${params.id}/templates`, label: "Templates", icon: ClockIcon },
-        { href: `/manager/teams/${params.id}/schedule`, label: "Schedule", icon: CalendarIcon },
-        { href: `/manager/teams/${params.id}/audit`, label: "Audit", icon: ActivityIcon },
+        { href: `/manager/teams/${selectedTeam.id}`, label: "Members", icon: UsersIcon },
+        { href: `/manager/teams/${selectedTeam.id}/templates`, label: "Templates", icon: ClockIcon },
+        { href: `/manager/teams/${selectedTeam.id}/schedule`, label: "Schedule", icon: CalendarIcon },
+        { href: `/manager/teams/${selectedTeam.id}/leave-requests`, label: "Leave", icon: CalendarOffIcon },
+        { href: `/manager/teams/${selectedTeam.id}/audit`, label: "Audit", icon: ActivityIcon },
       ]
     : [];
 
@@ -165,7 +167,7 @@ export default function ManagerNav() {
         </div>
       </div>
 
-      {inTeamDetail ? (
+      {teamTabs.length > 0 ? (
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {teamTabs.map((item) => {
             const active =
@@ -211,7 +213,7 @@ export default function ManagerNav() {
                     .map((w) => w[0])
                     .join("")
                     .slice(0, 2)
-                    .toUpperCase()
+                     .toUpperCase()
                 : "TM"}
             </span>
             <span className="min-w-0 flex-1 text-left">

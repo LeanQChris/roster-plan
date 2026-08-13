@@ -157,7 +157,7 @@ pages['overview'] = r"""<h1>Roster — Project Overview</h1>
 </tbody>
 </table>
 <h2>MVP vs Post-MVP</h2>
-<p>The <strong>Minimum Viable Product</strong> delivers the core scheduling loop: manager creates shifts with recurrence, assigns people, employees view schedule and clock in/out. Estimated at <strong>~38.5 days / 8 weeks</strong> (19 backend + 19.5 frontend).</p>
+<p>The <strong>Minimum Viable Product</strong> delivers the core scheduling loop: manager creates shifts with recurrence, assigns people, employees view schedule and clock in/out. Estimated at <strong>~41.5 days / 9 weeks</strong> (20.5 backend + 21 frontend).</p>
 <h3>MVP Features</h3>
 <ul>
 <li>Multi-tenant auth (register, login, logout)</li>

@@ -166,6 +166,12 @@ A user with role level *N* can access any resource requiring role level *≤ N*.
 | 🗓️ View team schedule | Full team calendar view for a given week with all shifts and assignments. | Navigate to team → "Schedule". Week grid displayed. |
 | ⏱️ View team clock entries | Clock-in/out history for any team member. | Navigate to person profile → "Clock Entries" tab → use date range filter. |
 
+#### Leave Requests
+
+| Capability | What It Does | How It Works |
+|-----------|-------------|-------------|
+| 📋 View all leave requests | Sees every leave request across all teams, filterable by team, status, and date range. | Navigate to `/leave-requests` → apply filters (team, status, date) → list of requests with requester, team, type, dates, reason, status. |
+
 ### 4.2 Compliance & Data Governance
 
 | Capability | What It Does | How It Works |
@@ -248,6 +254,15 @@ A user with role level *N* can access any resource requiring role level *≤ N*.
 | 🗓️ View team schedule | Full team calendar for a given week with all shifts and assignments. | Navigate to team → "Schedule". Week grid displayed. |
 | ⏱️ View team clock entries | Clock-in/out history for any team member. | Click person → "Clock Entries" tab. |
 
+#### Leave Requests
+
+| Capability | What It Does | How It Works |
+|-----------|-------------|-------------|
+| 📋 View team leave queue | Shows leave requests from their own team members only, filterable by status/date. | Navigate to team → "Leave Requests" tab. Only requests from people on teams they manage are visible. |
+| ✅ Approve a leave request | Approves a pending request; status becomes `approved`. | Click "Approve" on a pending request → confirmed. |
+| ❌ Deny a leave request | Denies a pending request with an optional comment; status becomes `denied`. | Click "Deny" → optional comment → confirm. |
+| 🚫 Leave scope enforcement | Cannot see or act on requests from other teams — enforced in middleware (`teams.manager_id`). | Only requests whose requester belongs to a team led by this manager are returned. |
+
 ### 5.2 Compliance & Data Governance
 
 | Capability | What It Does | How It Works |
@@ -262,6 +277,7 @@ A user with role level *N* can access any resource requiring role level *≤ N*.
 | 🚫 | Cannot change a person's role or account status |
 | 🚫 | Cannot edit company settings |
 | 🚫 | Cannot view other teams' schedules, people, or templates |
+| 🚫 | Cannot view or approve leave requests from teams they do not manage |
 | 🚫 | Cannot suspend or activate companies |
 | 🚫 | Cannot access the platform-wide audit log |
 
@@ -298,6 +314,16 @@ A user with role level *N* can access any resource requiring role level *≤ N*.
 | 🔴 Clock out | Records shift end. Duration calculated automatically. | Click "Clock Out". Optional notes prompt. Duration calculated. Entry saved. |
 | ⏱️ View own clock entries | Personal clock-in/out history for a date range. | Navigate to profile → "Clock Entries" tab → use date range filter. |
 
+#### Leave Requests
+
+| Capability | What It Does | How It Works |
+|-----------|-------------|-------------|
+| 📝 Request leave | Submits a leave request (type, start date, end date, reason) for self only. Status starts `pending`. | Dashboard or My Schedule → "Request Leave" → fill type/dates/reason → submit. |
+| 📋 View own requests | Shows own leave requests with status and reviewer comment. | Navigate to "My Leave Requests" → list of requests with status badges (pending/approved/denied). |
+| ✏️ Edit a pending request | Modifies type, dates, or reason while still pending. | Click "Edit" on a pending request → modify fields → save. |
+| 🗑️ Cancel a pending request | Withdraws a pending request. | Click "Cancel" on a pending request → confirm. |
+| 📧 Receive decision email | Gets an email when the manager approves or denies. | Email sent to requester with status and (if denied) the reviewer's comment. |
+
 #### Profile
 
 | Capability | What It Does | How It Works |
@@ -333,6 +359,7 @@ No compliance-specific capabilities are available at the Employee level. Employe
 | 🚫 | Cannot assign anyone to shifts (including themselves) |
 | 🚫 | Cannot publish schedules |
 | 🚫 | Cannot view other employees' schedules, clock entries, or profiles |
+| 🚫 | Cannot submit, edit, or cancel leave requests on behalf of others |
 | 🚫 | Cannot edit company settings |
 | 🚫 | Cannot invite new people |
 | 🚫 | Cannot access the admin panel or audit logs |
@@ -383,6 +410,12 @@ No compliance-specific capabilities are available at the Employee level. Employe
 | 🔴 | Clock out | ✅ | — | — | — |
 | ⏱️ | View own clock entries | ✅ | — | — | — |
 | ⏱️ | View team clock entries | — | ✅ | ✅ | ✅ |
+| | **Leave Requests** | | | | |
+| 📝 | Request leave | ✅ (self) | — | — | — |
+| 📋 | View own requests | ✅ (self) | — | — | — |
+| ✏️ | Edit/cancel own pending | ✅ | — | — | — |
+| 📋 | View team leave queue | — | ✅ (own team) | ✅ (all) | ✅ (all) |
+| ✅ | Approve / deny leave | — | ✅ (own team) | ✅ (all) | ✅ (all) |
 | | **Calendar** | | | | |
 | 🗓️ | View own schedule | ✅ | — | — | — |
 | 🗓️ | View team schedule | — | ✅ | ✅ | ✅ |
