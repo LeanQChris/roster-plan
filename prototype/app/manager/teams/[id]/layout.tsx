@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
 import { useCompany } from "@/lib/company-data";
+import { useManager } from "@/lib/manager-team";
 import StatCard from "@/components/ui/StatCard";
 import { ClockIcon, ListIcon, UsersIcon } from "@/components/ui/icons";
 import { TeamDetailProvider } from "./team-detail-context";
@@ -11,24 +11,18 @@ import { TeamDetailProvider } from "./team-detail-context";
 export default function ManagerTeamDetailLayout({ children }: { children: ReactNode }) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useAuth();
-  const { teams, people, shiftTemplates, auditLog } = useCompany();
-
-  const myPerson = useMemo(
-    () =>
-      people.find(
-        (p) => p.role === "manager" && p.email.toLowerCase() === user?.email.toLowerCase(),
-      ),
-    [people, user?.email],
-  );
+  const { managedTeams, selectTeam } = useManager();
+  const { people, shiftTemplates, auditLog } = useCompany();
 
   useEffect(() => {
-    if (myPerson && params.id !== myPerson.teamId) {
+    if (params.id && !managedTeams.some((t) => t.id === params.id)) {
       router.replace("/manager/dashboard");
+      return;
     }
-  }, [myPerson, params.id, router]);
+    selectTeam(params.id);
+  }, [managedTeams, params.id, router, selectTeam]);
 
-  const team = teams.find((t) => t.id === params.id);
+  const team = managedTeams.find((t) => t.id === params.id);
 
   const teamPeople = useMemo(
     () => people.filter((p) => p.teamId === params.id),
