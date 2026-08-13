@@ -642,7 +642,7 @@ interface CompanyContextValue extends CompanyState {
   ) => Team | null;
   updateTeam: (id: string, patch: Partial<Team>) => boolean;
   deleteTeam: (id: string) => void;
-  invitePerson: (input: InviteInput) => { ok: boolean; error?: string };
+  invitePerson: (input: InviteInput) => { ok: boolean; error?: string; personId?: string };
   updatePerson: (id: string, patch: Partial<Person>) => boolean;
   resendInvite: (id: string) => void;
   deletePerson: (id: string) => void;
@@ -805,7 +805,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const invitePerson = useCallback(
-    (input: InviteInput): { ok: boolean; error?: string } => {
+    (input: InviteInput): { ok: boolean; error?: string; personId?: string } => {
       const email = input.email.trim().toLowerCase();
       if (!input.name.trim() || !email) {
         return { ok: false, error: "Name and email are required." };
@@ -843,7 +843,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           message: `${person.name} invited as ${person.role}`,
         },
       });
-      return { ok: true };
+      return { ok: true, personId: person.id };
     },
     [state.people],
   );

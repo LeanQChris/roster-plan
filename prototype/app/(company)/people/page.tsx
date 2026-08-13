@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState } from "react";
+import { useAuth } from "@/lib/auth";
 import { useCompany } from "@/lib/company-data";
 import type { Person } from "@/lib/company-data";
 import Modal from "@/components/ui/Modal";
@@ -13,6 +14,7 @@ import type { PersonFormInput } from "@/components/people/PersonFormModal";
 export default function PeoplePage() {
   const { teams, people, locations, invitePerson, updatePerson, resendInvite, deletePerson } =
     useCompany();
+  const { registerEmployee } = useAuth();
   const [editing, setEditing] = useState<Person | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Person | null>(null);
@@ -55,6 +57,22 @@ export default function PeoplePage() {
       });
       if (!result.ok) {
         return { ok: false, error: result.error };
+      }
+      if (input.password && result.personId) {
+        updatePerson(result.personId, { status: "active" });
+        const account = registerEmployee(
+          {
+            email: input.email.trim().toLowerCase(),
+            password: input.password,
+            personId: result.personId,
+            name: input.name.trim(),
+            role: input.role,
+          },
+          { autoSignIn: false },
+        );
+        if (!account.ok) {
+          return { ok: false, error: account.error };
+        }
       }
     }
     setFormOpen(false);

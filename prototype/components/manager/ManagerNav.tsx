@@ -15,6 +15,7 @@ import {
   ChevronDownIcon,
   ClockIcon,
   MoonIcon,
+  SettingsIcon,
   SunIcon,
   UsersIcon,
 } from "@/components/ui/icons";
@@ -197,6 +198,24 @@ export default function ManagerNav() {
       ) : (
         <div className="flex-1" />
       )}
+
+      <nav className="border-t border-hairline p-3">
+        <Link
+          href="/manager/settings"
+          aria-current={pathname.startsWith("/manager/settings") ? "page" : undefined}
+          className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+            pathname.startsWith("/manager/settings")
+              ? "bg-primary-weak text-primary"
+              : "text-ink-muted hover:bg-surface-3 hover:text-ink"
+          }`}
+        >
+          <SettingsIcon className="size-4" />
+          Settings
+          {pathname.startsWith("/manager/settings") && (
+            <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
+          )}
+        </Link>
+      </nav>
 
       <div className="border-t border-hairline p-3">
         <div ref={menuRef} className="relative">

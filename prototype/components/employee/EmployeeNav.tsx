@@ -15,6 +15,7 @@ import {
   ClockIcon,
   ListIcon,
   MoonIcon,
+  SettingsIcon,
   SunIcon,
   UsersIcon,
 } from "@/components/ui/icons";
@@ -46,6 +47,7 @@ export default function EmployeeNav() {
     { href: "/employee/schedule", label: "Schedule", icon: CalendarIcon },
     { href: "/employee/clock", label: "Clock In/Out", icon: ClockIcon },
     { href: "/employee/leave-requests", label: "Leave Requests", icon: CalendarOffIcon },
+    { href: "/employee/settings", label: "Settings", icon: SettingsIcon },
     { href: "/employee/profile", label: "Profile", icon: UsersIcon },
     { href: "/employee/notifications", label: "Notifications", icon: BellIcon, badge: unreadCount },
   ];

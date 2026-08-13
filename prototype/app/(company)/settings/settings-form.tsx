@@ -14,6 +14,7 @@ import {
   slugify,
 } from "@/lib/company";
 import { COMPANY_COLORS } from "@/lib/data";
+import ChangePasswordCard from "@/components/settings/ChangePasswordCard";
 import {
   BuildingIcon,
   CheckIcon,
@@ -102,8 +103,9 @@ export default function SettingsForm() {
   };
 
   return (
-    <form onSubmit={onSubmit}>
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <form onSubmit={onSubmit}>
+        <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink">
             Company Settings
@@ -351,10 +353,15 @@ export default function SettingsForm() {
           {error}
         </p>
       )}
-
-      <p className="mt-6 text-center text-[11px] text-ink-faint">
-        Settings are stored in your browser for this prototype.
-      </p>
     </form>
+
+    <div className="mt-4">
+      <ChangePasswordCard />
+    </div>
+
+    <p className="mt-6 text-center text-[11px] text-ink-faint">
+      Settings are stored in your browser for this prototype.
+    </p>
+  </div>
   );
 }

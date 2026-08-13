@@ -20,8 +20,12 @@ export const DEMO_MANAGER_PASSWORD = "manager123";
 export const DEMO_EMPLOYEE_EMAIL = "employee@gmail.com";
 export const DEMO_EMPLOYEE_PASSWORD = "employee123";
 
+export const DEFAULT_PASSWORD = "Password@123";
+
 export const ADMINS_KEY = "roster.accounts";
 export const EMPLOYEE_ACCOUNTS_KEY = "roster.employeeAccounts";
+const PASSWORD_OVERRIDES_KEY = "roster.passwordOverrides";
+const PEOPLE_KEY = "roster.people";
 
 export type AuthRole = "super_admin" | "company_admin" | "manager" | "employee";
 
@@ -77,13 +81,21 @@ export type RegisterEmployeeInput = {
   role?: "employee" | "manager";
 };
 
+export type RegisterEmployeeOptions = {
+  autoSignIn?: boolean;
+};
+
 interface AuthContextValue {
   user: AuthUser | null;
   ready: boolean;
   signIn: (email: string, password: string) => SignInResult;
   signOut: () => void;
   registerAdmin: (input: RegisterInput) => SignInResult;
-  registerEmployee: (input: RegisterEmployeeInput) => SignInResult;
+  registerEmployee: (
+    input: RegisterEmployeeInput,
+    options?: RegisterEmployeeOptions,
+  ) => SignInResult;
+  changePassword: (current: string, next: string) => SignInResult;
 }
 
 const STORAGE_KEY = "roster.session";
@@ -110,6 +122,82 @@ function readEmployeeAccounts(): RegisteredEmployee[] {
     const parsed = JSON.parse(raw) as RegisteredEmployee[];
     return Array.isArray(parsed)
       ? parsed.filter((a) => a?.email && a?.password)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function readPasswordOverrides(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(window.localStorage.getItem(PASSWORD_OVERRIDES_KEY) ?? "{}") ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function writePasswordOverride(email: string, password: string): void {
+  try {
+    const all = readPasswordOverrides();
+    all[email] = password;
+    window.localStorage.setItem(PASSWORD_OVERRIDES_KEY, JSON.stringify(all));
+  } catch {
+    // storage unavailable — ignore
+  }
+}
+
+function demoPasswordFor(email: string): string | undefined {
+  if (email === DEMO_EMAIL) return DEMO_PASSWORD;
+  if (email === DEMO_MANAGER_EMAIL) return DEMO_MANAGER_PASSWORD;
+  if (email === DEMO_EMPLOYEE_EMAIL) return DEMO_EMPLOYEE_PASSWORD;
+  return undefined;
+}
+
+function demoIdentityFor(
+  email: string,
+): { name: string; role: AuthRole } | undefined {
+  if (email === DEMO_EMAIL) {
+    return { name: "Bishal Adhikari", role: "super_admin" };
+  }
+  if (email === DEMO_MANAGER_EMAIL) {
+    return { name: "Team Manager", role: "manager" };
+  }
+  if (email === DEMO_EMPLOYEE_EMAIL) {
+    return { name: "Team Employee", role: "employee" };
+  }
+  return undefined;
+}
+
+function readPeopleForAuth(): {
+  id: string;
+  email: string;
+  name: string;
+  role: "employee" | "manager";
+}[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(PEOPLE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as {
+      id: string;
+      email: string;
+      name: string;
+      role?: "employee" | "manager";
+    }[];
+    return Array.isArray(parsed)
+      ? parsed
+          .filter(
+            (p) =>
+              p?.email &&
+              (p.role === "employee" || p.role === "manager"),
+          )
+          .map((p) => ({
+            id: p.id,
+            email: (p.email as string).toLowerCase(),
+            name: p.name,
+            role: p.role as "employee" | "manager",
+          }))
       : [];
   } catch {
     return [];
@@ -210,8 +298,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(
     (email: string, password: string): SignInResult => {
       const normalized = email.trim().toLowerCase();
+      const overrides = readPasswordOverrides();
 
-      if (normalized === DEMO_EMAIL && password === DEMO_PASSWORD) {
+      if (
+        normalized === DEMO_EMAIL &&
+        password === (overrides[DEMO_EMAIL] ?? DEMO_PASSWORD)
+      ) {
         const session: AuthUser = {
           email: DEMO_EMAIL,
           name: "Bishal Adhikari",
@@ -221,7 +313,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: true, user: session };
       }
 
-      if (normalized === DEMO_MANAGER_EMAIL && password === DEMO_MANAGER_PASSWORD) {
+      if (
+        normalized === DEMO_MANAGER_EMAIL &&
+        password === (overrides[DEMO_MANAGER_EMAIL] ?? DEMO_MANAGER_PASSWORD)
+      ) {
         const session: AuthUser = {
           email: DEMO_MANAGER_EMAIL,
           name: "Team Manager",
@@ -231,7 +326,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: true, user: session };
       }
 
-      if (normalized === DEMO_EMPLOYEE_EMAIL && password === DEMO_EMPLOYEE_PASSWORD) {
+      if (
+        normalized === DEMO_EMPLOYEE_EMAIL &&
+        password === (overrides[DEMO_EMPLOYEE_EMAIL] ?? DEMO_EMPLOYEE_PASSWORD)
+      ) {
         const session: AuthUser = {
           email: DEMO_EMPLOYEE_EMAIL,
           name: "Team Employee",
@@ -264,6 +362,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         persistSession(session);
         return { ok: true, user: session };
+      }
+
+      // Legacy fallback: accounts and people created before passwords
+      // were stored sign in with the default password.
+      if (password === DEFAULT_PASSWORD) {
+        const demo = demoIdentityFor(normalized);
+        if (demo) {
+          writePasswordOverride(normalized, DEFAULT_PASSWORD);
+          const session: AuthUser = { email: normalized, name: demo.name, role: demo.role };
+          persistSession(session);
+          return { ok: true, user: session };
+        }
+        const person = readPeopleForAuth().find((p) => p.email === normalized);
+        if (person) {
+          try {
+            const employee: RegisteredEmployee = {
+              email: normalized,
+              password: DEFAULT_PASSWORD,
+              personId: person.id,
+              name: person.name,
+              role: person.role,
+              createdAt: new Date().toISOString(),
+            };
+            window.localStorage.setItem(
+              EMPLOYEE_ACCOUNTS_KEY,
+              JSON.stringify([...readEmployeeAccounts(), employee]),
+            );
+          } catch {
+            // storage unavailable — keep in-memory session only
+          }
+          const session: AuthUser = {
+            email: normalized,
+            name: person.name,
+            role: person.role,
+          };
+          persistSession(session);
+          return { ok: true, user: session };
+        }
       }
 
       return { ok: false, error: "Invalid email or password." };
@@ -315,7 +451,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const registerEmployee = useCallback(
-    (input: RegisterEmployeeInput): SignInResult => {
+    (
+      input: RegisterEmployeeInput,
+      options?: RegisterEmployeeOptions,
+    ): SignInResult => {
       const email = input.email.trim().toLowerCase();
 
       if (!email || !input.password || !input.personId) {
@@ -343,17 +482,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           EMPLOYEE_ACCOUNTS_KEY,
           JSON.stringify([...readEmployeeAccounts(), employee]),
         );
-        persistSession({
-          email,
-          name: employee.name,
-          role: employee.role ?? "employee",
-        });
+        if (options?.autoSignIn !== false) {
+          persistSession({
+            email,
+            name: employee.name,
+            role: employee.role ?? "employee",
+          });
+        }
       } catch {
         return { ok: false, error: "Storage unavailable. Try again in a private tab." };
       }
       return { ok: true };
     },
     [],
+  );
+
+  const changePassword = useCallback(
+    (current: string, next: string): SignInResult => {
+      if (!user) {
+        return { ok: false, error: "You must be signed in." };
+      }
+      if (next.length < 8) {
+        return { ok: false, error: "Password must be at least 8 characters." };
+      }
+      if (next === current) {
+        return { ok: false, error: "New password must be different from the current one." };
+      }
+      const email = user.email.toLowerCase();
+
+      const demo = demoPasswordFor(email);
+      if (demo) {
+        const overrides = readPasswordOverrides();
+        if ((overrides[email] ?? demo) !== current) {
+          return { ok: false, error: "Current password is incorrect." };
+        }
+        writePasswordOverride(email, next);
+        return { ok: true };
+      }
+
+      const admins = readAccounts();
+      const adminIdx = admins.findIndex((a) => a.email === email);
+      if (adminIdx >= 0) {
+        if (admins[adminIdx].password !== current) {
+          return { ok: false, error: "Current password is incorrect." };
+        }
+        const updated = [...admins];
+        updated[adminIdx] = { ...admins[adminIdx], password: next };
+        try {
+          window.localStorage.setItem(ADMINS_KEY, JSON.stringify(updated));
+        } catch {
+          return { ok: false, error: "Storage unavailable. Try again in a private tab." };
+        }
+        return { ok: true };
+      }
+
+      const employeeAccounts = readEmployeeAccounts();
+      const empIdx = employeeAccounts.findIndex((a) => a.email === email);
+      if (empIdx >= 0) {
+        if (employeeAccounts[empIdx].password !== current) {
+          return { ok: false, error: "Current password is incorrect." };
+        }
+        const updated = [...employeeAccounts];
+        updated[empIdx] = { ...employeeAccounts[empIdx], password: next };
+        try {
+          window.localStorage.setItem(EMPLOYEE_ACCOUNTS_KEY, JSON.stringify(updated));
+        } catch {
+          return { ok: false, error: "Storage unavailable. Try again in a private tab." };
+        }
+        return { ok: true };
+      }
+
+      return { ok: false, error: "No account found for this email." };
+    },
+    [user],
   );
 
   const signOut = useCallback(() => {
@@ -367,8 +568,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, ready, signIn, signOut, registerAdmin, registerEmployee }),
-    [user, ready, signIn, signOut, registerAdmin, registerEmployee],
+    () => ({
+      user,
+      ready,
+      signIn,
+      signOut,
+      registerAdmin,
+      registerEmployee,
+      changePassword,
+    }),
+    [user, ready, signIn, signOut, registerAdmin, registerEmployee, changePassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
