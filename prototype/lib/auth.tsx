@@ -418,9 +418,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!email || !input.password || !input.personId) {
         return { ok: false, error: "Please fill out every field." };
       }
-      if (email === DEMO_EMPLOYEE_EMAIL) {
-        return { ok: false, error: "That email is already in use." };
-      }
       if (input.password.length < 8) {
         return { ok: false, error: "Password must be at least 8 characters." };
       }
