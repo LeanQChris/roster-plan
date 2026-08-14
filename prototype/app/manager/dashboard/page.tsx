@@ -48,6 +48,13 @@ export default function ManagerDashboardPage() {
     ).length;
   }, [leaveRequests, teamPeople]);
 
+  const pendingShiftRequestCount = useMemo(() => {
+    const memberIds = new Set(teamPeople.map((p) => p.id));
+    return shiftAssignments.filter(
+      (a) => memberIds.has(a.personId) && a.status === "pending",
+    ).length;
+  }, [shiftAssignments, teamPeople]);
+
   const today = localDateStr(new Date());
   const upcomingShifts = useMemo(
     () =>
@@ -223,6 +230,42 @@ export default function ManagerDashboardPage() {
         </div>
         <span className="shrink-0 text-xs font-medium text-primary">
           {pendingLeaveCount > 0 ? "Review →" : "View all"}
+        </span>
+      </Link>
+
+      <Link
+        href={`/manager/teams/${selectedTeam.id}/shift-requests`}
+        className={`mt-4 flex items-center justify-between gap-4 rounded-xl border px-4 py-3 transition-colors ${
+          pendingShiftRequestCount > 0
+            ? "border-warning/25 bg-warning-weak hover:bg-warning-weak/70"
+            : "border-hairline bg-surface-2 hover:bg-surface-3/70"
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <span
+            className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+              pendingShiftRequestCount > 0
+                ? "bg-warning text-white"
+                : "bg-surface-3 text-ink-subtle"
+            }`}
+          >
+            <CalendarIcon className="size-4" />
+          </span>
+          <div>
+            <p className="text-[13px] font-medium text-ink">
+              {pendingShiftRequestCount > 0
+                ? `${pendingShiftRequestCount} pending shift request${pendingShiftRequestCount === 1 ? "" : "s"}`
+                : "No pending shift requests"}
+            </p>
+            <p className="text-xs text-ink-subtle">
+              {pendingShiftRequestCount > 0
+                ? "Review and approve or deny"
+                : "All shift requests are reviewed"}
+            </p>
+          </div>
+        </div>
+        <span className="shrink-0 text-xs font-medium text-primary">
+          {pendingShiftRequestCount > 0 ? "Review →" : "View all"}
         </span>
       </Link>
 

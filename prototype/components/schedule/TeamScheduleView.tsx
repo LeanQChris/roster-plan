@@ -7,6 +7,7 @@ import type { Shift, Team } from "@/lib/company-data";
 import { formatDateTime, localDateStr } from "@/lib/format";
 import Modal from "@/components/ui/Modal";
 import ShiftCalendar from "@/components/schedule/ShiftCalendar";
+import MonthCalendar from "@/components/schedule/MonthCalendar";
 import PublishPreviewModal from "@/components/schedule/PublishPreviewModal";
 import AssignShiftModal from "@/components/schedule/AssignShiftModal";
 import CreateShiftModal from "@/components/schedule/CreateShiftModal";
@@ -88,6 +89,11 @@ export default function TeamScheduleView({
   );
 
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
+  const [view, setView] = useState<"week" | "month">("week");
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [modal, setModal] = useState<ModalMode>({ type: null });
   const [publishPreview, setPublishPreview] = useState<{
     planned: Shift[];
@@ -106,13 +112,27 @@ export default function TeamScheduleView({
 
   const weekKey = localDateStr(weekStart) + "|" + localDateStr(weekEnd);
 
+  const viewRange = useMemo(() => {
+    if (view === "week") return { start: weekStart, end: weekEnd };
+    const start = new Date(monthCursor);
+    const day = start.getDay();
+    start.setDate(start.getDate() + (day === 0 ? -6 : 1 - day));
+    start.setHours(0, 0, 0, 0);
+    const last = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0);
+    const end = new Date(last);
+    const endDay = end.getDay();
+    end.setDate(last.getDate() + (endDay === 0 ? 0 : 7 - endDay));
+    end.setHours(0, 0, 0, 0);
+    return { start, end };
+  }, [view, weekStart, weekEnd, monthCursor]);
+
   const visibleShifts = useMemo(() => {
-    const startStr = localDateStr(weekStart);
-    const endStr = localDateStr(weekEnd);
+    const startStr = localDateStr(viewRange.start);
+    const endStr = localDateStr(viewRange.end);
     return shifts.filter(
       (s) => s.teamId === team.id && s.date >= startStr && s.date <= endStr,
     );
-  }, [shifts, team.id, weekStart, weekEnd]);
+  }, [shifts, team.id, viewRange]);
 
   const visibleAssignments = useMemo(() => {
     const shiftIds = new Set(visibleShifts.map((s) => s.id));
@@ -130,18 +150,37 @@ export default function TeamScheduleView({
   );
 
   const goPrev = () => {
-    const prev = new Date(weekStart);
-    prev.setDate(prev.getDate() - 7);
-    setWeekStart(prev);
+    if (view === "month") {
+      const prev = new Date(monthCursor);
+      prev.setMonth(prev.getMonth() - 1);
+      setMonthCursor(prev);
+    } else {
+      const prev = new Date(weekStart);
+      prev.setDate(prev.getDate() - 7);
+      setWeekStart(prev);
+    }
   };
 
   const goNext = () => {
-    const next = new Date(weekStart);
-    next.setDate(next.getDate() + 7);
-    setWeekStart(next);
+    if (view === "month") {
+      const next = new Date(monthCursor);
+      next.setMonth(next.getMonth() + 1);
+      setMonthCursor(next);
+    } else {
+      const next = new Date(weekStart);
+      next.setDate(next.getDate() + 7);
+      setWeekStart(next);
+    }
   };
 
-  const goToday = () => setWeekStart(getMonday(new Date()));
+  const goToday = () => {
+    if (view === "month") {
+      const now = new Date();
+      setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
+    } else {
+      setWeekStart(getMonday(new Date()));
+    }
+  };
 
   const handlePublishClick = () => {
     const rangeStart = localDateStr(weekStart);
@@ -274,8 +313,30 @@ export default function TeamScheduleView({
             <ChevronRightIcon className="size-3.5" />
           </button>
           <span className="ml-2 text-[15px] font-semibold text-ink">
-            {formatDateRange(weekStart)}
+            {view === "week"
+              ? formatDateRange(weekStart)
+              : MONTH_NAMES[monthCursor.getMonth()] + " " + monthCursor.getFullYear()}
           </span>
+          <div className="ml-3 flex items-center rounded-lg border border-hairline bg-surface-2 p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("week")}
+              className={`h-7 rounded-md px-3 text-[12px] font-medium transition-colors ${
+                view === "week" ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              Week
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("month")}
+              className={`h-7 rounded-md px-3 text-[12px] font-medium transition-colors ${
+                view === "month" ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              Month
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -332,14 +393,25 @@ export default function TeamScheduleView({
 
       {(activeTemplates.length > 0 || visibleShifts.length > 0) && (
         <div className="mt-4">
-          <ShiftCalendar
-            key={weekKey}
-            weekStart={weekStart}
-            shifts={visibleShifts}
-            assignments={visibleAssignments}
-            people={people}
-            onClickShift={(shift) => setModal({ type: "assign", shift })}
-          />
+          {view === "month" ? (
+            <MonthCalendar
+              monthStart={monthCursor}
+              shifts={visibleShifts}
+              assignments={visibleAssignments}
+              people={people}
+              onClickShift={(shift) => setModal({ type: "assign", shift })}
+              onDayClick={(date) => setModal({ type: "create", defaultDate: date })}
+            />
+          ) : (
+            <ShiftCalendar
+              key={weekKey}
+              weekStart={weekStart}
+              shifts={visibleShifts}
+              assignments={visibleAssignments}
+              people={people}
+              onClickShift={(shift) => setModal({ type: "assign", shift })}
+            />
+          )}
         </div>
       )}
 
@@ -347,7 +419,7 @@ export default function TeamScheduleView({
       {visibleShifts.length > 0 && (
         <div className="mt-4 space-y-2">
           <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
-            Shifts this week
+            {view === "week" ? "Shifts this week" : "Shifts in this month"}
           </p>
           <div className="space-y-1.5">
             {visibleShifts.map((shift) => {

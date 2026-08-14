@@ -12,6 +12,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "@/components/ui/icons";
+import MonthCalendar from "@/components/schedule/MonthCalendar";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -73,6 +74,11 @@ export default function MySchedulePage() {
   } = useCompany();
 
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
+  const [view, setView] = useState<"week" | "month">("week");
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
   const weekEnd = useMemo(() => {
@@ -84,6 +90,23 @@ export default function MySchedulePage() {
   const weekStartStr = localDateStr(weekStart);
   const weekEndStr = localDateStr(weekEnd);
   const today = localDateStr(new Date());
+
+  const viewRange = useMemo(() => {
+    if (view === "week") return { start: weekStart, end: weekEnd };
+    const start = new Date(monthCursor);
+    const day = start.getDay();
+    start.setDate(start.getDate() + (day === 0 ? -6 : 1 - day));
+    start.setHours(0, 0, 0, 0);
+    const last = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0);
+    const end = new Date(last);
+    const endDay = end.getDay();
+    end.setDate(last.getDate() + (endDay === 0 ? 0 : 7 - endDay));
+    end.setHours(0, 0, 0, 0);
+    return { start, end };
+  }, [view, weekStart, weekEnd, monthCursor]);
+
+  const viewStartStr = localDateStr(viewRange.start);
+  const viewEndStr = localDateStr(viewRange.end);
 
   const matchedPerson = useMemo(() => {
     if (selectedPersonId) {
@@ -105,9 +128,9 @@ export default function MySchedulePage() {
 
   const myShifts = useMemo(() => {
     return shifts
-      .filter((s) => myAssignmentShiftIds.has(s.id) && s.date >= weekStartStr && s.date <= weekEndStr)
+      .filter((s) => myAssignmentShiftIds.has(s.id) && s.date >= viewStartStr && s.date <= viewEndStr)
       .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
-  }, [shifts, myAssignmentShiftIds, weekStartStr, weekEndStr]);
+  }, [shifts, myAssignmentShiftIds, viewStartStr, viewEndStr]);
 
   const teamMap = useMemo(() => {
     const map = new Map<string, typeof teams[0]>();
@@ -116,18 +139,37 @@ export default function MySchedulePage() {
   }, [teams]);
 
   const goPrev = () => {
-    const prev = new Date(weekStart);
-    prev.setDate(prev.getDate() - 7);
-    setWeekStart(prev);
+    if (view === "month") {
+      const prev = new Date(monthCursor);
+      prev.setMonth(prev.getMonth() - 1);
+      setMonthCursor(prev);
+    } else {
+      const prev = new Date(weekStart);
+      prev.setDate(prev.getDate() - 7);
+      setWeekStart(prev);
+    }
   };
 
   const goNext = () => {
-    const next = new Date(weekStart);
-    next.setDate(next.getDate() + 7);
-    setWeekStart(next);
+    if (view === "month") {
+      const next = new Date(monthCursor);
+      next.setMonth(next.getMonth() + 1);
+      setMonthCursor(next);
+    } else {
+      const next = new Date(weekStart);
+      next.setDate(next.getDate() + 7);
+      setWeekStart(next);
+    }
   };
 
-  const goToday = () => setWeekStart(getMonday(new Date()));
+  const goToday = () => {
+    if (view === "month") {
+      const now = new Date();
+      setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
+    } else {
+      setWeekStart(getMonday(new Date()));
+    }
+  };
 
   const days = getWeekDays(weekStart);
   const shiftsByDate = new Map<string, Shift[]>();
@@ -206,12 +248,44 @@ export default function MySchedulePage() {
               <ChevronRightIcon className="size-3.5" />
             </button>
             <span className="ml-2 text-[15px] font-semibold text-ink">
-              {formatDateRange(weekStart)}
+              {view === "week"
+                ? formatDateRange(weekStart)
+                : MONTH_NAMES[monthCursor.getMonth()] + " " + monthCursor.getFullYear()}
             </span>
+            <div className="ml-3 flex items-center rounded-lg border border-hairline bg-surface-2 p-0.5">
+              <button
+                type="button"
+                onClick={() => setView("week")}
+                className={`h-7 rounded-md px-3 text-[12px] font-medium transition-colors ${
+                  view === "week" ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                Week
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("month")}
+                className={`h-7 rounded-md px-3 text-[12px] font-medium transition-colors ${
+                  view === "month" ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                Month
+              </button>
+            </div>
           </div>
 
           {/* Week calendar */}
           <div className="mt-4 overflow-hidden rounded-xl border border-hairline bg-surface-2">
+            {view === "month" ? (
+              <MonthCalendar
+                monthStart={monthCursor}
+                shifts={myShifts}
+                assignments={[]}
+                people={people}
+                onClickShift={() => {}}
+                onDayClick={() => {}}
+              />
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px] border-collapse">
                 <thead>
@@ -292,13 +366,14 @@ export default function MySchedulePage() {
                 </tbody>
               </table>
             </div>
+            )}
           </div>
 
           {/* Shift list below calendar */}
           {myShifts.length > 0 && (
             <div className="mt-6">
               <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
-                All shifts this week ({myShifts.length})
+                All shifts this {view === "week" ? "week" : "month"} ({myShifts.length})
               </p>
               <div className="mt-2 space-y-1.5">
                 {myShifts.map((shift) => {

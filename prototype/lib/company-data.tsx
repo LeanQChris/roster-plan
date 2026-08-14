@@ -222,6 +222,12 @@ type CompanyAction =
       id: string;
       cancelledAt: string;
     }
+  | {
+      type: "reviewAssignment";
+      id: string;
+      status: "approved" | "rejected";
+      reviewedBy: string;
+    }
   | { type: "addActivity"; entry: ActivityEntry }
   | { type: "addAudit"; entry: AuditEntry };
 
@@ -605,6 +611,20 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
             : a,
         ),
       };
+    case "reviewAssignment":
+      return {
+        ...state,
+        shiftAssignments: state.shiftAssignments.map((a) =>
+          a.id === action.id
+            ? {
+                ...a,
+                status: action.status,
+                approvedAt: action.status === "approved" ? new Date().toISOString() : undefined,
+                approvedBy: action.status === "approved" ? action.reviewedBy : undefined,
+              }
+            : a,
+        ),
+      };
     case "addActivity":
       return { ...state, activity: [action.entry, ...state.activity] };
     case "markActivityRead":
@@ -749,6 +769,8 @@ interface CompanyContextValue extends CompanyState {
     personId: string,
   ) => { ok: boolean; error?: string; conflict?: boolean };
   cancelSelfAssignment: (id: string) => void;
+  approveShiftRequest: (assignmentId: string, reviewedBy: string) => void;
+  denyShiftRequest: (assignmentId: string, reviewedBy: string) => void;
   getAvailableShiftsForPerson: (personId: string, teamId: string) => Shift[];
 }
 
@@ -1559,6 +1581,54 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     [state.shiftAssignments, state.shifts],
   );
 
+  const approveShiftRequest = useCallback(
+    (assignmentId: string, reviewedBy: string) => {
+      const assignment = state.shiftAssignments.find((a) => a.id === assignmentId);
+      if (!assignment || assignment.status !== "pending") return;
+      dispatch({ type: "reviewAssignment", id: assignmentId, status: "approved", reviewedBy });
+      const shift = state.shifts.find((s) => s.id === assignment.shiftId);
+      const person = state.people.find((p) => p.id === assignment.personId);
+      dispatch({
+        type: "addAudit",
+        entry: {
+          id: nextId("audit"),
+          timestamp: new Date().toISOString(),
+          action: "shift.request.approved",
+          tone: "success",
+          resource: "ShiftAssignment",
+          resourceId: assignmentId,
+          teamId: shift?.teamId,
+          message: `${person?.name ?? "Someone"}'s request for "${shift?.title ?? "shift"}" on ${shift?.date ?? ""} approved by ${reviewedBy}`,
+        },
+      });
+    },
+    [state.shiftAssignments, state.shifts, state.people],
+  );
+
+  const denyShiftRequest = useCallback(
+    (assignmentId: string, reviewedBy: string) => {
+      const assignment = state.shiftAssignments.find((a) => a.id === assignmentId);
+      if (!assignment || assignment.status !== "pending") return;
+      dispatch({ type: "reviewAssignment", id: assignmentId, status: "rejected", reviewedBy });
+      const shift = state.shifts.find((s) => s.id === assignment.shiftId);
+      const person = state.people.find((p) => p.id === assignment.personId);
+      dispatch({
+        type: "addAudit",
+        entry: {
+          id: nextId("audit"),
+          timestamp: new Date().toISOString(),
+          action: "shift.request.denied",
+          tone: "warning",
+          resource: "ShiftAssignment",
+          resourceId: assignmentId,
+          teamId: shift?.teamId,
+          message: `${person?.name ?? "Someone"}'s request for "${shift?.title ?? "shift"}" on ${shift?.date ?? ""} denied by ${reviewedBy}`,
+        },
+      });
+    },
+    [state.shiftAssignments, state.shifts, state.people],
+  );
+
   const requestShift = useCallback(
     (
       shiftId: string,
@@ -1617,10 +1687,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         id: nextId("assignment"),
         shiftId,
         personId,
-        status: "approved",
+        status: "pending",
         requestedAt: now,
-        approvedAt: now,
-        approvedBy: personId,
         createdAt: now,
       };
       dispatch({ type: "addAssignment", assignment });
@@ -1631,7 +1699,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           id: nextId("activity"),
           personId,
           action: "notified",
-          message: `Self-assigned to "${targetShift.title}" on ${targetShift.date} at ${targetShift.startTime}`,
+          message: `Requested to join "${targetShift.title}" on ${targetShift.date} at ${targetShift.startTime}`,
           timestamp: now,
           read: false,
         },
@@ -1643,12 +1711,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         entry: {
           id: nextId("audit"),
           timestamp: now,
-          action: "shift.self_assigned",
-          tone: "success",
+          action: "shift.requested",
+          tone: "neutral",
           resource: "ShiftAssignment",
           resourceId: assignment.id,
           teamId: targetShift.teamId,
-          message: `${person?.name ?? "Someone"} self-assigned to "${targetShift.title}" on ${targetShift.date}`,
+          message: `${person?.name ?? "Someone"} requested to join "${targetShift.title}" on ${targetShift.date}`,
         },
       });
 
@@ -1785,6 +1853,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       bulkAssign,
       requestShift,
       cancelSelfAssignment,
+      approveShiftRequest,
+      denyShiftRequest,
       getAvailableShiftsForPerson,
     }),
     [
@@ -1824,6 +1894,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       bulkAssign,
       requestShift,
       cancelSelfAssignment,
+      approveShiftRequest,
+      denyShiftRequest,
       getAvailableShiftsForPerson,
     ],
   );

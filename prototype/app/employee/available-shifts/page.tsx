@@ -6,6 +6,7 @@ import { useCompany } from "@/lib/company-data";
 import type { Shift } from "@/lib/company-data";
 import { localDateStr } from "@/lib/format";
 import Modal from "@/components/ui/Modal";
+import MonthCalendar from "@/components/schedule/MonthCalendar";
 import {
   CalendarIcon,
   ChevronLeftIcon,
@@ -79,6 +80,11 @@ export default function AvailableShiftsPage() {
     getAvailableShiftsForPerson,
   } = useCompany();
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
+  const [view, setView] = useState<"week" | "month">("week");
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
@@ -104,13 +110,30 @@ export default function AvailableShiftsPage() {
   const weekEndStr = localDateStr(weekEnd);
   const today = localDateStr(new Date());
 
+  const viewRange = useMemo(() => {
+    if (view === "week") return { start: weekStart, end: weekEnd };
+    const start = new Date(monthCursor);
+    const day = start.getDay();
+    start.setDate(start.getDate() + (day === 0 ? -6 : 1 - day));
+    start.setHours(0, 0, 0, 0);
+    const last = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0);
+    const end = new Date(last);
+    const endDay = end.getDay();
+    end.setDate(last.getDate() + (endDay === 0 ? 0 : 7 - endDay));
+    end.setHours(0, 0, 0, 0);
+    return { start, end };
+  }, [view, weekStart, weekEnd, monthCursor]);
+
+  const viewStartStr = localDateStr(viewRange.start);
+  const viewEndStr = localDateStr(viewRange.end);
+
   const availableShifts = useMemo(() => {
     if (!myPerson || !myPerson.teamId) return [];
     const allAvailable = getAvailableShiftsForPerson(myPerson.id, myPerson.teamId);
     return allAvailable.filter(
-      (s) => s.date >= weekStartStr && s.date <= weekEndStr,
+      (s) => s.date >= today && s.date >= viewStartStr && s.date <= viewEndStr,
     );
-  }, [myPerson, getAvailableShiftsForPerson, weekStartStr, weekEndStr]);
+  }, [myPerson, getAvailableShiftsForPerson, today, viewStartStr, viewEndStr]);
 
   const filteredShifts = useMemo(() => {
     if (!searchQuery.trim()) return availableShifts;
@@ -130,18 +153,37 @@ export default function AvailableShiftsPage() {
   }, [teams]);
 
   const goPrev = () => {
-    const prev = new Date(weekStart);
-    prev.setDate(prev.getDate() - 7);
-    setWeekStart(prev);
+    if (view === "month") {
+      const prev = new Date(monthCursor);
+      prev.setMonth(prev.getMonth() - 1);
+      setMonthCursor(prev);
+    } else {
+      const prev = new Date(weekStart);
+      prev.setDate(prev.getDate() - 7);
+      setWeekStart(prev);
+    }
   };
 
   const goNext = () => {
-    const next = new Date(weekStart);
-    next.setDate(next.getDate() + 7);
-    setWeekStart(next);
+    if (view === "month") {
+      const next = new Date(monthCursor);
+      next.setMonth(next.getMonth() + 1);
+      setMonthCursor(next);
+    } else {
+      const next = new Date(weekStart);
+      next.setDate(next.getDate() + 7);
+      setWeekStart(next);
+    }
   };
 
-  const goToday = () => setWeekStart(getMonday(new Date()));
+  const goToday = () => {
+    if (view === "month") {
+      const now = new Date();
+      setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
+    } else {
+      setWeekStart(getMonday(new Date()));
+    }
+  };
 
   const days = getWeekDays(weekStart);
   const shiftsByDate = new Map<string, Shift[]>();
@@ -241,12 +283,48 @@ export default function AvailableShiftsPage() {
               <ChevronRightIcon className="size-3.5" />
             </button>
             <span className="ml-2 text-[15px] font-semibold text-ink">
-              {formatDateRange(weekStart)}
+              {view === "week"
+                ? formatDateRange(weekStart)
+                : MONTH_NAMES[monthCursor.getMonth()] + " " + monthCursor.getFullYear()}
             </span>
+            <div className="ml-3 flex items-center rounded-lg border border-hairline bg-surface-2 p-0.5">
+              <button
+                type="button"
+                onClick={() => setView("week")}
+                className={`h-7 rounded-md px-3 text-[12px] font-medium transition-colors ${
+                  view === "week" ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                Week
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("month")}
+                className={`h-7 rounded-md px-3 text-[12px] font-medium transition-colors ${
+                  view === "month" ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                Month
+              </button>
+            </div>
           </div>
 
-          {/* Week calendar */}
+          {/* Calendar */}
           <div className="mt-4 overflow-hidden rounded-xl border border-hairline bg-surface-2">
+            {view === "month" ? (
+              <MonthCalendar
+                monthStart={monthCursor}
+                shifts={filteredShifts}
+                assignments={[]}
+                people={people}
+                onClickShift={(shift) => {
+                  setSelectedShift(shift);
+                  setRequestError(null);
+                  setRequestSuccess(false);
+                }}
+                onDayClick={() => {}}
+              />
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px] border-collapse">
                 <thead>
@@ -339,6 +417,7 @@ export default function AvailableShiftsPage() {
                 </tbody>
               </table>
             </div>
+            )}
           </div>
 
           {filteredShifts.length === 0 && (
@@ -373,7 +452,7 @@ export default function AvailableShiftsPage() {
           <div className="mt-4 space-y-3">
             {requestSuccess ? (
               <p className="text-[13px] text-success">
-                You&apos;ve been assigned to this shift!
+                Your shift request has been submitted! Your manager will review it.
               </p>
             ) : (
               <>
@@ -422,7 +501,7 @@ export default function AvailableShiftsPage() {
                   <p className="text-[13px] text-danger">{requestError}</p>
                 )}
                 <p className="text-[11px] text-ink-subtle">
-                  Click &quot;Request shift&quot; to add this shift to your schedule.
+                  Click &quot;Request shift&quot; to send a request to your manager for approval.
                 </p>
               </>
             )}
