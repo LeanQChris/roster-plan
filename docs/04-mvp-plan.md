@@ -37,8 +37,7 @@ Sign up company → Add teams → Invite employees
 ### Features Deferred (MVP+)
 | Feature | Why Deferred |
 |---|---|
-| Self-scheduling (employee picks shifts) | Manager-assign is simpler, unblocks initial use |
-| Self-scheduling approvals workflow | Builds on self-scheduling |
+| Self-scheduling approvals workflow | Auto-approve flow implemented; manager approval queue deferred |
 | Break tracking (meal/rest breaks) | Basic clock in/out sufficient for MVP |
 | Shift swaps / trades | Builds on shift assignments, requires conflict detection |
 | Positions CRUD | Nice-to-have, shifts can be created without named positions |
@@ -73,7 +72,7 @@ Only these tables are needed for MVP. The full schema in `db/02-schema.sql` has 
 | `shift_templates` | ✅ | Full |
 | `recurrence_rules` | ✅ | Full RRULE support |
 | `shifts` | ✅ | Full + simplified — no `draft`/`published` workflow for MVP |
-| `shift_assignments` | ✅ | Simplified: status is always `approved` (no pending/self-serve) |
+| `shift_assignments` | ✅ | Full — status, requested_at, approved_at, approved_by used for self-scheduling |
 | `notifications` | ✅ | Only `email` channel, `pending` → `sent` |
 | `audit_entries` | ✅ | Write-only for MVP (no query UI yet) |
 | `locations` | ❌ | Single-site assumption for MVP |
@@ -90,11 +89,9 @@ Only these tables are needed for MVP. The full schema in `db/02-schema.sql` has 
 ### Schema Simplifications for MVP
 
 ```sql
--- shift_assignments: no pending/approval flow. Manager assigns directly.
--- status is always 'approved' for MVP.
-ALTER TABLE shift_assignments DROP COLUMN IF EXISTS status;
-ALTER TABLE shift_assignments DROP COLUMN IF EXISTS requested_at;
-ALTER TABLE shift_assignments DROP COLUMN IF EXISTS approved_by;
+-- shift_assignments: self-scheduling enabled. Status supports pending/approved/rejected/cancelled.
+-- Manager-assign creates status='approved' directly. Employee self-request also auto-approves.
+-- Columns status, requested_at, approved_at, approved_by are now used.
 
 -- shifts: no draft/published workflow for MVP.
 -- All shifts are immediately visible once created.

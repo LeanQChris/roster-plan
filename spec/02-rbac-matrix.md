@@ -193,7 +193,7 @@ For MVP, only a subset of these permissions is enforced. Permissions for swap, p
 | `person.update` | ✅ (own timezone, phone only) | ✅ |
 | `shift_template.read` | ✅ (own team) | ✅ |
 | `shift.read` | ✅ (own + own team published) | ✅ |
-| `shift.request` | ✅ (self-scheduling) | ❌ MVP+ |
+| `shift.request` | ✅ (self-scheduling) | ✅ |
 | `shift.swap` | ✅ (request swap from manager) | ❌ MVP+ |
 | `clock.clock_in` | ✅ | ✅ |
 | `clock.clock_out` | ✅ | ✅ |

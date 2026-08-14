@@ -14,12 +14,6 @@ import type { ReactNode } from "react";
 export const DEMO_EMAIL = "superadmin@gmail.com";
 export const DEMO_PASSWORD = "superadmin";
 
-export const DEMO_MANAGER_EMAIL = "manager@gmail.com";
-export const DEMO_MANAGER_PASSWORD = "manager123";
-
-export const DEMO_EMPLOYEE_EMAIL = "employee@gmail.com";
-export const DEMO_EMPLOYEE_PASSWORD = "employee123";
-
 export const DEFAULT_PASSWORD = "Password@123";
 
 export const ADMINS_KEY = "roster.accounts";
@@ -149,8 +143,6 @@ function writePasswordOverride(email: string, password: string): void {
 
 function demoPasswordFor(email: string): string | undefined {
   if (email === DEMO_EMAIL) return DEMO_PASSWORD;
-  if (email === DEMO_MANAGER_EMAIL) return DEMO_MANAGER_PASSWORD;
-  if (email === DEMO_EMPLOYEE_EMAIL) return DEMO_EMPLOYEE_PASSWORD;
   return undefined;
 }
 
@@ -159,12 +151,6 @@ function demoIdentityFor(
 ): { name: string; role: AuthRole } | undefined {
   if (email === DEMO_EMAIL) {
     return { name: "Bishal Adhikari", role: "super_admin" };
-  }
-  if (email === DEMO_MANAGER_EMAIL) {
-    return { name: "Team Manager", role: "manager" };
-  }
-  if (email === DEMO_EMPLOYEE_EMAIL) {
-    return { name: "Team Employee", role: "employee" };
   }
   return undefined;
 }
@@ -219,7 +205,6 @@ function readStoredUser(): AuthUser | null {
       return parsed.email.toLowerCase() === DEMO_EMAIL ? parsed : null;
     }
     if (parsed.role === "manager") {
-      if (parsed.email.toLowerCase() === DEMO_MANAGER_EMAIL) return parsed;
       return readEmployeeAccounts().some(
         (a) =>
           a.email.toLowerCase() === parsed.email.toLowerCase() &&
@@ -230,7 +215,6 @@ function readStoredUser(): AuthUser | null {
     }
     if (parsed.role === "employee") {
       const email = parsed.email.toLowerCase();
-      if (email === DEMO_EMPLOYEE_EMAIL) return parsed;
       return readEmployeeAccounts().some((a) => a.email.toLowerCase() === email)
         ? parsed
         : null;
@@ -308,32 +292,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: DEMO_EMAIL,
           name: "Bishal Adhikari",
           role: "super_admin",
-        };
-        persistSession(session);
-        return { ok: true, user: session };
-      }
-
-      if (
-        normalized === DEMO_MANAGER_EMAIL &&
-        password === (overrides[DEMO_MANAGER_EMAIL] ?? DEMO_MANAGER_PASSWORD)
-      ) {
-        const session: AuthUser = {
-          email: DEMO_MANAGER_EMAIL,
-          name: "Team Manager",
-          role: "manager",
-        };
-        persistSession(session);
-        return { ok: true, user: session };
-      }
-
-      if (
-        normalized === DEMO_EMPLOYEE_EMAIL &&
-        password === (overrides[DEMO_EMPLOYEE_EMAIL] ?? DEMO_EMPLOYEE_PASSWORD)
-      ) {
-        const session: AuthUser = {
-          email: DEMO_EMPLOYEE_EMAIL,
-          name: "Team Employee",
-          role: "employee",
         };
         persistSession(session);
         return { ok: true, user: session };

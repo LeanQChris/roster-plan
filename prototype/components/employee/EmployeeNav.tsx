@@ -45,6 +45,7 @@ export default function EmployeeNav() {
   const navItems = [
     { href: "/employee/dashboard", label: "Dashboard", icon: ListIcon },
     { href: "/employee/schedule", label: "Schedule", icon: CalendarIcon },
+    { href: "/employee/available-shifts", label: "Available Shifts", icon: CalendarIcon },
     { href: "/employee/clock", label: "Clock In/Out", icon: ClockIcon },
     { href: "/employee/leave-requests", label: "Leave Requests", icon: CalendarOffIcon },
     { href: "/employee/settings", label: "Settings", icon: SettingsIcon },

@@ -118,10 +118,17 @@ export interface Shift {
   createdAt: string;
 }
 
+export type AssignmentStatus = "pending" | "approved" | "rejected" | "cancelled";
+
 export interface ShiftAssignment {
   id: string;
   shiftId: string;
   personId: string;
+  status: AssignmentStatus;
+  requestedAt: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  cancelledAt?: string;
   createdAt: string;
 }
 
@@ -210,6 +217,11 @@ type CompanyAction =
     }
   | { type: "addAssignment"; assignment: ShiftAssignment }
   | { type: "removeAssignment"; id: string }
+  | {
+      type: "cancelAssignment";
+      id: string;
+      cancelledAt: string;
+    }
   | { type: "addActivity"; entry: ActivityEntry }
   | { type: "addAudit"; entry: AuditEntry };
 
@@ -580,6 +592,19 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
           (a) => a.id !== action.id,
         ),
       };
+    case "cancelAssignment":
+      return {
+        ...state,
+        shiftAssignments: state.shiftAssignments.map((a) =>
+          a.id === action.id
+            ? {
+                ...a,
+                status: "cancelled" as const,
+                cancelledAt: action.cancelledAt,
+              }
+            : a,
+        ),
+      };
     case "addActivity":
       return { ...state, activity: [action.entry, ...state.activity] };
     case "markActivityRead":
@@ -719,6 +744,12 @@ interface CompanyContextValue extends CompanyState {
   ) => number;
   removeAssignment: (id: string) => void;
   bulkAssign: (input: BulkAssignInput) => BulkAssignResult;
+  requestShift: (
+    shiftId: string,
+    personId: string,
+  ) => { ok: boolean; error?: string; conflict?: boolean };
+  cancelSelfAssignment: (id: string) => void;
+  getAvailableShiftsForPerson: (personId: string, teamId: string) => Shift[];
 }
 
 const CompanyContext = createContext<CompanyContextValue | null>(null);
@@ -1458,6 +1489,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         id: nextId("assignment"),
         shiftId,
         personId,
+        status: "approved",
+        requestedAt: new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       };
       dispatch({ type: "addAssignment", assignment });
@@ -1497,6 +1531,149 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const removeAssignment = useCallback((id: string) => {
     dispatch({ type: "removeAssignment", id });
   }, []);
+
+  const cancelSelfAssignment = useCallback(
+    (id: string) => {
+      const assignment = state.shiftAssignments.find((a) => a.id === id);
+      if (!assignment) return;
+      dispatch({
+        type: "cancelAssignment",
+        id,
+        cancelledAt: new Date().toISOString(),
+      });
+      const shift = state.shifts.find((s) => s.id === assignment.shiftId);
+      dispatch({
+        type: "addAudit",
+        entry: {
+          id: nextId("audit"),
+          timestamp: new Date().toISOString(),
+          action: "shift.unassigned",
+          tone: "warning",
+          resource: "ShiftAssignment",
+          resourceId: id,
+          teamId: shift?.teamId,
+          message: `Self-assigned shift cancelled: "${shift?.title ?? "shift"}" on ${shift?.date ?? ""}`,
+        },
+      });
+    },
+    [state.shiftAssignments, state.shifts],
+  );
+
+  const requestShift = useCallback(
+    (
+      shiftId: string,
+      personId: string,
+    ): { ok: boolean; error?: string; conflict?: boolean } => {
+      const already = state.shiftAssignments.some(
+        (a) =>
+          a.shiftId === shiftId &&
+          a.personId === personId &&
+          a.status !== "cancelled",
+      );
+      if (already) {
+        return {
+          ok: false,
+          error: "You are already assigned to this shift.",
+        };
+      }
+
+      const targetShift = state.shifts.find((s) => s.id === shiftId);
+      if (!targetShift) return { ok: false, error: "Shift not found." };
+
+      const approvedLeave = hasApprovedLeaveOn(
+        personId,
+        targetShift.date,
+        state.leaveRequests,
+      );
+      if (approvedLeave) {
+        return {
+          ok: false,
+          conflict: true,
+          error: `TIME_OFF_CONFLICT: ${approvedLeave.type} leave approved ${approvedLeave.startDate} – ${approvedLeave.endDate}.`,
+        };
+      }
+
+      const personShiftIds = new Set(
+        state.shiftAssignments
+          .filter((a) => a.personId === personId && a.status !== "cancelled")
+          .map((a) => a.shiftId),
+      );
+      const conflictingShift = state.shifts.find(
+        (s) =>
+          s.id !== shiftId &&
+          personShiftIds.has(s.id) &&
+          shiftsOverlap(s, targetShift),
+      );
+      if (conflictingShift) {
+        return {
+          ok: false,
+          conflict: true,
+          error: `Conflicts with "${conflictingShift.title}" on ${conflictingShift.date} at ${conflictingShift.startTime}.`,
+        };
+      }
+
+      const now = new Date().toISOString();
+      const assignment: ShiftAssignment = {
+        id: nextId("assignment"),
+        shiftId,
+        personId,
+        status: "approved",
+        requestedAt: now,
+        approvedAt: now,
+        approvedBy: personId,
+        createdAt: now,
+      };
+      dispatch({ type: "addAssignment", assignment });
+
+      dispatch({
+        type: "addActivity",
+        entry: {
+          id: nextId("activity"),
+          personId,
+          action: "notified",
+          message: `Self-assigned to "${targetShift.title}" on ${targetShift.date} at ${targetShift.startTime}`,
+          timestamp: now,
+          read: false,
+        },
+      });
+
+      const person = state.people.find((p) => p.id === personId);
+      dispatch({
+        type: "addAudit",
+        entry: {
+          id: nextId("audit"),
+          timestamp: now,
+          action: "shift.self_assigned",
+          tone: "success",
+          resource: "ShiftAssignment",
+          resourceId: assignment.id,
+          teamId: targetShift.teamId,
+          message: `${person?.name ?? "Someone"} self-assigned to "${targetShift.title}" on ${targetShift.date}`,
+        },
+      });
+
+      return { ok: true };
+    },
+    [state.shiftAssignments, state.shifts, state.people, state.leaveRequests],
+  );
+
+  const getAvailableShiftsForPerson = useCallback(
+    (personId: string, teamId: string): Shift[] => {
+      const assignedShiftIds = new Set(
+        state.shiftAssignments
+          .filter(
+            (a) =>
+              a.personId === personId &&
+              a.status !== "cancelled",
+          )
+          .map((a) => a.shiftId),
+      );
+      return state.shifts.filter(
+        (s) => s.teamId === teamId && !assignedShiftIds.has(s.id),
+      );
+    },
+    [state.shifts, state.shiftAssignments],
+  );
 
   const bulkAssign = useCallback(
     (input: BulkAssignInput): BulkAssignResult => {
@@ -1557,6 +1734,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           id: nextId("assignment"),
           shiftId: shift.id,
           personId: input.personId,
+          status: "approved",
+          requestedAt: new Date().toISOString(),
+          approvedAt: new Date().toISOString(),
           createdAt: new Date().toISOString(),
         };
         dispatch({ type: "addAssignment", assignment });
@@ -1603,6 +1783,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       assignPerson,
       removeAssignment,
       bulkAssign,
+      requestShift,
+      cancelSelfAssignment,
+      getAvailableShiftsForPerson,
     }),
     [
       state,
@@ -1639,6 +1822,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       assignPerson,
       removeAssignment,
       bulkAssign,
+      requestShift,
+      cancelSelfAssignment,
+      getAvailableShiftsForPerson,
     ],
   );
 

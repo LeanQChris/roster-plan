@@ -10,12 +10,16 @@ import {
   CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  TrashIcon,
+  PlusIcon,
+  SearchIcon,
   UsersIcon,
 } from "@/components/ui/icons";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
 function getMonday(d: Date): Date {
   const date = new Date(d);
@@ -32,9 +36,9 @@ function formatDateRange(start: Date): string {
   const startMonth = MONTH_NAMES[start.getMonth()];
   const endMonth = MONTH_NAMES[end.getMonth()];
   if (startMonth === endMonth) {
-    return startMonth + " " + start.getDate() + " \u2013 " + end.getDate() + ", " + start.getFullYear();
+    return `${startMonth} ${start.getDate()} – ${end.getDate()}, ${start.getFullYear()}`;
   }
-  return startMonth + " " + start.getDate() + " \u2013 " + endMonth + " " + end.getDate() + ", " + start.getFullYear();
+  return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${start.getFullYear()}`;
 }
 
 function formatDuration(minutes: number): string {
@@ -64,23 +68,28 @@ function dateKey(d: Date): string {
   return localDateStr(d);
 }
 
-export default function EmployeeSchedulePage() {
+export default function AvailableShiftsPage() {
   const { user } = useAuth();
   const {
     people,
     shifts,
     shiftAssignments,
     teams,
-    cancelSelfAssignment,
+    requestShift,
+    getAvailableShiftsForPerson,
   } = useCompany();
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
-  const [cancelConfirm, setCancelConfirm] = useState<Shift | null>(null);
+  const [requestSuccess, setRequestSuccess] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const myPerson = useMemo(
     () =>
       people.find(
-        (p) => p.role === "employee" && p.email.toLowerCase() === user?.email.toLowerCase(),
+        (p) =>
+          p.role === "employee" &&
+          p.email.toLowerCase() === user?.email.toLowerCase(),
       ) ?? null,
     [people, user?.email],
   );
@@ -95,31 +104,24 @@ export default function EmployeeSchedulePage() {
   const weekEndStr = localDateStr(weekEnd);
   const today = localDateStr(new Date());
 
-  const myAssignmentShiftIds = useMemo(() => {
-    if (!myPerson) return new Set<string>();
-    const ids = new Set<string>();
-    for (const a of shiftAssignments) {
-      if (a.personId === myPerson.id && a.status !== "cancelled") ids.add(a.shiftId);
-    }
-    return ids;
-  }, [shiftAssignments, myPerson]);
+  const availableShifts = useMemo(() => {
+    if (!myPerson || !myPerson.teamId) return [];
+    const allAvailable = getAvailableShiftsForPerson(myPerson.id, myPerson.teamId);
+    return allAvailable.filter(
+      (s) => s.date >= weekStartStr && s.date <= weekEndStr,
+    );
+  }, [myPerson, getAvailableShiftsForPerson, weekStartStr, weekEndStr]);
 
-  const myAssignmentMap = useMemo(() => {
-    if (!myPerson) return new Map<string, (typeof shiftAssignments)[0]>();
-    const map = new Map<string, (typeof shiftAssignments)[0]>();
-    for (const a of shiftAssignments) {
-      if (a.personId === myPerson.id && a.status !== "cancelled") {
-        map.set(a.shiftId, a);
-      }
-    }
-    return map;
-  }, [shiftAssignments, myPerson]);
-
-  const myShifts = useMemo(() => {
-    return shifts
-      .filter((s) => myAssignmentShiftIds.has(s.id) && s.date >= weekStartStr && s.date <= weekEndStr)
-      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
-  }, [shifts, myAssignmentShiftIds, weekStartStr, weekEndStr]);
+  const filteredShifts = useMemo(() => {
+    if (!searchQuery.trim()) return availableShifts;
+    const q = searchQuery.toLowerCase();
+    return availableShifts.filter(
+      (s) =>
+        s.title.toLowerCase().includes(q) ||
+        s.date.includes(q) ||
+        s.startTime.includes(q),
+    );
+  }, [availableShifts, searchQuery]);
 
   const teamMap = useMemo(() => {
     const map = new Map<string, (typeof teams)[0]>();
@@ -143,11 +145,28 @@ export default function EmployeeSchedulePage() {
 
   const days = getWeekDays(weekStart);
   const shiftsByDate = new Map<string, Shift[]>();
-  for (const s of myShifts) {
+  for (const s of filteredShifts) {
     const list = shiftsByDate.get(s.date) ?? [];
     list.push(s);
     shiftsByDate.set(s.date, list);
   }
+
+  const handleRequestShift = () => {
+    if (!selectedShift || !myPerson) return;
+    setRequestError(null);
+    setRequestSuccess(false);
+
+    const result = requestShift(selectedShift.id, myPerson.id);
+    if (result.ok) {
+      setRequestSuccess(true);
+      setTimeout(() => {
+        setSelectedShift(null);
+        setRequestSuccess(false);
+      }, 1500);
+    } else {
+      setRequestError(result.error ?? "Failed to request shift.");
+    }
+  };
 
   const selectedTeam = selectedShift ? teamMap.get(selectedShift.teamId) : null;
 
@@ -159,10 +178,12 @@ export default function EmployeeSchedulePage() {
         </span>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink">
-            My Schedule
+            Available Shifts
           </h1>
           <p className="mt-0.5 text-xs text-ink-subtle">
-            {myPerson ? myPerson.name : "No linked team member record"}
+            {myPerson
+              ? `Browse and request shifts for ${teams.find((t) => t.id === myPerson.teamId)?.name ?? "your team"}`
+              : "No linked team member record"}
           </p>
         </div>
       </div>
@@ -179,8 +200,25 @@ export default function EmployeeSchedulePage() {
         </div>
       ) : (
         <>
+          {/* Search */}
+          <div className="mt-6 flex items-center gap-3">
+            <div className="relative flex-1 max-w-xs">
+              <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
+              <input
+                type="text"
+                placeholder="Search shifts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 w-full rounded-lg border border-hairline bg-surface-1 pl-9 pr-3 text-[13px] text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none"
+              />
+            </div>
+            <span className="text-[13px] text-ink-subtle">
+              {filteredShifts.length} shift{filteredShifts.length !== 1 ? "s" : ""} available
+            </span>
+          </div>
+
           {/* Week navigation */}
-          <div className="mt-6 flex items-center gap-2">
+          <div className="mt-4 flex items-center gap-2">
             <button
               type="button"
               onClick={goPrev}
@@ -222,10 +260,14 @@ export default function EmployeeSchedulePage() {
                           key={i}
                           className={`px-3 py-2.5 text-center ${isToday ? "bg-primary-weak" : ""}`}
                         >
-                          <p className={`text-[11px] font-medium uppercase tracking-wide ${isToday ? "text-primary" : "text-ink-subtle"}`}>
+                          <p
+                            className={`text-[11px] font-medium uppercase tracking-wide ${isToday ? "text-primary" : "text-ink-subtle"}`}
+                          >
                             {DAY_NAMES[day.getDay()]}
                           </p>
-                          <span className={`mt-0.5 flex size-6 items-center justify-center rounded-full text-[15px] font-semibold ${isToday ? "bg-primary text-white" : "text-ink"}`}>
+                          <span
+                            className={`mt-0.5 flex size-6 items-center justify-center rounded-full text-[15px] font-semibold ${isToday ? "bg-primary text-white" : "text-ink"}`}
+                          >
                             {day.getDate()}
                           </span>
                         </th>
@@ -249,24 +291,24 @@ export default function EmployeeSchedulePage() {
                         <td colSpan={6} className="px-2 py-1.5">
                           {dayShifts.length === 0 ? (
                             <p className="py-2 text-center text-[11px] text-ink-faint">
-                              No shifts
+                              No available shifts
                             </p>
                           ) : (
                             <div className="space-y-1.5 py-1">
                               {dayShifts.map((shift) => {
                                 const team = teamMap.get(shift.teamId);
-                                const assignment = myAssignmentMap.get(shift.id);
-                                const isSelfAssigned = assignment?.approvedBy === myPerson?.id;
                                 return (
-                                  <div
+                                  <button
                                     key={shift.id}
-                                    className="flex w-full items-center justify-between gap-2 rounded-lg border border-hairline bg-surface-1 px-3 py-2.5"
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedShift(shift);
+                                      setRequestError(null);
+                                      setRequestSuccess(false);
+                                    }}
+                                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-hairline bg-surface-1 px-3 py-2.5 text-left transition-colors hover:bg-surface-3"
                                   >
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedShift(shift)}
-                                      className="min-w-0 flex-1 text-left"
-                                    >
+                                    <div className="min-w-0 flex-1">
                                       <div className="flex items-center gap-2">
                                         <p className="truncate text-[13px] font-medium text-ink">
                                           {shift.title}
@@ -276,29 +318,16 @@ export default function EmployeeSchedulePage() {
                                             {team.name}
                                           </span>
                                         )}
-                                        {isSelfAssigned && (
-                                          <span className="shrink-0 rounded bg-success-weak px-1.5 py-px text-[10px] font-medium text-success">
-                                            Self-assigned
-                                          </span>
-                                        )}
                                       </div>
                                       <p className="mt-0.5 text-[11px] text-ink-subtle">
-                                        {shift.startTime} – {getEndTime(shift.startTime, shift.durationMinutes)}
+                                        {shift.startTime} –{" "}
+                                        {getEndTime(shift.startTime, shift.durationMinutes)}
                                         {" · "}
                                         {formatDuration(shift.durationMinutes)}
                                       </p>
-                                    </button>
-                                    {isSelfAssigned && (
-                                      <button
-                                        type="button"
-                                        onClick={() => setCancelConfirm(shift)}
-                                        className="shrink-0 rounded p-1.5 text-ink-subtle transition-colors hover:bg-danger-weak hover:text-danger"
-                                        title="Cancel self-assigned shift"
-                                      >
-                                        <TrashIcon className="size-3.5" />
-                                      </button>
-                                    )}
-                                  </div>
+                                    </div>
+                                    <PlusIcon className="size-4 shrink-0 text-ink-subtle" />
+                                  </button>
                                 );
                               })}
                             </div>
@@ -312,84 +341,94 @@ export default function EmployeeSchedulePage() {
             </div>
           </div>
 
-          {myShifts.length === 0 && (
+          {filteredShifts.length === 0 && (
             <div className="mt-8 rounded-xl border border-hairline bg-surface-2 p-10 text-center">
               <CalendarIcon className="mx-auto size-11 text-ink-faint" />
-              <h2 className="mt-3 text-[15px] font-semibold text-ink">No shifts this week</h2>
+              <h2 className="mt-3 text-[15px] font-semibold text-ink">
+                {searchQuery ? "No shifts match your search" : "No available shifts this week"}
+              </h2>
               <p className="mx-auto mt-1 max-w-sm text-xs text-ink-muted">
-                You don&apos;t have any shifts assigned for this week. Check back later or contact your manager.
+                {searchQuery
+                  ? "Try a different search term or clear the search."
+                  : "There are no unassigned shifts for your team this week. Check back later or contact your manager."}
               </p>
             </div>
           )}
         </>
       )}
 
+      {/* Request shift confirmation modal */}
       <Modal
         open={!!selectedShift}
-        title="Shift details"
-        confirmLabel="Close"
-        hideFooter
-        onConfirm={() => setSelectedShift(null)}
-        onClose={() => setSelectedShift(null)}
+        title={requestSuccess ? "Shift requested!" : "Request this shift?"}
+        confirmLabel={requestSuccess ? "Done" : "Request shift"}
+        onConfirm={handleRequestShift}
+        onClose={() => {
+          setSelectedShift(null);
+          setRequestError(null);
+          setRequestSuccess(false);
+        }}
       >
         {selectedShift && (
           <div className="mt-4 space-y-3">
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Title</p>
-              <p className="mt-0.5 text-[13px] text-ink">{selectedShift.title}</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Date</p>
-              <p className="mt-0.5 text-[13px] text-ink">{selectedShift.date}</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Time</p>
-              <p className="mt-0.5 text-[13px] text-ink">
-                {selectedShift.startTime} – {getEndTime(selectedShift.startTime, selectedShift.durationMinutes)}
-                {" · "}
-                {formatDuration(selectedShift.durationMinutes)}
+            {requestSuccess ? (
+              <p className="text-[13px] text-success">
+                You&apos;ve been assigned to this shift!
               </p>
-            </div>
-            {selectedTeam && (
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Team</p>
-                <p className="mt-0.5 text-[13px] text-ink">{selectedTeam.name}</p>
-              </div>
+            ) : (
+              <>
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
+                    Title
+                  </p>
+                  <p className="mt-0.5 text-[13px] text-ink">{selectedShift.title}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
+                    Date
+                  </p>
+                  <p className="mt-0.5 text-[13px] text-ink">{selectedShift.date}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
+                    Time
+                  </p>
+                  <p className="mt-0.5 text-[13px] text-ink">
+                    {selectedShift.startTime} –{" "}
+                    {getEndTime(selectedShift.startTime, selectedShift.durationMinutes)}
+                    {" · "}
+                    {formatDuration(selectedShift.durationMinutes)}
+                  </p>
+                </div>
+                {selectedTeam && (
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
+                      Team
+                    </p>
+                    <p className="mt-0.5 text-[13px] text-ink">{selectedTeam.name}</p>
+                  </div>
+                )}
+                {selectedShift.description && (
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
+                      Notes
+                    </p>
+                    <p className="mt-0.5 text-[13px] text-ink">
+                      {selectedShift.description}
+                    </p>
+                  </div>
+                )}
+                {requestError && (
+                  <p className="text-[13px] text-danger">{requestError}</p>
+                )}
+                <p className="text-[11px] text-ink-subtle">
+                  Click &quot;Request shift&quot; to add this shift to your schedule.
+                </p>
+              </>
             )}
-            {selectedShift.description && (
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Notes</p>
-                <p className="mt-0.5 text-[13px] text-ink">{selectedShift.description}</p>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setSelectedShift(null)}
-              className="mt-2 h-8 w-full rounded-lg border border-hairline bg-surface-3 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4"
-            >
-              Close
-            </button>
           </div>
         )}
       </Modal>
-
-      <Modal
-        open={!!cancelConfirm}
-        title="Cancel self-assigned shift?"
-        description="Are you sure you want to cancel this self-assigned shift? This action cannot be undone."
-        confirmLabel="Cancel shift"
-        tone="danger"
-        onConfirm={() => {
-          if (cancelConfirm) {
-            const assignment = myAssignmentMap.get(cancelConfirm.id);
-            if (assignment) {
-              cancelSelfAssignment(assignment.id);
-            }
-          }
-          setCancelConfirm(null);
-        }}
-        onClose={() => setCancelConfirm(null)}
-      />
     </div>
   );
 }

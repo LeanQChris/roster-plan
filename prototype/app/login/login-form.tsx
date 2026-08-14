@@ -6,10 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   DEMO_EMAIL,
-  DEMO_EMPLOYEE_EMAIL,
-  DEMO_EMPLOYEE_PASSWORD,
-  DEMO_MANAGER_EMAIL,
-  DEMO_MANAGER_PASSWORD,
   DEMO_PASSWORD,
   homeForRole,
   useAuth,
@@ -51,18 +47,6 @@ export default function LoginForm() {
   const fillDemo = () => {
     setEmail(DEMO_EMAIL);
     setPassword(DEMO_PASSWORD);
-    setError(null);
-  };
-
-  const fillManagerDemo = () => {
-    setEmail(DEMO_MANAGER_EMAIL);
-    setPassword(DEMO_MANAGER_PASSWORD);
-    setError(null);
-  };
-
-  const fillEmployeeDemo = () => {
-    setEmail(DEMO_EMPLOYEE_EMAIL);
-    setPassword(DEMO_EMPLOYEE_PASSWORD);
     setError(null);
   };
 
@@ -172,36 +156,6 @@ export default function LoginForm() {
           </p>
           <button
             onClick={fillDemo}
-            className="shrink-0 text-xs font-medium text-primary transition-colors hover:text-primary-hover"
-          >
-            Fill in
-          </button>
-        </div>
-
-        <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-hairline bg-surface-2 px-3.5 py-2.5">
-          <p className="text-xs text-ink-subtle">
-            Demo manager account
-            <span className="ml-1 font-mono text-[11px] text-ink-muted">
-              {DEMO_MANAGER_EMAIL} / {DEMO_MANAGER_PASSWORD}
-            </span>
-          </p>
-          <button
-            onClick={fillManagerDemo}
-            className="shrink-0 text-xs font-medium text-primary transition-colors hover:text-primary-hover"
-          >
-            Fill in
-          </button>
-        </div>
-
-        <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-hairline bg-surface-2 px-3.5 py-2.5">
-          <p className="text-xs text-ink-subtle">
-            Demo employee account
-            <span className="ml-1 font-mono text-[11px] text-ink-muted">
-              {DEMO_EMPLOYEE_EMAIL} / {DEMO_EMPLOYEE_PASSWORD}
-            </span>
-          </p>
-          <button
-            onClick={fillEmployeeDemo}
             className="shrink-0 text-xs font-medium text-primary transition-colors hover:text-primary-hover"
           >
             Fill in
