@@ -8,6 +8,7 @@ import { formatDateTime, initials, localDateStr } from "@/lib/format";
 import { ClockIcon, SearchIcon, UsersIcon } from "@/components/ui/icons";
 import BreakTypeBadge from "@/components/breaks/BreakTypeBadge";
 import ComplianceViolationBadge from "@/components/breaks/ComplianceViolationBadge";
+import { useTeamDetail } from "../team-detail-context";
 
 const inputClass =
   "h-9 rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none";
@@ -22,9 +23,10 @@ function daysAgoStr(days: number): string {
   return localDateStr(d);
 }
 
-function TimeTrackingContent() {
+function ManagerTeamTimeTrackingContent() {
   const searchParams = useSearchParams();
-  const { people, teams, clockEntries, breakEntries, complianceViolations } = useCompany();
+  const { teamPeople } = useTeamDetail();
+  const { clockEntries, breakEntries, complianceViolations } = useCompany();
 
   const [personId, setPersonId] = useState<string>(searchParams.get("person") ?? "");
   const [query, setQuery] = useState("");
@@ -32,21 +34,15 @@ function TimeTrackingContent() {
   const [rangeEnd, setRangeEnd] = useState(() => todayStr());
   const [loaded, setLoaded] = useState(false);
 
-  const teamMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const t of teams) map.set(t.id, t.name);
-    return map;
-  }, [teams]);
-
   const filteredPeople = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return people;
-    return people.filter(
+    if (!q) return teamPeople;
+    return teamPeople.filter(
       (p) => p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q),
     );
-  }, [people, query]);
+  }, [teamPeople, query]);
 
-  const selectedPerson = people.find((p) => p.id === personId) ?? null;
+  const selectedPerson = teamPeople.find((p) => p.id === personId) ?? null;
 
   const breaksByClockEntry = useMemo(() => {
     const map = new Map<string, BreakEntry[]>();
@@ -91,7 +87,7 @@ function TimeTrackingContent() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-ink">Time Tracking</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Open an employee, choose a date range, and load their clock entries.
+          Open a team member, choose a date range, and load their clock entries.
         </p>
       </div>
 
@@ -131,11 +127,7 @@ function TimeTrackingContent() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-medium">{p.name}</p>
-                  <p className="truncate text-[11px] text-ink-subtle">
-                    {p.teamIds.length > 0
-                      ? p.teamIds.map((id) => teamMap.get(id) ?? "—").join(", ")
-                      : "Unassigned"}
-                  </p>
+                  <p className="truncate text-[11px] text-ink-subtle">{p.email}</p>
                 </div>
               </button>
             ))}
@@ -146,7 +138,7 @@ function TimeTrackingContent() {
           {!selectedPerson ? (
             <div className="rounded-xl border border-hairline bg-surface-2 px-4 py-16 text-center">
               <UsersIcon className="mx-auto size-8 text-ink-faint" />
-              <p className="mt-3 text-[13px] font-medium text-ink">Select an employee</p>
+              <p className="mt-3 text-[13px] font-medium text-ink">Select a team member</p>
               <p className="mt-1 text-xs text-ink-muted">
                 Choose someone from the list to view their clock entries.
               </p>
@@ -266,10 +258,10 @@ function TimeTrackingContent() {
   );
 }
 
-export default function TimeTrackingPage() {
+export default function ManagerTeamTimeTrackingPage() {
   return (
     <Suspense fallback={null}>
-      <TimeTrackingContent />
+      <ManagerTeamTimeTrackingContent />
     </Suspense>
   );
 }

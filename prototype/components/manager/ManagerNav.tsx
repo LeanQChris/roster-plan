@@ -39,6 +39,7 @@ export default function ManagerNav() {
         { href: `/manager/teams/${selectedTeam.id}`, label: "Members", icon: UsersIcon },
         { href: `/manager/teams/${selectedTeam.id}/templates`, label: "Templates", icon: ClockIcon },
         { href: `/manager/teams/${selectedTeam.id}/schedule`, label: "Schedule", icon: CalendarIcon },
+        { href: `/manager/teams/${selectedTeam.id}/time-tracking`, label: "Time Tracking", icon: ClockIcon },
         { href: `/manager/teams/${selectedTeam.id}/shift-requests`, label: "Shift Requests", icon: BellIcon },
         { href: `/manager/teams/${selectedTeam.id}/leave-requests`, label: "Leave Requests", icon: CalendarOffIcon },
         { href: `/manager/teams/${selectedTeam.id}/audit`, label: "Audit", icon: ActivityIcon },

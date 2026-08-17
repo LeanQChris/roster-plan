@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCompany } from "@/lib/company-data";
+import type { BreakType } from "@/lib/company-data";
 import { formatDateTime, localDateStr } from "@/lib/format";
 import { AlertTriangleIcon, ClockIcon, UsersIcon } from "@/components/ui/icons";
+import BreakTypeBadge from "@/components/breaks/BreakTypeBadge";
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -21,12 +23,14 @@ interface CompletedEntry {
 
 export default function EmployeeClockPage() {
   const { user } = useAuth();
-  const { people, shifts, shiftAssignments, clockEntries, addClockEntry } = useCompany();
+  const { people, shifts, shiftAssignments, clockEntries, addClockEntry, breakEntries, startBreak, endBreak } =
+    useCompany();
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [showNote, setShowNote] = useState(false);
   const [completed, setCompleted] = useState<CompletedEntry | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [breakError, setBreakError] = useState<string | null>(null);
 
   const myPerson = useMemo(
     () =>
@@ -62,6 +66,18 @@ export default function EmployeeClockPage() {
     return shifts.some((s) => myShiftIds.has(s.id) && s.date === today);
   }, [shifts, shiftAssignments, myPerson, today]);
 
+  const sessionBreaks = useMemo(() => {
+    if (!latestEntry || latestEntry.action !== "in") return [];
+    return breakEntries
+      .filter((b) => b.clockEntryId === latestEntry.id)
+      .sort((a, b) => b.breakInAt.localeCompare(a.breakInAt));
+  }, [breakEntries, latestEntry]);
+
+  const activeBreak = useMemo(
+    () => sessionBreaks.find((b) => !b.breakOutAt) ?? null,
+    [sessionBreaks],
+  );
+
   const handleClockIn = () => {
     if (!myPerson) return;
     setError(null);
@@ -80,6 +96,20 @@ export default function EmployeeClockPage() {
     setCompleted({ durationMs, note: note || undefined });
     setNote("");
     setShowNote(false);
+  };
+
+  const handleStartBreak = (type: BreakType) => {
+    if (!myPerson) return;
+    setBreakError(null);
+    const result = startBreak(myPerson.id, type);
+    if (!result.ok) setBreakError(result.error ?? "Could not start break.");
+  };
+
+  const handleEndBreak = () => {
+    if (!activeBreak) return;
+    setBreakError(null);
+    const result = endBreak(activeBreak.id);
+    if (!result.ok) setBreakError(result.error ?? "Could not end break.");
   };
 
   if (!myPerson) {
@@ -140,6 +170,67 @@ export default function EmployeeClockPage() {
             <p className="mt-1 text-xs text-ink-muted">
               Clocked in at {latestEntry && formatDateTime(latestEntry.at)}
             </p>
+
+            <div className="mx-auto mt-5 max-w-sm rounded-lg border border-hairline bg-surface-3 p-4 text-left">
+              {activeBreak ? (
+                <>
+                  <p className="text-xs font-medium uppercase tracking-[0.12em] text-ink-subtle">
+                    On {activeBreak.type} break
+                  </p>
+                  <p className="mt-1.5 font-mono text-xl font-semibold text-ink">
+                    {formatElapsed(now - new Date(activeBreak.breakInAt).getTime())}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleEndBreak}
+                    className="mt-3 h-8 w-full rounded-lg border border-hairline bg-surface-2 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4"
+                  >
+                    End break
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-medium uppercase tracking-[0.12em] text-ink-subtle">
+                    Breaks
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleStartBreak("meal")}
+                      className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4"
+                    >
+                      Start meal break
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStartBreak("rest")}
+                      className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4"
+                    >
+                      Start rest break
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {breakError && (
+                <p className="mt-2 text-xs font-medium text-danger">{breakError}</p>
+              )}
+
+              {sessionBreaks.length > 0 && (
+                <ul className="mt-3 space-y-1.5 border-t border-hairline pt-3">
+                  {sessionBreaks.map((b) => (
+                    <li key={b.id} className="flex items-center justify-between gap-2 text-xs">
+                      <BreakTypeBadge type={b.type} />
+                      <span className="text-ink-subtle">
+                        {b.durationMinutes !== undefined
+                          ? `${b.durationMinutes}m`
+                          : "in progress"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             {showNote ? (
               <div className="mx-auto mt-5 max-w-sm text-left">

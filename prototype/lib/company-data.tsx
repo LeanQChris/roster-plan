@@ -72,6 +72,38 @@ export interface ClockEntry {
   note?: string;
 }
 
+export type BreakType = "meal" | "rest";
+
+export interface BreakEntry {
+  id: string;
+  clockEntryId: string; // id of the "in" ClockEntry that started this session
+  personId: string;
+  type: BreakType;
+  breakInAt: string;
+  breakOutAt?: string;
+  durationMinutes?: number;
+  createdAt: string;
+}
+
+export type ComplianceViolationType =
+  | "meal_break_missing"
+  | "meal_break_too_short"
+  | "rest_break_missing"
+  | "rest_break_too_short";
+export type ComplianceViolationSeverity = "warning" | "critical";
+export type ComplianceViolationStatus = "open" | "acknowledged" | "resolved" | "dismissed";
+
+export interface ComplianceViolation {
+  id: string;
+  personId: string;
+  clockEntryId: string;
+  type: ComplianceViolationType;
+  severity: ComplianceViolationSeverity;
+  description: string;
+  detectedAt: string;
+  status: ComplianceViolationStatus;
+}
+
 export type LeaveType = "vacation" | "sick" | "personal" | "bereavement" | "other";
 export type LeaveStatus = "pending" | "approved" | "denied" | "cancelled";
 
@@ -169,6 +201,8 @@ interface CompanyState {
   locations: Location[];
   activity: ActivityEntry[];
   clockEntries: ClockEntry[];
+  breakEntries: BreakEntry[];
+  complianceViolations: ComplianceViolation[];
   leaveRequests: LeaveRequest[];
   shiftTemplates: ShiftTemplate[];
   shifts: Shift[];
@@ -188,6 +222,9 @@ type CompanyAction =
   | { type: "updateLocation"; id: string; patch: Partial<Location> }
   | { type: "deleteLocation"; id: string }
   | { type: "addClockEntry"; entry: ClockEntry }
+  | { type: "addBreakEntry"; entry: BreakEntry }
+  | { type: "endBreakEntry"; id: string; breakOutAt: string; durationMinutes: number }
+  | { type: "addComplianceViolation"; violation: ComplianceViolation }
   | { type: "markActivityRead"; id: string }
   | { type: "markAllActivityRead"; personId: string }
   | { type: "addLeaveRequest"; request: LeaveRequest }
@@ -236,11 +273,18 @@ const PEOPLE_KEY = "roster.people";
 const LOCATIONS_KEY = "roster.locations";
 const ACTIVITY_KEY = "roster.activity";
 const CLOCK_KEY = "roster.clock";
+const BREAKS_KEY = "roster.breakEntries";
+const VIOLATIONS_KEY = "roster.complianceViolations";
 const LEAVE_KEY = "roster.leaveRequests";
 const TEMPLATES_KEY = "roster.shiftTemplates";
 const SHIFTS_KEY = "roster.shifts";
 const ASSIGNMENTS_KEY = "roster.shiftAssignments";
 const AUDIT_KEY = "roster.auditLog";
+
+const MEAL_BREAK_TRIGGER_MINUTES = 5 * 60;
+const MEAL_BREAK_MIN_MINUTES = 30;
+const REST_BREAK_TRIGGER_MINUTES = 4 * 60;
+const REST_BREAK_MIN_MINUTES = 10;
 
 let seq = 0;
 export const nextId = (prefix: string) =>
@@ -289,6 +333,64 @@ function hasApprovedLeaveOn(
   );
 }
 
+function minutesBetween(a: string, b: string): number {
+  return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000);
+}
+
+function inferBreakType(sessionMinutes: number, existingTypes: BreakType[]): BreakType {
+  if (sessionMinutes >= MEAL_BREAK_TRIGGER_MINUTES && !existingTypes.includes("meal")) {
+    return "meal";
+  }
+  return "rest";
+}
+
+function evaluateBreakCompliance(
+  sessionMinutes: number,
+  breaks: BreakEntry[],
+): { type: ComplianceViolationType; severity: ComplianceViolationSeverity; description: string }[] {
+  const violations: {
+    type: ComplianceViolationType;
+    severity: ComplianceViolationSeverity;
+    description: string;
+  }[] = [];
+
+  if (sessionMinutes >= MEAL_BREAK_TRIGGER_MINUTES) {
+    const mealBreaks = breaks.filter((b) => b.type === "meal" && b.durationMinutes !== undefined);
+    if (mealBreaks.length === 0) {
+      violations.push({
+        type: "meal_break_missing",
+        severity: "critical",
+        description: `No meal break taken during a ${Math.round(sessionMinutes / 60)}h+ shift.`,
+      });
+    } else if (!mealBreaks.some((b) => (b.durationMinutes ?? 0) >= MEAL_BREAK_MIN_MINUTES)) {
+      violations.push({
+        type: "meal_break_too_short",
+        severity: "warning",
+        description: `Meal break(s) taken but none reached the ${MEAL_BREAK_MIN_MINUTES}-minute minimum.`,
+      });
+    }
+  }
+
+  if (sessionMinutes >= REST_BREAK_TRIGGER_MINUTES) {
+    const restBreaks = breaks.filter((b) => b.type === "rest" && b.durationMinutes !== undefined);
+    if (restBreaks.length === 0) {
+      violations.push({
+        type: "rest_break_missing",
+        severity: "critical",
+        description: `No rest break taken during a ${Math.round(sessionMinutes / 60)}h+ shift.`,
+      });
+    } else if (!restBreaks.some((b) => (b.durationMinutes ?? 0) >= REST_BREAK_MIN_MINUTES)) {
+      violations.push({
+        type: "rest_break_too_short",
+        severity: "warning",
+        description: `Rest break(s) taken but none reached the ${REST_BREAK_MIN_MINUTES}-minute minimum.`,
+      });
+    }
+  }
+
+  return violations;
+}
+
 function readStored<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
@@ -323,6 +425,8 @@ function initState(): CompanyState {
   const locations = readStored<Location[]>(LOCATIONS_KEY, []);
   const activity = readStored<ActivityEntry[]>(ACTIVITY_KEY, []);
   const clockEntries = readStored<ClockEntry[]>(CLOCK_KEY, []);
+  const breakEntries = readStored<BreakEntry[]>(BREAKS_KEY, []);
+  const complianceViolations = readStored<ComplianceViolation[]>(VIOLATIONS_KEY, []);
   const leaveRequests = readStored<LeaveRequest[]>(LEAVE_KEY, []);
   const shiftTemplates = readStored<ShiftTemplate[]>(TEMPLATES_KEY, []);
   const shifts = readStored<Shift[]>(SHIFTS_KEY, []);
@@ -350,6 +454,8 @@ function initState(): CompanyState {
     locations,
     activity,
     clockEntries,
+    breakEntries,
+    complianceViolations,
     leaveRequests,
     shiftTemplates,
     shifts,
@@ -456,6 +562,12 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
         clockEntries: state.clockEntries.filter(
           (c) => c.personId !== action.id,
         ),
+        breakEntries: state.breakEntries.filter(
+          (b) => b.personId !== action.id,
+        ),
+        complianceViolations: state.complianceViolations.filter(
+          (v) => v.personId !== action.id,
+        ),
         leaveRequests: state.leaveRequests.filter(
           (l) => l.personId !== action.id,
         ),
@@ -486,6 +598,26 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
       };
     case "addClockEntry":
       return { ...state, clockEntries: [action.entry, ...state.clockEntries] };
+    case "addBreakEntry":
+      return { ...state, breakEntries: [action.entry, ...state.breakEntries] };
+    case "endBreakEntry":
+      return {
+        ...state,
+        breakEntries: state.breakEntries.map((b) =>
+          b.id === action.id
+            ? {
+                ...b,
+                breakOutAt: action.breakOutAt,
+                durationMinutes: action.durationMinutes,
+              }
+            : b,
+        ),
+      };
+    case "addComplianceViolation":
+      return {
+        ...state,
+        complianceViolations: [action.violation, ...state.complianceViolations],
+      };
     case "addLeaveRequest":
       return { ...state, leaveRequests: [action.request, ...state.leaveRequests] };
     case "updateLeaveRequest":
@@ -692,6 +824,14 @@ interface CompanyContextValue extends CompanyState {
   updateLocation: (id: string, patch: Partial<Location>) => boolean;
   deleteLocation: (id: string) => void;
   addClockEntry: (personId: string, action: ClockAction, note?: string) => void;
+  startBreak: (
+    personId: string,
+    type?: BreakType,
+  ) => { ok: boolean; error?: string; entry?: BreakEntry };
+  endBreak: (breakId: string) => { ok: boolean; error?: string };
+  getActiveBreakForPerson: (personId: string) => BreakEntry | null;
+  getBreaksForClockEntry: (clockEntryId: string) => BreakEntry[];
+  getViolationsForClockEntry: (clockEntryId: string) => ComplianceViolation[];
   requestLeave: (
     personId: string,
     input: {
@@ -795,6 +935,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     writeStored(CLOCK_KEY, state.clockEntries);
   }, [state.clockEntries]);
+
+  useEffect(() => {
+    writeStored(BREAKS_KEY, state.breakEntries);
+  }, [state.breakEntries]);
+
+  useEffect(() => {
+    writeStored(VIOLATIONS_KEY, state.complianceViolations);
+  }, [state.complianceViolations]);
 
   useEffect(() => {
     writeStored(LEAVE_KEY, state.leaveRequests);
@@ -951,18 +1099,217 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
   const addClockEntry = useCallback(
     (personId: string, action: ClockAction, note?: string) => {
-      dispatch({
-        type: "addClockEntry",
-        entry: {
-          id: nextId("clock"),
+      const at = new Date().toISOString();
+      const entry: ClockEntry = {
+        id: nextId("clock"),
+        personId,
+        action,
+        at,
+        note: note?.trim() || undefined,
+      };
+      dispatch({ type: "addClockEntry", entry });
+
+      if (action !== "out") return;
+
+      const session = state.clockEntries
+        .filter((c) => c.personId === personId && c.action === "in")
+        .sort((a, b) => b.at.localeCompare(a.at))[0];
+      if (!session) return;
+
+      const person = state.people.find((p) => p.id === personId);
+      let sessionBreaks = state.breakEntries.filter(
+        (b) => b.clockEntryId === session.id,
+      );
+
+      const openBreak = sessionBreaks.find((b) => !b.breakOutAt);
+      if (openBreak) {
+        const durationMinutes = minutesBetween(openBreak.breakInAt, at);
+        dispatch({
+          type: "endBreakEntry",
+          id: openBreak.id,
+          breakOutAt: at,
+          durationMinutes,
+        });
+        dispatch({
+          type: "addAudit",
+          entry: {
+            id: nextId("audit"),
+            timestamp: at,
+            action: "break.auto_closed",
+            tone: "warning",
+            resource: "BreakEntry",
+            resourceId: openBreak.id,
+            teamId: person?.teamIds[0] ?? undefined,
+            message: `${person?.name ?? "Someone"}'s ${openBreak.type} break auto-closed on clock out (${durationMinutes}m)`,
+          },
+        });
+        sessionBreaks = sessionBreaks.map((b) =>
+          b.id === openBreak.id ? { ...b, breakOutAt: at, durationMinutes } : b,
+        );
+      }
+
+      const sessionMinutes = minutesBetween(session.at, at);
+      const violations = evaluateBreakCompliance(sessionMinutes, sessionBreaks);
+      for (const v of violations) {
+        const violation: ComplianceViolation = {
+          id: nextId("violation"),
           personId,
-          action,
-          at: new Date().toISOString(),
-          note: note?.trim() || undefined,
+          clockEntryId: session.id,
+          type: v.type,
+          severity: v.severity,
+          description: v.description,
+          detectedAt: at,
+          status: "open",
+        };
+        dispatch({ type: "addComplianceViolation", violation });
+        dispatch({
+          type: "addActivity",
+          entry: {
+            id: nextId("activity"),
+            personId,
+            action: "notified",
+            message: v.description,
+            timestamp: at,
+            read: false,
+          },
+        });
+        dispatch({
+          type: "addAudit",
+          entry: {
+            id: nextId("audit"),
+            timestamp: at,
+            action: `compliance.${v.type}`,
+            tone: v.severity === "critical" ? "danger" : "warning",
+            resource: "ComplianceViolation",
+            resourceId: violation.id,
+            teamId: person?.teamIds[0] ?? undefined,
+            message: `${person?.name ?? "Someone"}: ${v.description}`,
+          },
+        });
+      }
+    },
+    [state.clockEntries, state.breakEntries, state.people],
+  );
+
+  const startBreak = useCallback(
+    (
+      personId: string,
+      type?: BreakType,
+    ): { ok: boolean; error?: string; entry?: BreakEntry } => {
+      const latestEntry = state.clockEntries
+        .filter((c) => c.personId === personId)
+        .sort((a, b) => b.at.localeCompare(a.at))[0];
+      if (!latestEntry || latestEntry.action !== "in") {
+        return { ok: false, error: "You must be clocked in to start a break." };
+      }
+      const session = latestEntry;
+      const alreadyOnBreak = state.breakEntries.some(
+        (b) => b.clockEntryId === session.id && !b.breakOutAt,
+      );
+      if (alreadyOnBreak) {
+        return { ok: false, error: "You are already on a break." };
+      }
+
+      const now = new Date().toISOString();
+      const sessionMinutes = minutesBetween(session.at, now);
+      const existingTypes = state.breakEntries
+        .filter((b) => b.clockEntryId === session.id)
+        .map((b) => b.type);
+      const resolvedType = type ?? inferBreakType(sessionMinutes, existingTypes);
+
+      const entry: BreakEntry = {
+        id: nextId("break"),
+        clockEntryId: session.id,
+        personId,
+        type: resolvedType,
+        breakInAt: now,
+        createdAt: now,
+      };
+      dispatch({ type: "addBreakEntry", entry });
+
+      const person = state.people.find((p) => p.id === personId);
+      dispatch({
+        type: "addAudit",
+        entry: {
+          id: nextId("audit"),
+          timestamp: now,
+          action: "break.started",
+          tone: "neutral",
+          resource: "BreakEntry",
+          resourceId: entry.id,
+          teamId: person?.teamIds[0] ?? undefined,
+          message: `${person?.name ?? "Someone"} started a ${resolvedType} break`,
         },
       });
+
+      return { ok: true, entry };
     },
-    [],
+    [state.clockEntries, state.breakEntries, state.people],
+  );
+
+  const endBreak = useCallback(
+    (breakId: string): { ok: boolean; error?: string } => {
+      const existing = state.breakEntries.find((b) => b.id === breakId);
+      if (!existing || existing.breakOutAt) {
+        return { ok: false, error: "Break not found or already ended." };
+      }
+      const now = new Date().toISOString();
+      const durationMinutes = minutesBetween(existing.breakInAt, now);
+      dispatch({
+        type: "endBreakEntry",
+        id: breakId,
+        breakOutAt: now,
+        durationMinutes,
+      });
+
+      const person = state.people.find((p) => p.id === existing.personId);
+      const minMinutes =
+        existing.type === "meal" ? MEAL_BREAK_MIN_MINUTES : REST_BREAK_MIN_MINUTES;
+      const tooShort = durationMinutes < minMinutes;
+      dispatch({
+        type: "addAudit",
+        entry: {
+          id: nextId("audit"),
+          timestamp: now,
+          action: "break.ended",
+          tone: tooShort ? "warning" : "neutral",
+          resource: "BreakEntry",
+          resourceId: breakId,
+          teamId: person?.teamIds[0] ?? undefined,
+          message: `${person?.name ?? "Someone"} ended a ${existing.type} break (${durationMinutes}m)${tooShort ? " \u2014 under minimum" : ""}`,
+        },
+      });
+
+      return { ok: true };
+    },
+    [state.breakEntries, state.people],
+  );
+
+  const getActiveBreakForPerson = useCallback(
+    (personId: string): BreakEntry | null => {
+      const session = state.clockEntries
+        .filter((c) => c.personId === personId && c.action === "in")
+        .sort((a, b) => b.at.localeCompare(a.at))[0];
+      if (!session) return null;
+      return (
+        state.breakEntries.find(
+          (b) => b.clockEntryId === session.id && !b.breakOutAt,
+        ) ?? null
+      );
+    },
+    [state.clockEntries, state.breakEntries],
+  );
+
+  const getBreaksForClockEntry = useCallback(
+    (clockEntryId: string): BreakEntry[] =>
+      state.breakEntries.filter((b) => b.clockEntryId === clockEntryId),
+    [state.breakEntries],
+  );
+
+  const getViolationsForClockEntry = useCallback(
+    (clockEntryId: string): ComplianceViolation[] =>
+      state.complianceViolations.filter((v) => v.clockEntryId === clockEntryId),
+    [state.complianceViolations],
   );
 
   const requestLeave = useCallback(
@@ -1826,6 +2173,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       updateLocation,
       deleteLocation,
       addClockEntry,
+      startBreak,
+      endBreak,
+      getActiveBreakForPerson,
+      getBreaksForClockEntry,
+      getViolationsForClockEntry,
       requestLeave,
       updateLeaveRequest,
       cancelLeaveRequest,
@@ -1867,6 +2219,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       updateLocation,
       deleteLocation,
       addClockEntry,
+      startBreak,
+      endBreak,
+      getActiveBreakForPerson,
+      getBreaksForClockEntry,
+      getViolationsForClockEntry,
       requestLeave,
       updateLeaveRequest,
       cancelLeaveRequest,
