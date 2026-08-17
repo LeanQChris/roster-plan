@@ -381,7 +381,7 @@ export default function DashboardPage() {
                       {t.name}
                     </p>
                     <p className="mt-0.5 text-[11px] text-ink-muted">
-                      {people.filter((p) => p.teamId === t.id).length} members
+                      {people.filter((p) => p.teamIds.includes(t.id)).length} members
                     </p>
                   </div>
                   <Link

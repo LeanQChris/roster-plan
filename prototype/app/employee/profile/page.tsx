@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCompany } from "@/lib/company-data";
+import { useEmployeeTeam } from "@/lib/employee-team";
 import { TIMEZONES } from "@/lib/company";
 import { CheckIcon, PencilIcon, UsersIcon } from "@/components/ui/icons";
 
@@ -11,24 +12,12 @@ const inputClass =
 
 export default function EmployeeProfilePage() {
   const { user } = useAuth();
-  const { people, teams, locations, updatePerson } = useCompany();
+  const { locations, updatePerson } = useCompany();
+  const { myPerson, myTeams } = useEmployeeTeam();
   const [editing, setEditing] = useState(false);
   const [timezone, setTimezone] = useState("");
   const [phone, setPhone] = useState("");
   const [saved, setSaved] = useState(false);
-
-  const myPerson = useMemo(
-    () =>
-      people.find(
-        (p) => p.role === "employee" && p.email.toLowerCase() === user?.email.toLowerCase(),
-      ) ?? null,
-    [people, user?.email],
-  );
-
-  const myTeam = useMemo(
-    () => teams.find((t) => t.id === myPerson?.teamId) ?? null,
-    [teams, myPerson?.teamId],
-  );
 
   const myLocation = useMemo(
     () => locations.find((l) => l.id === myPerson?.locationId) ?? null,
@@ -115,8 +104,10 @@ export default function EmployeeProfilePage() {
             <p className="mt-0.5 text-[13px] capitalize text-ink">{myPerson.role}</p>
           </div>
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Team</p>
-            <p className="mt-0.5 text-[13px] text-ink">{myTeam?.name ?? "—"}</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Teams</p>
+            <p className="mt-0.5 text-[13px] text-ink">
+              {myTeams.length > 0 ? myTeams.map((t) => t.name).join(", ") : "—"}
+            </p>
           </div>
           <div>
             <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Location</p>

@@ -64,7 +64,7 @@ export default function TeamDetailPage() {
   );
 
   const members = useMemo(
-    () => people.filter((p) => p.teamId === team?.id),
+    () => people.filter((p) => team && p.teamIds.includes(team.id)),
     [people, team?.id],
   );
 

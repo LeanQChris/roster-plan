@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useCompany } from "@/lib/company-data";
+import { useEmployeeTeam } from "@/lib/employee-team";
 import { localDateStr } from "@/lib/format";
 import RequestLeaveModal from "@/components/leave/RequestLeaveModal";
 import LeaveStatusBadge from "@/components/leave/LeaveStatusBadge";
@@ -63,21 +64,9 @@ function typeLabel(type: string): string {
 
 export default function EmployeeDashboardPage() {
   const { user } = useAuth();
-  const { people, teams, shifts, shiftAssignments, clockEntries, leaveRequests, cancelLeaveRequest } = useCompany();
+  const { shifts, shiftAssignments, clockEntries, leaveRequests, cancelLeaveRequest } = useCompany();
+  const { myPerson, myTeams } = useEmployeeTeam();
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
-
-  const myPerson = useMemo(
-    () =>
-      people.find(
-        (p) => p.role === "employee" && p.email.toLowerCase() === user?.email.toLowerCase(),
-      ) ?? null,
-    [people, user?.email],
-  );
-
-  const myTeam = useMemo(
-    () => teams.find((t) => t.id === myPerson?.teamId) ?? null,
-    [teams, myPerson?.teamId],
-  );
 
   const today = localDateStr(new Date());
 
@@ -150,9 +139,9 @@ export default function EmployeeDashboardPage() {
               <ClockIcon className="size-3.5" />
               {isClockedIn ? "Currently clocked in" : "Not clocked in"}
             </span>
-            {myTeam && (
+            {myTeams.length > 0 && (
               <span className="rounded-lg border border-hairline bg-surface-2 px-3 py-1.5 text-xs text-ink-muted">
-                {myTeam.name}
+                {myTeams.map((t) => t.name).join(", ")}
               </span>
             )}
           </div>

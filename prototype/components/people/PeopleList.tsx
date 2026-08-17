@@ -58,8 +58,9 @@ export default function PeopleList({
 
   const filtered = useMemo(() => {
     let list = people;
-    if (teamFilter === "unassigned") list = list.filter((p) => !p.teamId);
-    else if (teamFilter !== "all") list = list.filter((p) => p.teamId === teamFilter);
+    if (teamFilter === "unassigned") list = list.filter((p) => p.teamIds.length === 0);
+    else if (teamFilter !== "all")
+      list = list.filter((p) => p.teamIds.includes(teamFilter));
 
     const q = search.trim().toLowerCase();
     if (q) {
@@ -174,7 +175,9 @@ export default function PeopleList({
                   </p>
                 </div>
                 <span className="hidden shrink-0 text-xs text-ink-subtle sm:block">
-                  {person.teamId ? teamName.get(person.teamId) ?? "—" : "Unassigned"}
+                  {person.teamIds.length > 0
+                    ? person.teamIds.map((id) => teamName.get(id) ?? "—").join(", ")
+                    : "Unassigned"}
                 </span>
                 {person.locationId && (
                   <span className="hidden shrink-0 items-center gap-1 text-xs text-ink-subtle lg:flex">

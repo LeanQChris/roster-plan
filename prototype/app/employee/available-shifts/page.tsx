@@ -1,14 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useAuth } from "@/lib/auth";
 import { useCompany } from "@/lib/company-data";
 import type { Shift } from "@/lib/company-data";
+import { useEmployeeTeam } from "@/lib/employee-team";
 import { localDateStr } from "@/lib/format";
 import Modal from "@/components/ui/Modal";
 import MonthCalendar from "@/components/schedule/MonthCalendar";
 import {
   CalendarIcon,
+  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   PlusIcon,
@@ -70,7 +71,6 @@ function dateKey(d: Date): string {
 }
 
 export default function AvailableShiftsPage() {
-  const { user } = useAuth();
   const {
     people,
     shifts,
@@ -79,6 +79,7 @@ export default function AvailableShiftsPage() {
     requestShift,
     getAvailableShiftsForPerson,
   } = useCompany();
+  const { myPerson, myTeams, selectedTeam, selectTeam } = useEmployeeTeam();
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
   const [view, setView] = useState<"week" | "month">("week");
   const [monthCursor, setMonthCursor] = useState(() => {
@@ -89,16 +90,6 @@ export default function AvailableShiftsPage() {
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const myPerson = useMemo(
-    () =>
-      people.find(
-        (p) =>
-          p.role === "employee" &&
-          p.email.toLowerCase() === user?.email.toLowerCase(),
-      ) ?? null,
-    [people, user?.email],
-  );
 
   const weekEnd = useMemo(() => {
     const end = new Date(weekStart);
@@ -128,12 +119,12 @@ export default function AvailableShiftsPage() {
   const viewEndStr = localDateStr(viewRange.end);
 
   const availableShifts = useMemo(() => {
-    if (!myPerson || !myPerson.teamId) return [];
-    const allAvailable = getAvailableShiftsForPerson(myPerson.id, myPerson.teamId);
+    if (!myPerson || !selectedTeam) return [];
+    const allAvailable = getAvailableShiftsForPerson(myPerson.id, selectedTeam.id);
     return allAvailable.filter(
       (s) => s.date >= today && s.date >= viewStartStr && s.date <= viewEndStr,
     );
-  }, [myPerson, getAvailableShiftsForPerson, today, viewStartStr, viewEndStr]);
+  }, [myPerson, selectedTeam, getAvailableShiftsForPerson, today, viewStartStr, viewEndStr]);
 
   const filteredShifts = useMemo(() => {
     if (!searchQuery.trim()) return availableShifts;
@@ -210,24 +201,43 @@ export default function AvailableShiftsPage() {
     }
   };
 
-  const selectedTeam = selectedShift ? teamMap.get(selectedShift.teamId) : null;
+  const shiftTeam = selectedShift ? teamMap.get(selectedShift.teamId) : null;
 
   return (
     <div>
-      <div className="flex items-center gap-4">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary-weak text-primary">
-          <CalendarIcon className="size-5" />
-        </span>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">
-            Available Shifts
-          </h1>
-          <p className="mt-0.5 text-xs text-ink-subtle">
-            {myPerson
-              ? `Browse and request shifts for ${teams.find((t) => t.id === myPerson.teamId)?.name ?? "your team"}`
-              : "No linked team member record"}
-          </p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary-weak text-primary">
+            <CalendarIcon className="size-5" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">
+              Available Shifts
+            </h1>
+            <p className="mt-0.5 text-xs text-ink-subtle">
+              {selectedTeam
+                ? `Browse and request shifts for ${selectedTeam.name}`
+                : "No linked team member record"}
+            </p>
+          </div>
         </div>
+        {myTeams.length > 1 && (
+          <div className="relative">
+            <select
+              value={selectedTeam?.id ?? ""}
+              onChange={(e) => selectTeam(e.target.value)}
+              aria-label="Switch team"
+              className="h-9 appearance-none rounded-lg border border-hairline bg-surface-2 pl-3 pr-8 text-[13px] text-ink transition-colors focus:border-primary/60 focus:outline-none"
+            >
+              {myTeams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-subtle" />
+          </div>
+        )}
       </div>
 
       {!myPerson ? (
@@ -479,12 +489,12 @@ export default function AvailableShiftsPage() {
                     {formatDuration(selectedShift.durationMinutes)}
                   </p>
                 </div>
-                {selectedTeam && (
+                {shiftTeam && (
                   <div>
                     <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
                       Team
                     </p>
-                    <p className="mt-0.5 text-[13px] text-ink">{selectedTeam.name}</p>
+                    <p className="mt-0.5 text-[13px] text-ink">{shiftTeam.name}</p>
                   </div>
                 )}
                 {selectedShift.description && (

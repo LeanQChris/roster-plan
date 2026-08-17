@@ -57,7 +57,7 @@ export default function TeamsPage() {
   };
 
   const affected = confirmDelete
-    ? people.filter((p) => p.teamId === confirmDelete.id).length
+    ? people.filter((p) => p.teamIds.includes(confirmDelete.id)).length
     : 0;
 
   return (

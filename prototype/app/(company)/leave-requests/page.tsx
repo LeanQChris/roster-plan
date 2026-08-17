@@ -38,7 +38,7 @@ export default function CompanyLeaveRequestsPage() {
       .filter((l) => {
         if (teamFilter === "all") return true;
         const person = personById.get(l.personId);
-        return person?.teamId === teamFilter;
+        return person?.teamIds.includes(teamFilter) ?? false;
       })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [leaveRequests, statusFilter, teamFilter, personById]);
@@ -116,7 +116,11 @@ export default function CompanyLeaveRequestsPage() {
             <tbody>
               {filtered.map((l) => {
                 const person = personById.get(l.personId);
-                const team = person ? teamById.get(person.teamId ?? "") : null;
+                const personTeams = person
+                  ? person.teamIds
+                      .map((id) => teamById.get(id)?.name)
+                      .filter(Boolean)
+                  : [];
                 return (
                   <tr
                     key={l.id}
@@ -126,7 +130,7 @@ export default function CompanyLeaveRequestsPage() {
                       {person?.name ?? "Unknown"}
                     </td>
                     <td className="px-4 py-3 text-ink-subtle">
-                      {team?.name ?? "—"}
+                      {personTeams.length > 0 ? personTeams.join(", ") : "—"}
                     </td>
                     <td className="px-4 py-3 text-ink-subtle">
                       {typeLabel(l.type)}

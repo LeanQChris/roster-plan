@@ -5,12 +5,12 @@ import { useAuth } from "./auth";
 import { useCompany } from "./company-data";
 import type { Person, Team } from "./company-data";
 
-const MANAGER_TEAM_KEY = "roster.managerSelectedTeam";
+const EMPLOYEE_TEAM_KEY = "roster.employeeSelectedTeam";
 
 function readSelectedTeamId(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return window.localStorage.getItem(MANAGER_TEAM_KEY);
+    return window.localStorage.getItem(EMPLOYEE_TEAM_KEY);
   } catch {
     return null;
   }
@@ -18,14 +18,14 @@ function readSelectedTeamId(): string | null {
 
 function persistSelectedTeamId(id: string | null) {
   try {
-    if (id) window.localStorage.setItem(MANAGER_TEAM_KEY, id);
-    else window.localStorage.removeItem(MANAGER_TEAM_KEY);
+    if (id) window.localStorage.setItem(EMPLOYEE_TEAM_KEY, id);
+    else window.localStorage.removeItem(EMPLOYEE_TEAM_KEY);
   } catch {
     // storage unavailable — selection stays in memory
   }
 }
 
-export function useManager() {
+export function useEmployeeTeam() {
   const { user } = useAuth();
   const { teams, people } = useCompany();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(
@@ -35,28 +35,26 @@ export function useManager() {
   const myPerson = useMemo<Person | null>(
     () =>
       people.find(
-        (p) => p.role === "manager" && p.email.toLowerCase() === user?.email.toLowerCase(),
+        (p) => p.email.toLowerCase() === user?.email.toLowerCase(),
       ) ?? null,
     [people, user?.email],
   );
 
-  const managedTeams = useMemo<Team[]>(
+  const myTeams = useMemo<Team[]>(
     () =>
       myPerson
-        ? teams.filter(
-            (t) => myPerson.teamIds.includes(t.id) || t.managerId === myPerson.id,
-          )
+        ? teams.filter((t) => myPerson.teamIds.includes(t.id))
         : [],
     [teams, myPerson],
   );
 
   const effectiveTeamId = useMemo(() => {
-    if (managedTeams.length === 0) return null;
-    if (selectedTeamId && managedTeams.some((t) => t.id === selectedTeamId)) {
+    if (myTeams.length === 0) return null;
+    if (selectedTeamId && myTeams.some((t) => t.id === selectedTeamId)) {
       return selectedTeamId;
     }
-    return managedTeams[0].id;
-  }, [managedTeams, selectedTeamId]);
+    return myTeams[0].id;
+  }, [myTeams, selectedTeamId]);
 
   useEffect(() => {
     persistSelectedTeamId(effectiveTeamId);
@@ -67,9 +65,9 @@ export function useManager() {
   }, []);
 
   const selectedTeam = useMemo(
-    () => managedTeams.find((t) => t.id === effectiveTeamId) ?? null,
-    [managedTeams, effectiveTeamId],
+    () => myTeams.find((t) => t.id === effectiveTeamId) ?? null,
+    [myTeams, effectiveTeamId],
   );
 
-  return { myPerson, managedTeams, selectedTeam, selectTeam };
+  return { myPerson, myTeams, selectedTeam, selectTeam };
 }

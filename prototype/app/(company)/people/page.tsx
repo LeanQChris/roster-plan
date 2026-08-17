@@ -41,7 +41,7 @@ export default function PeoplePage() {
         name: input.name,
         phone: input.phone,
         role: input.role,
-        teamId: input.teamId,
+        teamIds: input.teamIds,
         locationId: input.locationId,
         timezone: input.timezone,
       });
@@ -51,7 +51,7 @@ export default function PeoplePage() {
         email: input.email,
         phone: input.phone,
         role: input.role,
-        teamId: input.teamId,
+        teamIds: input.teamIds,
         locationId: input.locationId,
         timezone: input.timezone,
       });

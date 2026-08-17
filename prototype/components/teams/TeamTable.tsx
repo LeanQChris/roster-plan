@@ -35,8 +35,9 @@ export default function TeamTable({
   const memberCount = useMemo(() => {
     const counts = new Map<string, number>();
     for (const p of people) {
-      if (!p.teamId) continue;
-      counts.set(p.teamId, (counts.get(p.teamId) ?? 0) + 1);
+      for (const teamId of p.teamIds) {
+        counts.set(teamId, (counts.get(teamId) ?? 0) + 1);
+      }
     }
     return counts;
   }, [people]);

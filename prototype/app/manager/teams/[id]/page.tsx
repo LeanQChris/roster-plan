@@ -17,7 +17,7 @@ export default function ManagerTeamMembersPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const handleInvite = (input: PersonFormInput): { ok: boolean; error?: string } => {
-    const result = invitePerson({ ...input, teamId: team.id });
+    const result = invitePerson({ ...input, teamIds: [team.id] });
     if (result.ok) setInviteOpen(false);
     return result;
   };

@@ -42,7 +42,7 @@ export interface Person {
   email: string;
   phone?: string;
   role: PersonRole;
-  teamId: string | null;
+  teamIds: string[];
   locationId: string | null;
   timezone: string;
   status: PersonStatus;
@@ -314,7 +314,12 @@ function initState(): CompanyState {
     ...t,
     managerId: t.managerId ?? null,
   }));
-  const people = readStored<Person[]>(PEOPLE_KEY, []);
+  const people = readStored<
+    (Person & { teamId?: string | null; teamIds?: string[] })[]
+  >(PEOPLE_KEY, []).map((p) => ({
+    ...p,
+    teamIds: p.teamIds ?? (p.teamId ? [p.teamId] : []),
+  }));
   const locations = readStored<Location[]>(LOCATIONS_KEY, []);
   const activity = readStored<ActivityEntry[]>(ACTIVITY_KEY, []);
   const clockEntries = readStored<ClockEntry[]>(CLOCK_KEY, []);
@@ -369,7 +374,9 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
         ...state,
         teams: state.teams.filter((t) => t.id !== action.id),
         people: state.people.map((p) =>
-          p.teamId === action.id ? { ...p, teamId: null } : p,
+          p.teamIds.includes(action.id)
+            ? { ...p, teamIds: p.teamIds.filter((x) => x !== action.id) }
+            : p,
         ),
       };
     case "addPerson":
@@ -391,21 +398,11 @@ const reducer = (state: CompanyState, action: CompanyAction): CompanyState => {
     case "updatePerson": {
       const target = state.people.find((p) => p.id === action.id);
       if (!target) return state;
-      const promoting =
-        action.patch.role === "manager" && target.role !== "manager";
       const demoting =
         action.patch.role !== undefined &&
         action.patch.role !== "manager" &&
         target.role === "manager";
       let teams = state.teams;
-      if (promoting && target.teamId) {
-        // Only fill an unmanaged team — don't steal from an existing manager.
-        teams = teams.map((t) =>
-          t.id === target.teamId && !t.managerId
-            ? { ...t, managerId: target.id }
-            : t,
-        );
-      }
       if (demoting) {
         teams = teams.map((t) =>
           t.managerId === target.id ? { ...t, managerId: null } : t,
@@ -651,7 +648,7 @@ interface InviteInput {
   email: string;
   phone?: string;
   role: PersonRole;
-  teamId: string | null;
+  teamIds: string[];
   locationId: string | null;
   timezone: string;
 }
@@ -875,7 +872,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         email,
         phone: input.phone?.trim() || undefined,
         role: input.role,
-        teamId: input.teamId,
+        teamIds: input.teamIds,
         locationId: input.locationId,
         timezone: input.timezone,
         status: "invited",
@@ -892,7 +889,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           tone: "success",
           resource: "Person",
           resourceId: person.id,
-          teamId: input.teamId ?? undefined,
+          teamId: input.teamIds[0] ?? undefined,
           message: `${person.name} invited as ${person.role}`,
         },
       });
@@ -1007,7 +1004,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           tone: "neutral",
           resource: "LeaveRequest",
           resourceId: request.id,
-          teamId: person?.teamId ?? undefined,
+          teamId: person?.teamIds[0] ?? undefined,
           message: `${person?.name ?? "Someone"} requested ${request.type} leave (${request.startDate} \u2013 ${request.endDate})`,
         },
       });
@@ -1075,7 +1072,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           tone: status === "approved" ? "success" : "warning",
           resource: "LeaveRequest",
           resourceId: request.id,
-          teamId: person?.teamId ?? undefined,
+          teamId: person?.teamIds[0] ?? undefined,
           message: `${reviewedBy} ${status} ${person?.name ?? "someone"}'s ${request.type} leave (${request.startDate} \u2013 ${request.endDate})`,
         },
       });
@@ -1305,7 +1302,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         });
 
         const teamMembers = state.people.filter(
-          (p) => p.teamId === teamId && p.status !== "inactive",
+          (p) => p.teamIds.includes(teamId) && p.status !== "inactive",
         );
         for (const person of teamMembers) {
           dispatch({

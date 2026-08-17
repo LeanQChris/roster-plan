@@ -27,7 +27,7 @@ export default function ManagerDashboardPage() {
   } = useCompany();
 
   const teamPeople = useMemo(
-    () => people.filter((p) => p.teamId === selectedTeam?.id),
+    () => people.filter((p) => selectedTeam && p.teamIds.includes(selectedTeam.id)),
     [people, selectedTeam?.id],
   );
 

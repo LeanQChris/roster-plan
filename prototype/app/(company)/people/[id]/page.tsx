@@ -10,6 +10,7 @@ import { DEFAULT_TIMEZONE, TIMEZONES } from "@/lib/company";
 import { formatDate, formatDateTime, initials, timeAgo } from "@/lib/format";
 import Modal from "@/components/ui/Modal";
 import StatCard from "@/components/ui/StatCard";
+import TeamMultiSelect from "@/components/people/TeamMultiSelect";
 import {
   ArrowLeftIcon,
   ChevronDownIcon,
@@ -44,7 +45,7 @@ interface EditForm {
   name: string;
   phone: string;
   role: PersonRole;
-  teamId: string | null;
+  teamIds: string[];
   locationId: string | null;
   timezone: string;
   notes: string;
@@ -79,7 +80,7 @@ export default function PersonDetailPage() {
     name: "",
     phone: "",
     role: "employee",
-    teamId: null,
+    teamIds: [],
     locationId: null,
     timezone: DEFAULT_TIMEZONE,
     notes: "",
@@ -119,7 +120,7 @@ export default function PersonDetailPage() {
     );
   }
 
-  const team = person.teamId ? teams.find((t) => t.id === person.teamId) : null;
+  const personTeams = teams.filter((t) => person.teamIds.includes(t.id));
   const location = person.locationId
     ? locations.find((l) => l.id === person.locationId)
     : null;
@@ -129,7 +130,7 @@ export default function PersonDetailPage() {
       name: person.name,
       phone: person.phone ?? "",
       role: person.role,
-      teamId: person.teamId,
+      teamIds: person.teamIds,
       locationId: person.locationId,
       timezone: person.timezone,
       notes: person.notes ?? "",
@@ -143,7 +144,7 @@ export default function PersonDetailPage() {
       name: form.name.trim(),
       phone: form.phone.trim() || undefined,
       role: form.role,
-      teamId: form.teamId,
+      teamIds: form.teamIds,
       locationId: form.locationId,
       timezone: form.timezone,
       notes: form.notes.trim() || undefined,
@@ -258,33 +259,46 @@ export default function PersonDetailPage() {
           </div>
 
           <StatCard
-            label="Team"
-            value={team ? team.name : "Unassigned"}
+            label="Teams"
+            value={
+              personTeams.length > 0
+                ? personTeams.map((t) => t.name).join(", ")
+                : "Unassigned"
+            }
             icon={<ListIcon className="size-4" />}
-            sub={team ? "assigned team" : "no team yet"}
+            sub={
+              personTeams.length > 0
+                ? `${personTeams.length} team${personTeams.length === 1 ? "" : "s"}`
+                : "no team yet"
+            }
           />
 
-          {team ? (
+          {personTeams.length > 0 ? (
             <div className="overflow-hidden rounded-xl border border-hairline bg-surface-2">
               <p className="border-b border-hairline px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-subtle">
-                Team
+                Teams
               </p>
-              <Link
-                href={`/teams/${team.id}`}
-                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-3/70"
-              >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary-weak text-primary">
-                  <ListIcon className="size-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-medium text-ink">
-                    {team.name}
-                  </p>
-                  <p className="truncate text-xs text-ink-subtle">
-                    {team.description || "View team"}
-                  </p>
-                </div>
-              </Link>
+              <div className="divide-y divide-hairline/60">
+                {personTeams.map((team) => (
+                  <Link
+                    key={team.id}
+                    href={`/teams/${team.id}`}
+                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-3/70"
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary-weak text-primary">
+                      <ListIcon className="size-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium text-ink">
+                        {team.name}
+                      </p>
+                      <p className="truncate text-xs text-ink-subtle">
+                        {team.description || "View team"}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="rounded-xl border border-hairline bg-surface-2 px-4 py-6 text-center text-[13px] text-ink-muted">
@@ -454,65 +468,50 @@ export default function PersonDetailPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="person-team"
-                  className="block text-xs font-medium text-ink-muted"
+            <div>
+              <label
+                htmlFor="person-location"
+                className="block text-xs font-medium text-ink-muted"
+              >
+                Location
+              </label>
+              <div className="relative">
+                <select
+                  id="person-location"
+                  value={form.locationId ?? ""}
+                  onChange={(e) => {
+                    const nextLoc = e.target.value || null;
+                    setForm({
+                      ...form,
+                      locationId: nextLoc,
+                      teamIds: form.teamIds.filter(
+                        (id) => teams.find((t) => t.id === id)?.locationId === nextLoc,
+                      ),
+                    });
+                  }}
+                  className={selectClass}
                 >
-                  Team
-                </label>
-                <div className="relative">
-                  <select
-                    id="person-team"
-                    value={form.teamId ?? ""}
-                    onChange={(e) => {
-                      const teamId = e.target.value || null;
-                      const t = teams.find((x) => x.id === teamId);
-                      setForm({
-                        ...form,
-                        teamId,
-                        locationId: t?.locationId ?? null,
-                      });
-                    }}
-                    className={selectClass}
-                  >
-                    <option value="">Unassigned</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
-                </div>
+                  <option value="">Unassigned</option>
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
               </div>
-              <div>
-                <label
-                  htmlFor="person-location"
-                  className="block text-xs font-medium text-ink-muted"
-                >
-                  Location
-                </label>
-                <div className="relative">
-                  <select
-                    id="person-location"
-                    value={form.locationId ?? ""}
-                    onChange={(e) =>
-                      setForm({ ...form, locationId: e.target.value || null })
-                    }
-                    className={selectClass}
-                  >
-                    <option value="">Unassigned</option>
-                    {locations.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
-                </div>
-              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-ink-muted">
+                Teams
+              </label>
+              <TeamMultiSelect
+                teams={teams}
+                locationId={form.locationId}
+                selectedTeamIds={form.teamIds}
+                onChange={(teamIds) => setForm({ ...form, teamIds })}
+              />
             </div>
 
             <div>

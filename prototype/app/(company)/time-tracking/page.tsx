@@ -109,7 +109,9 @@ function TimeTrackingContent() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-medium">{p.name}</p>
                   <p className="truncate text-[11px] text-ink-subtle">
-                    {p.teamId ? teamMap.get(p.teamId) ?? "—" : "Unassigned"}
+                    {p.teamIds.length > 0
+                      ? p.teamIds.map((id) => teamMap.get(id) ?? "—").join(", ")
+                      : "Unassigned"}
                   </p>
                 </div>
               </button>

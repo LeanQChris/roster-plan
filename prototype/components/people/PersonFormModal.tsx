@@ -15,6 +15,7 @@ import {
   EyeIcon,
   EyeOffIcon,
 } from "@/components/ui/icons";
+import TeamMultiSelect from "./TeamMultiSelect";
 
 const inputClass =
   "mt-1.5 h-9 w-full rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none";
@@ -27,7 +28,7 @@ export interface PersonFormInput {
   email: string;
   phone?: string;
   role: PersonRole;
-  teamId: string | null;
+  teamIds: string[];
   locationId: string | null;
   timezone: string;
   password?: string;
@@ -96,7 +97,7 @@ export default function PersonFormModal({
   const [email, setEmail] = useState(person?.email ?? "");
   const [phone, setPhone] = useState(person?.phone ?? "");
   const [role, setRole] = useState<PersonRole>(person?.role ?? "employee");
-  const [teamId, setTeamId] = useState<string | null>(person?.teamId ?? null);
+  const [teamIds, setTeamIds] = useState<string[]>(person?.teamIds ?? []);
   const [locationId, setLocationId] = useState<string | null>(
     person?.locationId ?? null,
   );
@@ -129,7 +130,7 @@ export default function PersonFormModal({
       email: email.trim(),
       phone: phone.trim() || undefined,
       role,
-      teamId,
+      teamIds,
       locationId,
       timezone,
       password: password || undefined,
@@ -231,60 +232,49 @@ export default function PersonFormModal({
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label
-              htmlFor="person-team"
-              className="block text-xs font-medium text-ink-muted"
+        <div>
+          <label
+            htmlFor="person-location"
+            className="block text-xs font-medium text-ink-muted"
+          >
+            Location
+          </label>
+          <div className="relative">
+            <select
+              id="person-location"
+              value={locationId ?? ""}
+              onChange={(e) => {
+                const nextLoc = e.target.value || null;
+                setLocationId(nextLoc);
+                setTeamIds((prev) =>
+                  prev.filter(
+                    (id) => teams.find((t) => t.id === id)?.locationId === nextLoc,
+                  ),
+                );
+              }}
+              className={selectClass}
             >
-              Team
-            </label>
-            <div className="relative">
-              <select
-                id="person-team"
-                value={teamId ?? ""}
-                onChange={(e) => {
-                  const nextTeamId = e.target.value || null;
-                  const team = teams.find((t) => t.id === nextTeamId);
-                  setTeamId(nextTeamId);
-                  setLocationId(team?.locationId ?? null);
-                }}
-                className={selectClass}
-              >
-                <option value="">Unassigned</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
-            </div>
+              <option value="">Unassigned</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
           </div>
-          <div>
-            <label
-              htmlFor="person-location"
-              className="block text-xs font-medium text-ink-muted"
-            >
-              Location
-            </label>
-            <div className="relative">
-              <select
-                id="person-location"
-                value={locationId ?? ""}
-                onChange={(e) => setLocationId(e.target.value || null)}
-                className={selectClass}
-              >
-                <option value="">Unassigned</option>
-                {locations.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-subtle" />
-            </div>
-          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-ink-muted">
+            Teams
+          </label>
+          <TeamMultiSelect
+            teams={teams}
+            locationId={locationId}
+            selectedTeamIds={teamIds}
+            onChange={setTeamIds}
+          />
         </div>
 
         {!isEdit && (

@@ -84,7 +84,7 @@ export default function TeamScheduleView({
   } = useCompany();
 
   const teamPeople = useMemo(
-    () => people.filter((p) => p.teamId === team.id),
+    () => people.filter((p) => p.teamIds.includes(team.id)),
     [people, team.id],
   );
 

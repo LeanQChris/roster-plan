@@ -117,7 +117,7 @@ export default function SchedulePage() {
 
   const team = teams.find((t) => t.id === params.id);
   const teamPeople = useMemo(
-    () => people.filter((p) => p.teamId === params.id),
+    () => people.filter((p) => params.id && p.teamIds.includes(params.id)),
     [people, params.id],
   );
 
