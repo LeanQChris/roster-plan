@@ -4,6 +4,8 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import type { ShiftTemplate } from "@/lib/company-data";
+import { getBreakPolicy } from "@/lib/company";
+import type { BreakPolicy } from "@/lib/company";
 import RecurrenceRuleInput from "./RecurrenceRuleInput";
 
 const inputClass =
@@ -19,6 +21,7 @@ export interface ShiftTemplateFormInput {
   maxCount?: number;
   isActive: boolean;
   recurrenceRule?: string;
+  breakPolicyOverride?: Partial<BreakPolicy>;
   applyToExisting?: boolean;
   applyStart?: string;
   applyEnd?: string;
@@ -56,6 +59,14 @@ export default function ShiftTemplateFormModal({
   const [maxCount, setMaxCount] = useState(template?.maxCount?.toString() ?? "");
   const [isActive, setIsActive] = useState(template?.isActive ?? true);
   const [recurrenceRule, setRecurrenceRule] = useState(template?.recurrenceRule ?? "");
+  const companyDefaults = getBreakPolicy();
+  const [overrideBreakPolicy, setOverrideBreakPolicy] = useState(
+    !!template?.breakPolicyOverride,
+  );
+  const [breakPolicyFields, setBreakPolicyFields] = useState<BreakPolicy>({
+    ...companyDefaults,
+    ...template?.breakPolicyOverride,
+  });
   const [applyToExisting, setApplyToExisting] = useState(false);
   const [applyStart, setApplyStart] = useState("");
   const [applyEnd, setApplyEnd] = useState("");
@@ -82,6 +93,7 @@ export default function ShiftTemplateFormModal({
       maxCount: maxCount ? parseInt(maxCount) : undefined,
       isActive,
       recurrenceRule: recurrenceRule || undefined,
+      breakPolicyOverride: overrideBreakPolicy ? breakPolicyFields : undefined,
       applyToExisting,
       applyStart: applyToExisting ? applyStart || undefined : undefined,
       applyEnd: applyToExisting ? applyEnd || undefined : undefined,
@@ -277,6 +289,132 @@ export default function ShiftTemplateFormModal({
           <div className="mt-1.5 rounded-lg border border-hairline bg-surface-1 p-3">
             <RecurrenceRuleInput value={recurrenceRule} onChange={setRecurrenceRule} />
           </div>
+        </div>
+
+        <div className="rounded-lg border border-hairline bg-surface-1 p-3">
+          <label className="flex cursor-pointer items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={overrideBreakPolicy}
+              onChange={(e) => setOverrideBreakPolicy(e.target.checked)}
+              className="mt-0.5 size-4 accent-primary"
+            />
+            <span className="text-[13px] leading-5 text-ink-muted">
+              Override company break policy for this shift
+            </span>
+          </label>
+          {overrideBreakPolicy && (
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-ink-muted">Meal breaks</p>
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted">
+                    Trigger after (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={breakPolicyFields.mealBreakThresholdMinutes}
+                    onChange={(e) =>
+                      setBreakPolicyFields((p) => ({
+                        ...p,
+                        mealBreakThresholdMinutes: Number(e.target.value) || 0,
+                      }))
+                    }
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted">
+                    Minimum duration (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={breakPolicyFields.mealBreakMinMinutes}
+                    onChange={(e) =>
+                      setBreakPolicyFields((p) => ({
+                        ...p,
+                        mealBreakMinMinutes: Number(e.target.value) || 0,
+                      }))
+                    }
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted">
+                    Max meal breaks / shift
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={breakPolicyFields.maxMealBreaksPerShift}
+                    onChange={(e) =>
+                      setBreakPolicyFields((p) => ({
+                        ...p,
+                        maxMealBreaksPerShift: Number(e.target.value) || 1,
+                      }))
+                    }
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-ink-muted">Rest breaks</p>
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted">
+                    Trigger after (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={breakPolicyFields.restBreakThresholdMinutes}
+                    onChange={(e) =>
+                      setBreakPolicyFields((p) => ({
+                        ...p,
+                        restBreakThresholdMinutes: Number(e.target.value) || 0,
+                      }))
+                    }
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted">
+                    Minimum duration (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={breakPolicyFields.restBreakMinMinutes}
+                    onChange={(e) =>
+                      setBreakPolicyFields((p) => ({
+                        ...p,
+                        restBreakMinMinutes: Number(e.target.value) || 0,
+                      }))
+                    }
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-ink-muted">
+                    Max rest breaks / shift
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={breakPolicyFields.maxRestBreaksPerShift}
+                    onChange={(e) =>
+                      setBreakPolicyFields((p) => ({
+                        ...p,
+                        maxRestBreaksPerShift: Number(e.target.value) || 1,
+                      }))
+                    }
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {isEdit && (

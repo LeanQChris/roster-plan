@@ -7,6 +7,31 @@ export interface CompanySetup {
   locale?: string;
   brandingColor?: string;
   logoUrl?: string;
+  breakPolicy?: BreakPolicy;
+}
+
+export interface BreakPolicy {
+  enabled: boolean;
+  mealBreakThresholdMinutes: number;
+  mealBreakMinMinutes: number;
+  restBreakThresholdMinutes: number;
+  restBreakMinMinutes: number;
+  maxMealBreaksPerShift: number;
+  maxRestBreaksPerShift: number;
+}
+
+export const DEFAULT_BREAK_POLICY: BreakPolicy = {
+  enabled: true,
+  mealBreakThresholdMinutes: 5 * 60,
+  mealBreakMinMinutes: 30,
+  restBreakThresholdMinutes: 4 * 60,
+  restBreakMinMinutes: 10,
+  maxMealBreaksPerShift: 1,
+  maxRestBreaksPerShift: 3,
+};
+
+export function getBreakPolicy(): BreakPolicy {
+  return readCompanySetup()?.breakPolicy ?? DEFAULT_BREAK_POLICY;
 }
 
 export const SETUP_KEY = "roster.setup";
@@ -69,6 +94,7 @@ export function saveCompanySettings(
       brandingColor:
         patch.brandingColor ?? existing?.brandingColor ?? DEFAULT_BRANDING,
       logoUrl: patch.logoUrl ?? existing?.logoUrl,
+      breakPolicy: patch.breakPolicy ?? existing?.breakPolicy ?? DEFAULT_BREAK_POLICY,
     };
     window.localStorage.setItem(SETUP_KEY, JSON.stringify(next));
     return next;

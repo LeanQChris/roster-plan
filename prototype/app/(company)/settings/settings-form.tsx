@@ -5,6 +5,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import {
   DEFAULT_BRANDING,
+  DEFAULT_BREAK_POLICY,
   DEFAULT_LOCALE,
   DEFAULT_TIMEZONE,
   LOCALES,
@@ -13,6 +14,7 @@ import {
   saveCompanySettings,
   slugify,
 } from "@/lib/company";
+import type { BreakPolicy } from "@/lib/company";
 import { COMPANY_COLORS } from "@/lib/data";
 import ChangePasswordCard from "@/components/settings/ChangePasswordCard";
 import {
@@ -22,6 +24,7 @@ import {
   ClockIcon,
   ImageIcon,
   PaletteIcon,
+  PauseIcon,
   SaveIcon,
   TrashIcon,
 } from "@/components/ui/icons";
@@ -46,6 +49,9 @@ export default function SettingsForm() {
     setup?.brandingColor ?? DEFAULT_BRANDING,
   );
   const [logoUrl, setLogoUrl] = useState(setup?.logoUrl ?? "");
+  const [breakPolicy, setBreakPolicy] = useState<BreakPolicy>(
+    setup?.breakPolicy ?? DEFAULT_BREAK_POLICY,
+  );
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -55,7 +61,9 @@ export default function SettingsForm() {
     timezone !== (setup?.timezone ?? DEFAULT_TIMEZONE) ||
     locale !== (setup?.locale ?? DEFAULT_LOCALE) ||
     branding !== (setup?.brandingColor ?? DEFAULT_BRANDING) ||
-    logoUrl !== (setup?.logoUrl ?? "");
+    logoUrl !== (setup?.logoUrl ?? "") ||
+    JSON.stringify(breakPolicy) !==
+      JSON.stringify(setup?.breakPolicy ?? DEFAULT_BREAK_POLICY);
 
   const onLogoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -93,6 +101,7 @@ export default function SettingsForm() {
       locale,
       brandingColor: branding,
       logoUrl,
+      breakPolicy,
     });
     if (!result) {
       setError("Couldn't save — storage unavailable.");
@@ -343,6 +352,154 @@ export default function SettingsForm() {
               <p className="text-[11px] text-ink-subtle">
                 Applied across the console — buttons, links, and active states.
               </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-hairline bg-surface-2 p-5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-8 items-center justify-center rounded-lg border border-primary/25 bg-primary-weak text-primary">
+              <PauseIcon className="size-4" />
+            </span>
+            <h2 className="text-[15px] font-semibold tracking-tight text-ink">
+              Break Policy
+            </h2>
+          </div>
+
+          <div className="mt-4 flex items-center gap-2">
+            <input
+              id="break-enabled"
+              type="checkbox"
+              checked={breakPolicy.enabled}
+              onChange={(e) =>
+                setBreakPolicy((p) => ({ ...p, enabled: e.target.checked }))
+              }
+              className="size-4 rounded border-hairline bg-surface-3 text-primary focus:ring-primary/30"
+            />
+            <label htmlFor="break-enabled" className="text-[13px] text-ink-muted">
+              Enable break tracking
+            </label>
+          </div>
+
+          <div
+            className={`mt-4 grid gap-4 sm:grid-cols-2 ${
+              breakPolicy.enabled ? "" : "cursor-not-allowed opacity-60"
+            }`}
+          >
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-ink-muted">Meal breaks</p>
+              <div>
+                <label className="block text-xs font-medium text-ink-muted">
+                  Trigger after (minutes)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  disabled={!breakPolicy.enabled}
+                  value={breakPolicy.mealBreakThresholdMinutes}
+                  onChange={(e) =>
+                    setBreakPolicy((p) => ({
+                      ...p,
+                      mealBreakThresholdMinutes: Number(e.target.value) || 0,
+                    }))
+                  }
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-ink-muted">
+                  Minimum duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  disabled={!breakPolicy.enabled}
+                  value={breakPolicy.mealBreakMinMinutes}
+                  onChange={(e) =>
+                    setBreakPolicy((p) => ({
+                      ...p,
+                      mealBreakMinMinutes: Number(e.target.value) || 0,
+                    }))
+                  }
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-ink-muted">
+                  Max meal breaks / shift
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  disabled={!breakPolicy.enabled}
+                  value={breakPolicy.maxMealBreaksPerShift}
+                  onChange={(e) =>
+                    setBreakPolicy((p) => ({
+                      ...p,
+                      maxMealBreaksPerShift: Number(e.target.value) || 1,
+                    }))
+                  }
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-ink-muted">Rest breaks</p>
+              <div>
+                <label className="block text-xs font-medium text-ink-muted">
+                  Trigger after (minutes)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  disabled={!breakPolicy.enabled}
+                  value={breakPolicy.restBreakThresholdMinutes}
+                  onChange={(e) =>
+                    setBreakPolicy((p) => ({
+                      ...p,
+                      restBreakThresholdMinutes: Number(e.target.value) || 0,
+                    }))
+                  }
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-ink-muted">
+                  Minimum duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  disabled={!breakPolicy.enabled}
+                  value={breakPolicy.restBreakMinMinutes}
+                  onChange={(e) =>
+                    setBreakPolicy((p) => ({
+                      ...p,
+                      restBreakMinMinutes: Number(e.target.value) || 0,
+                    }))
+                  }
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-ink-muted">
+                  Max rest breaks / shift
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  disabled={!breakPolicy.enabled}
+                  value={breakPolicy.maxRestBreaksPerShift}
+                  onChange={(e) =>
+                    setBreakPolicy((p) => ({
+                      ...p,
+                      maxRestBreaksPerShift: Number(e.target.value) || 1,
+                    }))
+                  }
+                  className={inputClass}
+                />
+              </div>
             </div>
           </div>
         </section>

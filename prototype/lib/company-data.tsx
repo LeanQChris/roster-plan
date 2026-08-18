@@ -9,7 +9,8 @@ import {
   useReducer,
 } from "react";
 import type { ReactNode } from "react";
-import { readCompanySetup } from "./company";
+import { readCompanySetup, getBreakPolicy } from "./company";
+import type { BreakPolicy } from "./company";
 import { RRule } from "rrule";
 
 export type PersonRole = "employee" | "manager";
@@ -133,6 +134,7 @@ export interface ShiftTemplate {
   maxCount?: number;
   isActive: boolean;
   recurrenceRule?: string;
+  breakPolicyOverride?: Partial<BreakPolicy>;
   createdAt: string;
   updatedAt: string;
 }
@@ -281,11 +283,6 @@ const SHIFTS_KEY = "roster.shifts";
 const ASSIGNMENTS_KEY = "roster.shiftAssignments";
 const AUDIT_KEY = "roster.auditLog";
 
-const MEAL_BREAK_TRIGGER_MINUTES = 5 * 60;
-const MEAL_BREAK_MIN_MINUTES = 30;
-const REST_BREAK_TRIGGER_MINUTES = 4 * 60;
-const REST_BREAK_MIN_MINUTES = 10;
-
 let seq = 0;
 export const nextId = (prefix: string) =>
   `${prefix}_${Date.now().toString(36)}${(seq += 1).toString(36)}`;
@@ -337,8 +334,35 @@ function minutesBetween(a: string, b: string): number {
   return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000);
 }
 
-function inferBreakType(sessionMinutes: number, existingTypes: BreakType[]): BreakType {
-  if (sessionMinutes >= MEAL_BREAK_TRIGGER_MINUTES && !existingTypes.includes("meal")) {
+function resolveBreakPolicy(
+  state: CompanyState,
+  personId: string,
+  sessionAtISO: string,
+): BreakPolicy {
+  const base = getBreakPolicy();
+  const sessionDate = sessionAtISO.slice(0, 10);
+  const assignment = state.shiftAssignments.find((a) => {
+    if (a.personId !== personId) return false;
+    const shift = state.shifts.find((s) => s.id === a.shiftId);
+    return shift?.date === sessionDate;
+  });
+  const shift = assignment
+    ? state.shifts.find((s) => s.id === assignment.shiftId)
+    : undefined;
+  const template = shift?.templateId
+    ? state.shiftTemplates.find((t) => t.id === shift.templateId)
+    : undefined;
+  return template?.breakPolicyOverride
+    ? { ...base, ...template.breakPolicyOverride }
+    : base;
+}
+
+function inferBreakType(
+  sessionMinutes: number,
+  existingTypes: BreakType[],
+  policy: BreakPolicy,
+): BreakType {
+  if (sessionMinutes >= policy.mealBreakThresholdMinutes && !existingTypes.includes("meal")) {
     return "meal";
   }
   return "rest";
@@ -347,6 +371,7 @@ function inferBreakType(sessionMinutes: number, existingTypes: BreakType[]): Bre
 function evaluateBreakCompliance(
   sessionMinutes: number,
   breaks: BreakEntry[],
+  policy: BreakPolicy,
 ): { type: ComplianceViolationType; severity: ComplianceViolationSeverity; description: string }[] {
   const violations: {
     type: ComplianceViolationType;
@@ -354,7 +379,9 @@ function evaluateBreakCompliance(
     description: string;
   }[] = [];
 
-  if (sessionMinutes >= MEAL_BREAK_TRIGGER_MINUTES) {
+  if (!policy.enabled) return violations;
+
+  if (sessionMinutes >= policy.mealBreakThresholdMinutes) {
     const mealBreaks = breaks.filter((b) => b.type === "meal" && b.durationMinutes !== undefined);
     if (mealBreaks.length === 0) {
       violations.push({
@@ -362,16 +389,16 @@ function evaluateBreakCompliance(
         severity: "critical",
         description: `No meal break taken during a ${Math.round(sessionMinutes / 60)}h+ shift.`,
       });
-    } else if (!mealBreaks.some((b) => (b.durationMinutes ?? 0) >= MEAL_BREAK_MIN_MINUTES)) {
+    } else if (!mealBreaks.some((b) => (b.durationMinutes ?? 0) >= policy.mealBreakMinMinutes)) {
       violations.push({
         type: "meal_break_too_short",
         severity: "warning",
-        description: `Meal break(s) taken but none reached the ${MEAL_BREAK_MIN_MINUTES}-minute minimum.`,
+        description: `Meal break(s) taken but none reached the ${policy.mealBreakMinMinutes}-minute minimum.`,
       });
     }
   }
 
-  if (sessionMinutes >= REST_BREAK_TRIGGER_MINUTES) {
+  if (sessionMinutes >= policy.restBreakThresholdMinutes) {
     const restBreaks = breaks.filter((b) => b.type === "rest" && b.durationMinutes !== undefined);
     if (restBreaks.length === 0) {
       violations.push({
@@ -379,11 +406,11 @@ function evaluateBreakCompliance(
         severity: "critical",
         description: `No rest break taken during a ${Math.round(sessionMinutes / 60)}h+ shift.`,
       });
-    } else if (!restBreaks.some((b) => (b.durationMinutes ?? 0) >= REST_BREAK_MIN_MINUTES)) {
+    } else if (!restBreaks.some((b) => (b.durationMinutes ?? 0) >= policy.restBreakMinMinutes)) {
       violations.push({
         type: "rest_break_too_short",
         severity: "warning",
-        description: `Rest break(s) taken but none reached the ${REST_BREAK_MIN_MINUTES}-minute minimum.`,
+        description: `Rest break(s) taken but none reached the ${policy.restBreakMinMinutes}-minute minimum.`,
       });
     }
   }
@@ -805,6 +832,7 @@ export interface ShiftTemplateInput {
   maxCount?: number;
   isActive: boolean;
   recurrenceRule?: string;
+  breakPolicyOverride?: Partial<BreakPolicy>;
 }
 
 interface CompanyContextValue extends CompanyState {
@@ -832,6 +860,7 @@ interface CompanyContextValue extends CompanyState {
   getActiveBreakForPerson: (personId: string) => BreakEntry | null;
   getBreaksForClockEntry: (clockEntryId: string) => BreakEntry[];
   getViolationsForClockEntry: (clockEntryId: string) => ComplianceViolation[];
+  getBreakPolicyForPerson: (personId: string) => BreakPolicy;
   requestLeave: (
     personId: string,
     input: {
@@ -1149,7 +1178,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       }
 
       const sessionMinutes = minutesBetween(session.at, at);
-      const violations = evaluateBreakCompliance(sessionMinutes, sessionBreaks);
+      const policy = resolveBreakPolicy(state, personId, session.at);
+      const violations = evaluateBreakCompliance(sessionMinutes, sessionBreaks, policy);
       for (const v of violations) {
         const violation: ComplianceViolation = {
           id: nextId("violation"),
@@ -1188,7 +1218,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [state.clockEntries, state.breakEntries, state.people],
+    [state],
   );
 
   const startBreak = useCallback(
@@ -1210,12 +1240,29 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         return { ok: false, error: "You are already on a break." };
       }
 
+      const policy = resolveBreakPolicy(state, personId, session.at);
+      if (!policy.enabled) {
+        return { ok: false, error: "Break tracking is disabled for this shift." };
+      }
+
       const now = new Date().toISOString();
       const sessionMinutes = minutesBetween(session.at, now);
       const existingTypes = state.breakEntries
         .filter((b) => b.clockEntryId === session.id)
         .map((b) => b.type);
-      const resolvedType = type ?? inferBreakType(sessionMinutes, existingTypes);
+      const resolvedType = type ?? inferBreakType(sessionMinutes, existingTypes, policy);
+
+      const countForType = state.breakEntries.filter(
+        (b) => b.clockEntryId === session.id && b.type === resolvedType,
+      ).length;
+      const cap =
+        resolvedType === "meal" ? policy.maxMealBreaksPerShift : policy.maxRestBreaksPerShift;
+      if (countForType >= cap) {
+        return {
+          ok: false,
+          error: `${resolvedType === "meal" ? "Meal" : "Rest"} break limit reached (${cap}/shift).`,
+        };
+      }
 
       const entry: BreakEntry = {
         id: nextId("break"),
@@ -1244,7 +1291,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       return { ok: true, entry };
     },
-    [state.clockEntries, state.breakEntries, state.people],
+    [state],
   );
 
   const endBreak = useCallback(
@@ -1263,8 +1310,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       });
 
       const person = state.people.find((p) => p.id === existing.personId);
+      const session = state.clockEntries.find((c) => c.id === existing.clockEntryId);
+      const policy = resolveBreakPolicy(
+        state,
+        existing.personId,
+        session?.at ?? existing.breakInAt,
+      );
       const minMinutes =
-        existing.type === "meal" ? MEAL_BREAK_MIN_MINUTES : REST_BREAK_MIN_MINUTES;
+        existing.type === "meal" ? policy.mealBreakMinMinutes : policy.restBreakMinMinutes;
       const tooShort = durationMinutes < minMinutes;
       dispatch({
         type: "addAudit",
@@ -1282,7 +1335,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       return { ok: true };
     },
-    [state.breakEntries, state.people],
+    [state],
   );
 
   const getActiveBreakForPerson = useCallback(
@@ -1310,6 +1363,16 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     (clockEntryId: string): ComplianceViolation[] =>
       state.complianceViolations.filter((v) => v.clockEntryId === clockEntryId),
     [state.complianceViolations],
+  );
+
+  const getBreakPolicyForPerson = useCallback(
+    (personId: string): BreakPolicy => {
+      const latestEntry = state.clockEntries
+        .filter((c) => c.personId === personId)
+        .sort((a, b) => b.at.localeCompare(a.at))[0];
+      return resolveBreakPolicy(state, personId, latestEntry?.at ?? new Date().toISOString());
+    },
+    [state],
   );
 
   const requestLeave = useCallback(
@@ -1477,6 +1540,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         maxCount: input.maxCount,
         isActive: input.isActive,
         recurrenceRule: input.recurrenceRule?.trim() || undefined,
+        breakPolicyOverride: input.breakPolicyOverride,
         createdAt: now,
         updatedAt: now,
       };
@@ -2178,6 +2242,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       getActiveBreakForPerson,
       getBreaksForClockEntry,
       getViolationsForClockEntry,
+      getBreakPolicyForPerson,
       requestLeave,
       updateLeaveRequest,
       cancelLeaveRequest,
@@ -2224,6 +2289,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       getActiveBreakForPerson,
       getBreaksForClockEntry,
       getViolationsForClockEntry,
+      getBreakPolicyForPerson,
       requestLeave,
       updateLeaveRequest,
       cancelLeaveRequest,

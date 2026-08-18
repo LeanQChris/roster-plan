@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCompany } from "@/lib/company-data";
 import type { BreakType } from "@/lib/company-data";
+import { DEFAULT_BREAK_POLICY } from "@/lib/company";
 import { formatDateTime, localDateStr } from "@/lib/format";
 import { AlertTriangleIcon, ClockIcon, UsersIcon } from "@/components/ui/icons";
 import BreakTypeBadge from "@/components/breaks/BreakTypeBadge";
@@ -23,8 +24,17 @@ interface CompletedEntry {
 
 export default function EmployeeClockPage() {
   const { user } = useAuth();
-  const { people, shifts, shiftAssignments, clockEntries, addClockEntry, breakEntries, startBreak, endBreak } =
-    useCompany();
+  const {
+    people,
+    shifts,
+    shiftAssignments,
+    clockEntries,
+    addClockEntry,
+    breakEntries,
+    startBreak,
+    endBreak,
+    getBreakPolicyForPerson,
+  } = useCompany();
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [showNote, setShowNote] = useState(false);
@@ -77,6 +87,12 @@ export default function EmployeeClockPage() {
     () => sessionBreaks.find((b) => !b.breakOutAt) ?? null,
     [sessionBreaks],
   );
+
+  const policy = myPerson ? getBreakPolicyForPerson(myPerson.id) : DEFAULT_BREAK_POLICY;
+  const mealCount = sessionBreaks.filter((b) => b.type === "meal").length;
+  const restCount = sessionBreaks.filter((b) => b.type === "rest").length;
+  const mealCapped = mealCount >= policy.maxMealBreaksPerShift;
+  const restCapped = restCount >= policy.maxRestBreaksPerShift;
 
   const handleClockIn = () => {
     if (!myPerson) return;
@@ -171,6 +187,7 @@ export default function EmployeeClockPage() {
               Clocked in at {latestEntry && formatDateTime(latestEntry.at)}
             </p>
 
+            {policy.enabled && (
             <div className="mx-auto mt-5 max-w-sm rounded-lg border border-hairline bg-surface-3 p-4 text-left">
               {activeBreak ? (
                 <>
@@ -197,16 +214,18 @@ export default function EmployeeClockPage() {
                     <button
                       type="button"
                       onClick={() => handleStartBreak("meal")}
-                      className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4"
+                      disabled={mealCapped}
+                      className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Start meal break
+                      Start meal break{mealCapped ? " (limit reached)" : ""}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleStartBreak("rest")}
-                      className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4"
+                      disabled={restCapped}
+                      className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Start rest break
+                      Start rest break{restCapped ? " (limit reached)" : ""}
                     </button>
                   </div>
                 </>
@@ -231,6 +250,7 @@ export default function EmployeeClockPage() {
                 </ul>
               )}
             </div>
+            )}
 
             {showNote ? (
               <div className="mx-auto mt-5 max-w-sm text-left">
