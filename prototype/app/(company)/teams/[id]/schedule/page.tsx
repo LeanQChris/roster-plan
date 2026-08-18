@@ -273,12 +273,12 @@ export default function SchedulePage() {
     });
   };
 
-  const handleConfirmPublish = () => {
+  const handleConfirmPublish = async () => {
     if (!publishPreview) return;
     const toPublish = publishPreview.planned.filter(
       (s) => !excludedIds.has(s.id),
     );
-    const newShifts = publishShifts(
+    const newShifts = await publishShifts(
       params.id,
       publishRange.start,
       publishRange.end,
@@ -289,14 +289,14 @@ export default function SchedulePage() {
     setExcludedIds(new Set());
   };
 
-  const handleCreateShift = (shiftData: {
+  const handleCreateShift = async (shiftData: {
     title: string;
     date: string;
     startTime: string;
     durationMinutes: number;
     requiredCount: number;
   }) => {
-    const result = createShift({
+    const result = await createShift({
       teamId: params.id,
       title: shiftData.title,
       date: shiftData.date,
@@ -310,27 +310,27 @@ export default function SchedulePage() {
     return result;
   };
 
-  const handleUpdateShift = (id: string, patch: Partial<Shift>) => {
-    const result = updateShift(id, patch);
+  const handleUpdateShift = async (id: string, patch: Partial<Shift>) => {
+    const result = await updateShift(id, patch);
     if (result.ok) {
       setModal({ type: null });
     }
     return result;
   };
 
-  const handleDeleteShift = (id: string) => {
-    deleteShift(id);
+  const handleDeleteShift = async (id: string) => {
+    await deleteShift(id);
     setModal({ type: null });
   };
 
-  const handleAssign = (personId: string, override?: boolean) => {
+  const handleAssign = async (personId: string, override?: boolean) => {
     if (modal.type !== "assign")
       return { ok: false, error: "No shift selected." };
     return assignPerson(modal.shift.id, personId, override);
   };
 
-  const handleRemoveAssignment = (assignmentId: string) => {
-    removeAssignment(assignmentId);
+  const handleRemoveAssignment = async (assignmentId: string) => {
+    await removeAssignment(assignmentId);
   };
 
   const getAssignmentCount = (shiftId: string) => {
@@ -351,9 +351,9 @@ export default function SchedulePage() {
     setSelectMode(!selectMode);
   };
 
-  const handleBulkDeleteConfirm = () => {
+  const handleBulkDeleteConfirm = async () => {
     if (selectedIds.size === 0) return;
-    deleteShifts([...selectedIds]);
+    await deleteShifts([...selectedIds]);
     setSelectMode(false);
     setSelectedIds(new Set());
     setModal({ type: null });
@@ -721,8 +721,8 @@ export default function SchedulePage() {
           defaultStartDate={
             teamShifts.length > 0 ? teamShifts[0].date : undefined
           }
-          onCreate={(input) => {
-            const result = createShifts({ teamId: params.id, ...input });
+          onCreate={async (input) => {
+            const result = await createShifts({ teamId: params.id, ...input });
             if (result.ok) setModal({ type: null });
             return result;
           }}

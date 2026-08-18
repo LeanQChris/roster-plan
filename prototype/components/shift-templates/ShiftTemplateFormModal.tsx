@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import type { ShiftTemplate } from "@/lib/company-data";
-import { getBreakPolicy } from "@/lib/company";
+import { DEFAULT_BREAK_POLICY, getBreakPolicy } from "@/lib/company";
 import type { BreakPolicy } from "@/lib/company";
 import RecurrenceRuleInput from "./RecurrenceRuleInput";
 
@@ -32,7 +32,7 @@ interface ShiftTemplateFormModalProps {
   teams?: { id: string; name: string }[];
   defaultTeamId?: string;
   onClose: () => void;
-  onSave: (input: ShiftTemplateFormInput) => { ok: boolean; error?: string };
+  onSave: (input: ShiftTemplateFormInput) => Promise<{ ok: boolean; error?: string }>;
 }
 
 function formatDuration(minutes: number): string {
@@ -59,14 +59,25 @@ export default function ShiftTemplateFormModal({
   const [maxCount, setMaxCount] = useState(template?.maxCount?.toString() ?? "");
   const [isActive, setIsActive] = useState(template?.isActive ?? true);
   const [recurrenceRule, setRecurrenceRule] = useState(template?.recurrenceRule ?? "");
-  const companyDefaults = getBreakPolicy();
   const [overrideBreakPolicy, setOverrideBreakPolicy] = useState(
     !!template?.breakPolicyOverride,
   );
   const [breakPolicyFields, setBreakPolicyFields] = useState<BreakPolicy>({
-    ...companyDefaults,
+    ...DEFAULT_BREAK_POLICY,
     ...template?.breakPolicyOverride,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    getBreakPolicy().then((companyDefaults) => {
+      if (cancelled) return;
+      setBreakPolicyFields((prev) => ({ ...companyDefaults, ...template?.breakPolicyOverride, ...prev }));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [applyToExisting, setApplyToExisting] = useState(false);
   const [applyStart, setApplyStart] = useState("");
   const [applyEnd, setApplyEnd] = useState("");
@@ -80,10 +91,10 @@ export default function ShiftTemplateFormModal({
     return `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
   })();
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    const result = onSave({
+    const result = await onSave({
       teamId: teamId || undefined,
       title: title.trim(),
       description: description.trim() || undefined,

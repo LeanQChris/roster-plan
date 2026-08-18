@@ -138,9 +138,9 @@ export default function PersonDetailPage() {
     setEditing(true);
   };
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    updatePerson(person.id, {
+    await updatePerson(person.id, {
       name: form.name.trim(),
       phone: form.phone.trim() || undefined,
       role: form.role,

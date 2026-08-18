@@ -9,7 +9,7 @@ const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 
 interface EditShiftModalProps {
   shift: Shift;
-  onUpdate: (id: string, patch: Partial<Shift>) => { ok: boolean; error?: string };
+  onUpdate: (id: string, patch: Partial<Shift>) => Promise<{ ok: boolean; error?: string }>;
   onClose: () => void;
 }
 
@@ -29,7 +29,7 @@ export default function EditShiftModal({
   const durationTotal =
     parseInt(durationHours || "0", 10) * 60 + parseInt(durationMinutes || "0", 10);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim()) {
       setError("Title is required.");
       return;
@@ -48,7 +48,7 @@ export default function EditShiftModal({
       return;
     }
 
-    const result = onUpdate(shift.id, {
+    const result = await onUpdate(shift.id, {
       title: title.trim(),
       date,
       startTime,

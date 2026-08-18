@@ -64,7 +64,7 @@ export default function ChangePasswordCard() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setSaved(false);
@@ -86,14 +86,14 @@ export default function ChangePasswordCard() {
       return;
     }
 
-    const result = changePassword(current, next);
+    const result = await changePassword(current, next);
     if (!result.ok) {
       setError(result.error ?? "Couldn't change password.");
       return;
     }
     setSaved(true);
-    window.setTimeout(() => {
-      signOut();
+    window.setTimeout(async () => {
+      await signOut();
       router.replace("/login");
     }, 600);
   };
@@ -153,12 +153,7 @@ export default function ChangePasswordCard() {
           </p>
         )}
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[11px] text-ink-subtle">
-            Legacy accounts sign in with{" "}
-            <span className="font-mono text-ink-muted">Password@123</span> until
-            you change it here.
-          </p>
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
           <button
             type="submit"
             className="flex h-8 items-center gap-2 rounded-lg bg-primary px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-primary-hover"

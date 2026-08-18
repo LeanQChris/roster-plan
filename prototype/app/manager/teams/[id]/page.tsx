@@ -16,8 +16,10 @@ export default function ManagerTeamMembersPage() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  const handleInvite = (input: PersonFormInput): { ok: boolean; error?: string } => {
-    const result = invitePerson({ ...input, teamIds: [team.id] });
+  const handleInvite = async (
+    input: PersonFormInput,
+  ): Promise<{ ok: boolean; error?: string }> => {
+    const result = await invitePerson({ ...input, teamIds: [team.id] });
     if (result.ok) setInviteOpen(false);
     return result;
   };

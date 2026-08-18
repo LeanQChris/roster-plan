@@ -5,8 +5,7 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { homeForRole, useAuth } from "@/lib/auth";
-import { CompanyProvider, useCompany } from "@/lib/company-data";
-import type { Person } from "@/lib/company-data";
+import { createClient } from "@/lib/supabase/client";
 import { useTheme } from "@/lib/theme";
 import LogoMark from "@/components/ui/Logo";
 import {
@@ -64,65 +63,43 @@ function PasswordField({
   );
 }
 
-function AcceptInviteContent() {
+// Invitee lands here already authenticated — app/auth/callback/route.ts exchanges
+// the invite link's code for a session before redirecting here. This form only
+// needs to set the initial password.
+export default function AcceptInviteForm() {
   const router = useRouter();
-  const { registerEmployee } = useAuth();
-  const { people, updatePerson } = useCompany();
+  const { user, ready } = useAuth();
   const { theme, toggleTheme } = useTheme();
-
-  const [email, setEmail] = useState("");
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [person, setPerson] = useState<Person | null>(null);
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const submitEmail = (e: FormEvent<HTMLFormElement>) => {
+  const submitPassword = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setEmailError(null);
-    const normalized = email.trim().toLowerCase();
-    const match = people.find(
-      (p) =>
-        p.email.toLowerCase() === normalized &&
-        p.status === "invited",
-    );
-    if (!match) {
-      setEmailError("No pending invite found for this email.");
-      return;
-    }
-    setPerson(match);
-  };
-
-  const submitPassword = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setPasswordError(null);
-    if (!person) return;
+    setError(null);
 
     if (password.length < 8) {
-      setPasswordError("Password must be at least 8 characters.");
+      setError("Password must be at least 8 characters.");
       return;
     }
     if (password !== confirm) {
-      setPasswordError("Passwords do not match.");
+      setError("Passwords do not match.");
       return;
     }
 
-    updatePerson(person.id, { status: "active" });
-    const result = registerEmployee({
-      email: person.email,
-      password,
-      personId: person.id,
-      name: person.name,
-      role: person.role,
-    });
-    if (!result.ok) {
-      setPasswordError(result.error ?? "Unable to activate your account.");
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    setSubmitting(false);
+    if (updateError) {
+      setError(updateError.message);
       return;
     }
-    router.replace(homeForRole(person.role));
+    router.replace(homeForRole(user?.role));
   };
 
   return (
@@ -144,47 +121,22 @@ function AcceptInviteContent() {
           <LogoMark className="size-11" />
           <div className="text-center">
             <h1 className="text-xl font-semibold tracking-tight text-ink">
-              {person ? "Create your password" : "Accept your invite"}
+              Create your password
             </h1>
             <p className="mt-1 text-sm text-ink-muted">
-              {person
-                ? `Set a password for ${person.email}`
-                : "Enter the email your invite was sent to"}
+              {ready && user
+                ? `Set a password for ${user.email}`
+                : ready
+                  ? "This invite link is invalid or has expired."
+                  : "Loading your invite…"}
             </p>
           </div>
         </div>
 
-        {!person ? (
-          <form
-            onSubmit={submitEmail}
-            className="mt-6 rounded-xl border border-hairline bg-surface-2 p-6"
-          >
-            <label htmlFor="email" className="block text-xs font-medium text-ink-muted">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              className="mt-1.5 h-9 w-full rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none"
-            />
-
-            {emailError && (
-              <p className="mt-4 rounded-lg border border-danger/30 bg-danger-weak px-3 py-2 text-[13px] font-medium text-danger">
-                {emailError}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              className="mt-5 h-9 w-full rounded-lg bg-primary text-[13px] font-medium text-white transition-colors hover:bg-primary-hover"
-            >
-              Continue
-            </button>
-          </form>
+        {ready && !user ? (
+          <div className="mt-6 rounded-xl border border-hairline bg-surface-2 p-6 text-center text-[13px] text-ink-muted">
+            Ask your admin to resend the invite, then open the link again.
+          </div>
         ) : (
           <form
             onSubmit={submitPassword}
@@ -212,26 +164,18 @@ function AcceptInviteContent() {
               />
             </div>
 
-            {passwordError && (
+            {error && (
               <p className="mt-4 rounded-lg border border-danger/30 bg-danger-weak px-3 py-2 text-[13px] font-medium text-danger">
-                {passwordError}
+                {error}
               </p>
             )}
 
             <button
               type="submit"
-              className="mt-5 h-9 w-full rounded-lg bg-primary text-[13px] font-medium text-white transition-colors hover:bg-primary-hover"
+              disabled={submitting || !ready}
+              className="mt-5 h-9 w-full rounded-lg bg-primary text-[13px] font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Activate account
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setPerson(null)}
-              className="mt-3 flex w-full items-center justify-center gap-1.5 text-xs font-medium text-primary transition-colors hover:text-primary-hover"
-            >
-              <ArrowLeftIcon className="size-3.5" />
-              Use a different email
+              {submitting ? "Activating…" : "Activate account"}
             </button>
           </form>
         )}
@@ -253,13 +197,5 @@ function AcceptInviteContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function AcceptInviteForm() {
-  return (
-    <CompanyProvider>
-      <AcceptInviteContent />
-    </CompanyProvider>
   );
 }

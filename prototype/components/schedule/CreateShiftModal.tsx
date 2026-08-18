@@ -15,7 +15,7 @@ interface CreateShiftModalProps {
     startTime: string;
     durationMinutes: number;
     requiredCount: number;
-  }) => { ok: boolean; error?: string };
+  }) => Promise<{ ok: boolean; error?: string }>;
   onClose: () => void;
 }
 
@@ -36,7 +36,7 @@ export default function CreateShiftModal({
   const durationTotal =
     parseInt(durationHours || "0", 10) * 60 + parseInt(durationMinutes || "0", 10);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim()) {
       setError("Title is required.");
       return;
@@ -55,7 +55,7 @@ export default function CreateShiftModal({
       return;
     }
 
-    const result = onCreate({
+    const result = await onCreate({
       title: title.trim(),
       date,
       startTime,

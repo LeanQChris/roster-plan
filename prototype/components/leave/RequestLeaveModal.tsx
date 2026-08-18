@@ -31,8 +31,8 @@ export default function RequestLeaveModal({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = () => {
-    const result = requestLeave(personId, { type, startDate, endDate, reason });
+  const handleSubmit = async () => {
+    const result = await requestLeave(personId, { type, startDate, endDate, reason });
     if (!result.ok) {
       setError(result.error ?? "Couldn't submit the request.");
       return;

@@ -82,7 +82,7 @@ interface PersonFormModalProps {
   teams: Team[];
   locations: Location[];
   onClose: () => void;
-  onSave: (input: PersonFormInput) => { ok: boolean; error?: string };
+  onSave: (input: PersonFormInput) => Promise<{ ok: boolean; error?: string }>;
 }
 
 export default function PersonFormModal({
@@ -110,7 +110,7 @@ export default function PersonFormModal({
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
@@ -125,7 +125,7 @@ export default function PersonFormModal({
       }
     }
 
-    const result = onSave({
+    const result = await onSave({
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim() || undefined,

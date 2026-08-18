@@ -5,12 +5,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
-import {
-  DEFAULT_LOCALE,
-  DEFAULT_TIMEZONE,
-  SETUP_KEY,
-  TIMEZONES,
-} from "@/lib/company";
+import { DEFAULT_TIMEZONE, TIMEZONES, completeCompanySetup } from "@/lib/company";
 import LogoMark from "@/components/ui/Logo";
 import {
   ArrowLeftIcon,
@@ -21,40 +16,31 @@ import {
 
 export default function SetupForm() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
-  const [team, setTeam] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) router.replace("/login");
   }, [user, router]);
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
-    if (!timezone || !team.trim()) {
-      setError("Enter a timezone and a first team name.");
+    if (!timezone) {
+      setError("Choose a timezone.");
       return;
     }
 
-    try {
-      window.localStorage.setItem(
-        SETUP_KEY,
-        JSON.stringify({
-          company: user?.company ?? "",
-          email: user?.email ?? "",
-          timezone,
-          team: team.trim(),
-          completeAt: new Date().toISOString(),
-          locale: DEFAULT_LOCALE,
-          brandingColor: "#5e6ad2",
-        }),
-      );
-    } catch {
-      // ignore — setup just won't persist
+    setSubmitting(true);
+    const result = await completeCompanySetup(timezone);
+    setSubmitting(false);
+    if (!result) {
+      setError("Couldn't save setup — try again.");
+      return;
     }
     router.replace("/dashboard");
   };
@@ -120,22 +106,6 @@ export default function SetupForm() {
               </p>
             </div>
 
-            <div>
-              <label
-                htmlFor="team"
-                className="block text-xs font-medium text-ink-muted"
-              >
-                First team name
-              </label>
-              <input
-                id="team"
-                type="text"
-                value={team}
-                onChange={(e) => setTeam(e.target.value)}
-                placeholder="Kitchen"
-                className="mt-1.5 h-9 w-full rounded-lg border border-hairline bg-surface-3 px-3 text-[13px] text-ink placeholder:text-ink-subtle transition-colors focus:border-primary/60 focus:outline-none"
-              />
-            </div>
           </div>
 
           {error && (
@@ -146,21 +116,18 @@ export default function SetupForm() {
 
           <button
             type="submit"
-            className="mt-5 h-9 w-full rounded-lg bg-primary text-[13px] font-medium text-white transition-colors hover:bg-primary-hover"
+            disabled={submitting}
+            className="mt-5 h-9 w-full rounded-lg bg-primary text-[13px] font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Continue to Dashboard
+            {submitting ? "Saving…" : "Continue to Dashboard"}
           </button>
         </form>
 
         <div className="mt-4 flex items-center justify-between gap-3">
           <button
             type="button"
-            onClick={() => {
-              try {
-                window.localStorage.removeItem("roster.session");
-              } catch {
-                // ignore
-              }
+            onClick={async () => {
+              await signOut();
               router.push("/login");
             }}
             className="flex items-center gap-1.5 text-xs font-medium text-primary transition-colors hover:text-primary-hover"
@@ -170,12 +137,8 @@ export default function SetupForm() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              try {
-                window.localStorage.removeItem("roster.session");
-              } catch {
-                // ignore
-              }
+            onClick={async () => {
+              await signOut();
               router.push("/");
             }}
             className="shrink-0 text-xs text-ink-subtle transition-colors hover:text-ink-muted"
@@ -183,10 +146,6 @@ export default function SetupForm() {
             Cancel
           </button>
         </div>
-
-        <p className="mt-6 text-center text-[11px] leading-relaxed text-ink-faint">
-          Static prototype — setup data is stored only in your browser.
-        </p>
       </div>
     </div>
   );

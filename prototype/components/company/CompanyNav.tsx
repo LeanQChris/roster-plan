@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
-import { DEFAULT_BRANDING, readCompanySetup } from "@/lib/company";
+import { DEFAULT_BRANDING, getCompanySettings } from "@/lib/company";
 import LogoMark from "@/components/ui/Logo";
 import {
   ActivityIcon,
@@ -42,17 +42,26 @@ export default function CompanyNav() {
   const { theme, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const [branding] = useState(() => readCompanySetup());
+  const [brandingColor, setBrandingColor] = useState(DEFAULT_BRANDING);
 
   useEffect(() => {
-    const color = branding?.brandingColor ?? DEFAULT_BRANDING;
+    let cancelled = false;
+    getCompanySettings().then((result) => {
+      if (!cancelled && result) setBrandingColor(result.brandingColor);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty("--primary", color);
+    root.style.setProperty("--primary", brandingColor);
     root.style.setProperty(
       "--primary-hover",
-      `color-mix(in srgb, ${color} 82%, #ffffff)`,
+      `color-mix(in srgb, ${brandingColor} 82%, #ffffff)`,
     );
-  }, [branding?.brandingColor]);
+  }, [brandingColor]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -72,9 +81,9 @@ export default function CompanyNav() {
     };
   }, [menuOpen]);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     setMenuOpen(false);
-    signOut();
+    await signOut();
     router.push("/");
   };
 

@@ -25,7 +25,7 @@ interface BulkCreateShiftModalProps {
     durationMinutes: number;
     requiredCount: number;
     dates: string[];
-  }) => { ok: boolean; error?: string; count: number };
+  }) => Promise<{ ok: boolean; error?: string; count: number }>;
   onClose: () => void;
 }
 
@@ -57,7 +57,7 @@ export default function BulkCreateShiftModal({
     });
   }, [start, end, weekdays]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError(null);
     if (!title.trim()) {
       setError("Title is required.");
@@ -80,7 +80,7 @@ export default function BulkCreateShiftModal({
       setError("No dates match — check weekdays or widen the range.");
       return;
     }
-    const result = onCreate({
+    const result = await onCreate({
       title: title.trim(),
       startTime,
       durationMinutes: durationTotal,

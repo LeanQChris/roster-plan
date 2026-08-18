@@ -20,13 +20,14 @@ export default function ManagerTeamTemplatesPage() {
   const [confirmDelete, setConfirmDelete] = useState<ShiftTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<ShiftTemplate | null>(null);
 
-  const handleSaveTemplate = (input: ShiftTemplateFormInput): { ok: boolean; error?: string } => {
+  const handleSaveTemplate = async (
+    input: ShiftTemplateFormInput,
+  ): Promise<{ ok: boolean; error?: string }> => {
     if (modalTemplate) {
-      if (!updateShiftTemplate(modalTemplate.id, input)) {
-        return { ok: false, error: "Couldn't save changes." };
-      }
+      const ok = await updateShiftTemplate(modalTemplate.id, input);
+      if (!ok) return { ok: false, error: "Couldn't save changes." };
     } else {
-      const result = createShiftTemplate({ ...input, teamId: team.id });
+      const result = await createShiftTemplate({ ...input, teamId: team.id });
       if (!result.ok) return { ok: false, error: result.error };
     }
     setModalTemplate(undefined);

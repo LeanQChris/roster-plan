@@ -13,7 +13,7 @@ interface LocationFormModalProps {
   mode: "create" | "edit";
   location?: Location;
   onClose: () => void;
-  onSave: (input: LocationInput) => { ok: boolean; error?: string };
+  onSave: (input: LocationInput) => Promise<{ ok: boolean; error?: string }>;
 }
 
 export default function LocationFormModal({
@@ -28,7 +28,7 @@ export default function LocationFormModal({
   const [error, setError] = useState<string | null>(null);
   const geocode = useGeocode(location ?? null);
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
@@ -42,7 +42,7 @@ export default function LocationFormModal({
       active,
     };
 
-    const result = onSave(input);
+    const result = await onSave(input);
     if (!result.ok) setError(result.error ?? "Something went wrong.");
   };
 

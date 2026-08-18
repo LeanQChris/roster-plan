@@ -45,16 +45,22 @@ export default function LocationsPage() {
     window.setTimeout(() => setSaved(false), 2600);
   };
 
-  const handleSave = (input: LocationInput): { ok: boolean; error?: string } => {
+  const handleSave = async (
+    input: LocationInput,
+  ): Promise<{ ok: boolean; error?: string }> => {
     if (modal?.mode === "edit") {
-      if (!updateLocation(modal.location.id, input)) {
+      const ok = await updateLocation(modal.location.id, input);
+      if (!ok) {
         return { ok: false, error: "Location name can't be empty." };
       }
-    } else if (!createLocation(input)) {
-      return {
-        ok: false,
-        error: "Location name can't be empty or match an existing location.",
-      };
+    } else {
+      const location = await createLocation(input);
+      if (!location) {
+        return {
+          ok: false,
+          error: "Location name can't be empty or match an existing location.",
+        };
+      }
     }
     setModal(null);
     flashSaved();

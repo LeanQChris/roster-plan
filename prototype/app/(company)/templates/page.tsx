@@ -51,14 +51,15 @@ export default function ShiftTemplatesPage() {
     }, 2600);
   };
 
-  const handleSave = (input: ShiftTemplateFormInput): { ok: boolean; error?: string } => {
+  const handleSave = async (
+    input: ShiftTemplateFormInput,
+  ): Promise<{ ok: boolean; error?: string }> => {
     let applied = 0;
     if (modalTemplate) {
-      if (!updateShiftTemplate(modalTemplate.id, input)) {
-        return { ok: false, error: "Couldn't save changes." };
-      }
+      const ok = await updateShiftTemplate(modalTemplate.id, input);
+      if (!ok) return { ok: false, error: "Couldn't save changes." };
       if (input.applyToExisting) {
-        applied = applyTemplateToShifts(
+        applied = await applyTemplateToShifts(
           modalTemplate.id,
           {
             title: input.title,
@@ -72,7 +73,7 @@ export default function ShiftTemplatesPage() {
       }
     } else {
       if (!input.teamId) return { ok: false, error: "Please select a team." };
-      const result = createShiftTemplate({ ...input, teamId: input.teamId });
+      const result = await createShiftTemplate({ ...input, teamId: input.teamId });
       if (!result.ok) return { ok: false, error: result.error };
     }
     setModalTemplate(undefined);

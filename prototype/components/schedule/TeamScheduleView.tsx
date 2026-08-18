@@ -199,25 +199,25 @@ export default function TeamScheduleView({
     });
   };
 
-  const handleConfirmPublish = () => {
+  const handleConfirmPublish = async () => {
     if (!publishPreview) return;
     const rangeStart = localDateStr(weekStart);
     const rangeEnd = localDateStr(weekEnd);
     const toPublish = publishPreview.planned.filter((s) => !excludedIds.has(s.id));
-    const newShifts = publishShifts(team.id, rangeStart, rangeEnd, toPublish);
+    const newShifts = await publishShifts(team.id, rangeStart, rangeEnd, toPublish);
     setPublishResult({ count: newShifts.length });
     setPublishPreview(null);
     setExcludedIds(new Set());
   };
 
-  const handleCreateShift = (shiftData: {
+  const handleCreateShift = async (shiftData: {
     title: string;
     date: string;
     startTime: string;
     durationMinutes: number;
     requiredCount: number;
   }) => {
-    const result = createShift({
+    const result = await createShift({
       teamId: team.id,
       title: shiftData.title,
       date: shiftData.date,
@@ -231,26 +231,26 @@ export default function TeamScheduleView({
     return result;
   };
 
-  const handleUpdateShift = (id: string, patch: Partial<Shift>) => {
-    const result = updateShift(id, patch);
+  const handleUpdateShift = async (id: string, patch: Partial<Shift>) => {
+    const result = await updateShift(id, patch);
     if (result.ok) {
       setModal({ type: null });
     }
     return result;
   };
 
-  const handleDeleteShift = (id: string) => {
-    deleteShift(id);
+  const handleDeleteShift = async (id: string) => {
+    await deleteShift(id);
     setModal({ type: null });
   };
 
-  const handleAssign = (personId: string, override?: boolean) => {
+  const handleAssign = async (personId: string, override?: boolean) => {
     if (modal.type !== "assign") return { ok: false, error: "No shift selected." };
     return assignPerson(modal.shift.id, personId, override);
   };
 
-  const handleRemoveAssignment = (assignmentId: string) => {
-    removeAssignment(assignmentId);
+  const handleRemoveAssignment = async (assignmentId: string) => {
+    await removeAssignment(assignmentId);
   };
 
   const getAssignmentCount = (shiftId: string) => {

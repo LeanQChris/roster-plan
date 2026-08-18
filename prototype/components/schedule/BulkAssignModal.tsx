@@ -59,7 +59,7 @@ interface BulkAssignModalProps {
   teamPeople: Person[];
   teamShifts: Shift[];
   templates: ShiftTemplate[];
-  onBulkAssign: (input: BulkAssignInput) => BulkAssignResult;
+  onBulkAssign: (input: BulkAssignInput) => Promise<BulkAssignResult>;
   onClose: () => void;
 }
 
@@ -108,9 +108,9 @@ export default function BulkAssignModal({
   const valid =
     !!personId && range.start !== "" && range.end !== "" && range.start <= range.end;
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!valid || !personId) return;
-    const res = onBulkAssign({
+    const res = await onBulkAssign({
       teamId,
       personId,
       templateId: templateId || undefined,

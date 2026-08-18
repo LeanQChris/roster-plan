@@ -96,17 +96,16 @@ export default function TeamDetailPage() {
     setEditing(true);
   };
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    if (
-      !updateTeam(team.id, {
-        name,
-        description: description || undefined,
-        locationId,
-        managerId,
-      })
-    ) {
+    const ok = await updateTeam(team.id, {
+      name,
+      description: description || undefined,
+      locationId,
+      managerId,
+    });
+    if (!ok) {
       setError("Team names can't be empty or duplicate an existing team.");
       return;
     }

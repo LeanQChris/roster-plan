@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import {
@@ -10,11 +10,11 @@ import {
   DEFAULT_TIMEZONE,
   LOCALES,
   TIMEZONES,
-  readCompanySetup,
+  getCompanySettings,
   saveCompanySettings,
   slugify,
 } from "@/lib/company";
-import type { BreakPolicy } from "@/lib/company";
+import type { BreakPolicy, CompanySettings } from "@/lib/company";
 import { COMPANY_COLORS } from "@/lib/data";
 import ChangePasswordCard from "@/components/settings/ChangePasswordCard";
 import {
@@ -40,30 +40,48 @@ const LOGO_TYPES = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
 
 export default function SettingsForm() {
   const { user } = useAuth();
-  const [setup] = useState(() => readCompanySetup());
+  const [setup, setSetup] = useState<CompanySettings | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
-  const [name, setName] = useState(setup?.company ?? user?.company ?? "");
-  const [timezone, setTimezone] = useState(setup?.timezone ?? DEFAULT_TIMEZONE);
-  const [locale, setLocale] = useState(setup?.locale ?? DEFAULT_LOCALE);
-  const [branding, setBranding] = useState(
-    setup?.brandingColor ?? DEFAULT_BRANDING,
-  );
-  const [logoUrl, setLogoUrl] = useState(setup?.logoUrl ?? "");
-  const [breakPolicy, setBreakPolicy] = useState<BreakPolicy>(
-    setup?.breakPolicy ?? DEFAULT_BREAK_POLICY,
-  );
+  const [name, setName] = useState(user?.company ?? "");
+  const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
+  const [locale, setLocale] = useState(DEFAULT_LOCALE);
+  const [branding, setBranding] = useState(DEFAULT_BRANDING);
+  const [logoUrl, setLogoUrl] = useState("");
+  const [breakPolicy, setBreakPolicy] = useState<BreakPolicy>(DEFAULT_BREAK_POLICY);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    getCompanySettings().then((result) => {
+      if (cancelled) return;
+      setSetup(result);
+      setLoaded(true);
+      if (result) {
+        setName(result.name);
+        setTimezone(result.timezone);
+        setLocale(result.locale);
+        setBranding(result.brandingColor);
+        setLogoUrl(result.logoUrl ?? "");
+        setBreakPolicy(result.breakPolicy);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const dirty =
-    name.trim() !== (setup?.company ?? "") ||
-    timezone !== (setup?.timezone ?? DEFAULT_TIMEZONE) ||
-    locale !== (setup?.locale ?? DEFAULT_LOCALE) ||
-    branding !== (setup?.brandingColor ?? DEFAULT_BRANDING) ||
-    logoUrl !== (setup?.logoUrl ?? "") ||
-    JSON.stringify(breakPolicy) !==
-      JSON.stringify(setup?.breakPolicy ?? DEFAULT_BREAK_POLICY);
+    loaded &&
+    (name.trim() !== (setup?.name ?? "") ||
+      timezone !== (setup?.timezone ?? DEFAULT_TIMEZONE) ||
+      locale !== (setup?.locale ?? DEFAULT_LOCALE) ||
+      branding !== (setup?.brandingColor ?? DEFAULT_BRANDING) ||
+      logoUrl !== (setup?.logoUrl ?? "") ||
+      JSON.stringify(breakPolicy) !==
+        JSON.stringify(setup?.breakPolicy ?? DEFAULT_BREAK_POLICY));
 
   const onLogoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -86,7 +104,7 @@ export default function SettingsForm() {
     reader.readAsDataURL(file);
   };
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
@@ -95,18 +113,19 @@ export default function SettingsForm() {
       return;
     }
 
-    const result = saveCompanySettings({
-      company: name.trim(),
+    const result = await saveCompanySettings({
+      name: name.trim(),
       timezone,
       locale,
       brandingColor: branding,
-      logoUrl,
+      logoUrl: logoUrl || null,
       breakPolicy,
     });
     if (!result) {
-      setError("Couldn't save — storage unavailable.");
+      setError("Couldn't save changes.");
       return;
     }
+    setSetup(result);
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2600);
   };
@@ -121,7 +140,7 @@ export default function SettingsForm() {
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
             Workspace identity, regional defaults, and branding for{" "}
-            {setup?.company ?? "your company"}.
+            {setup?.name ?? "your company"}.
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -515,10 +534,6 @@ export default function SettingsForm() {
     <div className="mt-4">
       <ChangePasswordCard />
     </div>
-
-    <p className="mt-6 text-center text-[11px] text-ink-faint">
-      Settings are stored in your browser for this prototype.
-    </p>
   </div>
   );
 }

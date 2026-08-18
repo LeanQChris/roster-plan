@@ -88,13 +88,28 @@ export default function EmployeeClockPage() {
     [sessionBreaks],
   );
 
-  const policy = myPerson ? getBreakPolicyForPerson(myPerson.id) : DEFAULT_BREAK_POLICY;
+  const [policy, setPolicy] = useState(DEFAULT_BREAK_POLICY);
+
+  useEffect(() => {
+    if (!myPerson) {
+      setPolicy(DEFAULT_BREAK_POLICY);
+      return;
+    }
+    let cancelled = false;
+    getBreakPolicyForPerson(myPerson.id).then((p) => {
+      if (!cancelled) setPolicy(p);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [myPerson, getBreakPolicyForPerson]);
+
   const mealCount = sessionBreaks.filter((b) => b.type === "meal").length;
   const restCount = sessionBreaks.filter((b) => b.type === "rest").length;
   const mealCapped = mealCount >= policy.maxMealBreaksPerShift;
   const restCapped = restCount >= policy.maxRestBreaksPerShift;
 
-  const handleClockIn = () => {
+  const handleClockIn = async () => {
     if (!myPerson) return;
     setError(null);
     setCompleted(null);
@@ -102,29 +117,29 @@ export default function EmployeeClockPage() {
       setError("No shift assigned today — contact your manager.");
       return;
     }
-    addClockEntry(myPerson.id, "in");
+    await addClockEntry(myPerson.id, "in");
   };
 
-  const handleClockOut = () => {
+  const handleClockOut = async () => {
     if (!myPerson || !latestEntry) return;
     const durationMs = Date.now() - new Date(latestEntry.at).getTime();
-    addClockEntry(myPerson.id, "out", note || undefined);
+    await addClockEntry(myPerson.id, "out", note || undefined);
     setCompleted({ durationMs, note: note || undefined });
     setNote("");
     setShowNote(false);
   };
 
-  const handleStartBreak = (type: BreakType) => {
+  const handleStartBreak = async (type: BreakType) => {
     if (!myPerson) return;
     setBreakError(null);
-    const result = startBreak(myPerson.id, type);
+    const result = await startBreak(myPerson.id, type);
     if (!result.ok) setBreakError(result.error ?? "Could not start break.");
   };
 
-  const handleEndBreak = () => {
+  const handleEndBreak = async () => {
     if (!activeBreak) return;
     setBreakError(null);
-    const result = endBreak(activeBreak.id);
+    const result = await endBreak(activeBreak.id);
     if (!result.ok) setBreakError(result.error ?? "Could not end break.");
   };
 

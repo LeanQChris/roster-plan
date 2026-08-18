@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { readCompanySetup } from "@/lib/company";
+import { getCompanySettings } from "@/lib/company";
+import type { CompanySettings } from "@/lib/company";
 import { useCompany } from "@/lib/company-data";
 import type { Shift } from "@/lib/company-data";
 import { localDateStr } from "@/lib/format";
@@ -76,11 +77,21 @@ function getMonday(d: Date): Date {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { teams, people, shifts, shiftAssignments, clockEntries } = useCompany();
-  const [setup] = useState(() => readCompanySetup());
+  const [setup, setSetup] = useState<CompanySettings | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCompanySettings().then((result) => {
+      if (!cancelled) setSetup(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (!user) return null;
 
-  const company = setup?.company ?? user.company ?? "Your company";
+  const company = setup?.name ?? user.company ?? "Your company";
   const timezone = setup?.timezone ?? "—";
   const firstName = user.name.split(/\s+/)[0] ?? user.name;
   const activeMembers = people.filter((p) => p.status === "active").length;

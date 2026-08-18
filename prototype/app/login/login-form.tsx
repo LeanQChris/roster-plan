@@ -4,12 +4,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  DEMO_EMAIL,
-  DEMO_PASSWORD,
-  homeForRole,
-  useAuth,
-} from "@/lib/auth";
+import { homeForRole, useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import LogoMark from "@/components/ui/Logo";
 import {
@@ -33,21 +28,15 @@ export default function LoginForm() {
     if (user) router.replace(homeForRole(user.role));
   }, [user, router]);
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    const result = signIn(email, password);
+    const result = await signIn(email, password);
     if (result.ok) {
       router.replace(homeForRole(result.user?.role));
     } else {
       setError(result.error ?? "Unable to sign in.");
     }
-  };
-
-  const fillDemo = () => {
-    setEmail(DEMO_EMAIL);
-    setPassword(DEMO_PASSWORD);
-    setError(null);
   };
 
   return (
@@ -146,21 +135,6 @@ export default function LoginForm() {
             Sign in
           </button>
         </form>
-
-        <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-hairline bg-surface-2 px-3.5 py-2.5">
-          <p className="text-xs text-ink-subtle">
-            Demo account
-            <span className="ml-1 font-mono text-[11px] text-ink-muted">
-              {DEMO_EMAIL} / {DEMO_PASSWORD}
-            </span>
-          </p>
-          <button
-            onClick={fillDemo}
-            className="shrink-0 text-xs font-medium text-primary transition-colors hover:text-primary-hover"
-          >
-            Fill in
-          </button>
-        </div>
 
         <div className="mt-4 flex items-center justify-between gap-3">
           <Link

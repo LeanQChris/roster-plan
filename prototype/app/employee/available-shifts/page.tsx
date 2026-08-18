@@ -184,12 +184,12 @@ export default function AvailableShiftsPage() {
     shiftsByDate.set(s.date, list);
   }
 
-  const handleRequestShift = () => {
+  const handleRequestShift = async () => {
     if (!selectedShift || !myPerson) return;
     setRequestError(null);
     setRequestSuccess(false);
 
-    const result = requestShift(selectedShift.id, myPerson.id);
+    const result = await requestShift(selectedShift.id, myPerson.id);
     if (result.ok) {
       setRequestSuccess(true);
       setTimeout(() => {

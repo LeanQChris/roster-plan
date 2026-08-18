@@ -29,27 +29,29 @@ export default function TeamsPage() {
     window.setTimeout(() => setSaved(false), 2600);
   };
 
-  const handleSave = (input: TeamFormInput): { ok: boolean; error?: string } => {
+  const handleSave = async (
+    input: TeamFormInput,
+  ): Promise<{ ok: boolean; error?: string }> => {
     if (modalTeam) {
-      if (
-        !updateTeam(modalTeam.id, {
-          name: input.name,
-          description: input.description,
-          locationId: input.locationId,
-          managerId: input.managerId,
-        })
-      ) {
+      const ok = await updateTeam(modalTeam.id, {
+        name: input.name,
+        description: input.description,
+        locationId: input.locationId,
+        managerId: input.managerId,
+      });
+      if (!ok) {
         return { ok: false, error: "Team names can't be empty or duplicate an existing team." };
       }
-    } else if (
-      !createTeam(
+    } else {
+      const team = await createTeam(
         input.name,
         input.description,
         input.locationId,
         input.managerId,
-      )
-    ) {
-      return { ok: false, error: "Team name can't be empty or match an existing team." };
+      );
+      if (!team) {
+        return { ok: false, error: "Team name can't be empty or match an existing team." };
+      }
     }
     setModalTeam(undefined);
     flashSaved();

@@ -12,15 +12,8 @@ import {
   EyeIcon,
   EyeOffIcon,
   MoonIcon,
-  ShieldIcon,
   SunIcon,
 } from "@/components/ui/icons";
-
-const CODE_LENGTH = 6;
-
-function generateCode(): string {
-  return Math.floor(Math.random() * 900000 + 100000).toString();
-}
 
 function PasswordField({
   id,
@@ -69,19 +62,12 @@ function PasswordField({
   );
 }
 
-interface PendingSignup {
-  email: string;
-  password: string;
-  company: string;
-}
-
 export default function RegisterForm() {
   const router = useRouter();
   const { registerAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  const [pending, setPending] = useState<PendingSignup | null>(null);
-  const [code, setCode] = useState(generateCode());
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
@@ -90,12 +76,9 @@ export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [codeInput, setCodeInput] = useState("");
-  const [codeError, setCodeError] = useState<string | null>(null);
-  const [resent, setResent] = useState(false);
-
-  const submitStep = (e: FormEvent<HTMLFormElement>) => {
+  const submitStep = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setAccountError(null);
 
@@ -116,47 +99,26 @@ export default function RegisterForm() {
       return;
     }
 
-    // Static prototype — no 6-digit code is actually emailed; it's shown in the demo box.
-    setPending({
+    setSubmitting(true);
+    const result = await registerAdmin({
       email: email.trim().toLowerCase(),
       password,
       company: company.trim(),
     });
-    setCode(generateCode());
-    setCodeInput("");
-    setCodeError(null);
-    setResent(false);
-  };
+    setSubmitting(false);
 
-  const verifyCode = (value: string) => {
-    if (value !== code) {
-      setCodeError("That code doesn't match. Double-check or resend.");
-      setCodeInput("");
+    if (result.ok) {
+      router.replace("/company/setup");
       return;
     }
-
-    if (!pending) return;
-    const result = registerAdmin({
-      email: pending.email,
-      password: pending.password,
-      company: pending.company,
-    });
-    if (!result.ok) {
-      setCodeError(result.error ?? "Unable to create the account.");
+    if (result.error?.startsWith("Account created")) {
+      setPendingMessage(result.error);
       return;
     }
-    router.replace("/company/setup");
+    setAccountError(result.error ?? "Unable to create the account.");
   };
 
-  const resend = () => {
-    const next = generateCode();
-    setCode(next);
-    setCodeError(null);
-    setCodeInput("");
-    setResent(true);
-  };
-
-  if (pending) {
+  if (pendingMessage) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
         <div className="w-full max-w-sm">
@@ -166,96 +128,19 @@ export default function RegisterForm() {
               <h1 className="text-xl font-semibold tracking-tight text-ink">
                 Check your email
               </h1>
-              <p className="mt-1 text-sm text-ink-muted">
-                We sent a {CODE_LENGTH}-digit code to{" "}
-                <span className="font-medium text-ink">{pending.email}</span>
-              </p>
+              <p className="mt-1 text-sm text-ink-muted">{pendingMessage}</p>
             </div>
           </div>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              verifyCode(codeInput);
-            }}
-            className="mt-6 rounded-xl border border-hairline bg-surface-2 p-6"
-          >
-            <label
-              htmlFor="code"
-              className="block text-xs font-medium text-ink-muted"
-            >
-              Verification code
-            </label>
-            <input
-              id="code"
-              inputMode="numeric"
-              autoFocus
-              autoComplete="one-time-code"
-              maxLength={CODE_LENGTH}
-              value={codeInput}
-              onChange={(e) => {
-                const value = e.target.value
-                  .replace(/\D/g, "")
-                  .slice(0, CODE_LENGTH);
-                setCodeInput(value);
-                if (value.length === CODE_LENGTH) verifyCode(value);
-              }}
-              placeholder="······"
-              className="mt-1.5 h-12 w-full rounded-lg border border-hairline bg-surface-3 text-center text-lg font-semibold tracking-[0.35em] text-ink placeholder:text-ink-faint transition-colors focus:border-primary/60 focus:outline-none"
-            />
-
-            {codeError && (
-              <p className="mt-4 rounded-lg border border-danger/30 bg-danger-weak px-3 py-2 text-[13px] font-medium text-danger">
-                {codeError}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={codeInput.length !== CODE_LENGTH}
-              className="mt-5 h-9 w-full rounded-lg bg-primary text-[13px] font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Verify &amp; continue
-            </button>
-          </form>
-
-          <div className="mt-4 rounded-lg border border-hairline bg-surface-2 px-3.5 py-3">
-            <p className="flex items-center gap-1.5 text-xs text-ink-subtle">
-              <ShieldIcon className="size-3.5" />
-              Static prototype — no email is actually sent
-            </p>
-            <p className="mt-2 text-[11px] text-ink-muted">
-              Your code is
-              <span className="ml-1.5 font-mono text-[15px] font-semibold tracking-[0.3em] text-ink">
-                {code}
-              </span>
-            </p>
-          </div>
-
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => setPending(null)}
+          <div className="mt-4 flex items-center justify-center">
+            <Link
+              href="/login"
               className="flex items-center gap-1.5 text-xs font-medium text-primary transition-colors hover:text-primary-hover"
             >
               <ArrowLeftIcon className="size-3.5" />
-              Change email address
-            </button>
-            <button
-              type="button"
-              onClick={resend}
-              className="shrink-0 text-xs text-ink-subtle transition-colors hover:text-ink-muted"
-            >
-              Resend code
-            </button>
+              Back to sign in
+            </Link>
           </div>
-
-          <p
-            className={`mt-3 text-center text-[11px] font-medium transition-opacity ${resent ? "text-success opacity-100" : "opacity-0"}`}
-            aria-hidden={!resent}
-          >
-            A new code has been sent.
-          </p>
         </div>
       </div>
     );
@@ -353,14 +238,14 @@ export default function RegisterForm() {
 
           <button
             type="submit"
-            className="mt-5 h-9 w-full rounded-lg bg-primary text-[13px] font-medium text-white transition-colors hover:bg-primary-hover"
+            disabled={submitting}
+            className="mt-5 h-9 w-full rounded-lg bg-primary text-[13px] font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Create Account
+            {submitting ? "Creating account…" : "Create Account"}
           </button>
 
           <p className="mt-3 text-center text-[11px] leading-relaxed text-ink-subtle">
-            A verification code will be sent to your email to confirm the
-            account.
+            You may need to confirm your email before signing in.
           </p>
         </form>
 
@@ -379,10 +264,6 @@ export default function RegisterForm() {
             Back to home
           </Link>
         </div>
-
-        <p className="mt-6 text-center text-[11px] leading-relaxed text-ink-faint">
-          Static prototype — the account is stored only in your browser.
-        </p>
       </div>
     </div>
   );

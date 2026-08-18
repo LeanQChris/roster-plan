@@ -7,52 +7,25 @@ import {
   useEffect,
   useMemo,
   useState,
-  useSyncExternalStore,
 } from "react";
 import type { ReactNode } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { homeForRole } from "@/lib/roles";
+import type { AuthRole } from "@/lib/roles";
+import { inviteEmployee as inviteEmployeeAction } from "@/lib/supabase/actions";
 
-export const DEMO_EMAIL = "superadmin@gmail.com";
-export const DEMO_PASSWORD = "superadmin";
-
-export const DEFAULT_PASSWORD = "Password@123";
-
-export const ADMINS_KEY = "roster.accounts";
-export const EMPLOYEE_ACCOUNTS_KEY = "roster.employeeAccounts";
-const PASSWORD_OVERRIDES_KEY = "roster.passwordOverrides";
-const PEOPLE_KEY = "roster.people";
-
-export type AuthRole = "super_admin" | "company_admin" | "manager" | "employee";
-
-export function homeForRole(role: string | undefined): string {
-  if (role === "super_admin") return "/admin";
-  if (role === "manager") return "/manager/dashboard";
-  if (role === "employee") return "/employee/dashboard";
-  return "/dashboard";
-}
+export type { AuthRole };
+export { homeForRole };
 
 export interface AuthUser {
+  id: string;
   email: string;
   name: string;
   role: AuthRole;
+  companyId: string | null;
+  personId: string | null;
+  /** Company display name, joined from companies.name. Undefined for super_admin. */
   company?: string;
-}
-
-export interface RegisteredAdmin {
-  name: string;
-  email: string;
-  password: string;
-  company: string;
-  role: "company_admin";
-  createdAt: string;
-}
-
-export interface RegisteredEmployee {
-  email: string;
-  password: string;
-  personId: string;
-  name: string;
-  role?: "employee" | "manager";
-  createdAt: string;
 }
 
 export interface SignInResult {
@@ -69,391 +42,181 @@ export type RegisterInput = {
 
 export type RegisterEmployeeInput = {
   email: string;
-  password: string;
   personId: string;
   name: string;
   role?: "employee" | "manager";
-};
-
-export type RegisterEmployeeOptions = {
-  autoSignIn?: boolean;
+  /**
+   * @deprecated Real Supabase invites let the invitee set their own
+   * password via the emailed link — this is ignored. Kept optional so
+   * pre-migration call sites (Phase 2 people domain) still compile.
+   */
+  password?: string;
 };
 
 interface AuthContextValue {
   user: AuthUser | null;
   ready: boolean;
-  signIn: (email: string, password: string) => SignInResult;
-  signOut: () => void;
-  registerAdmin: (input: RegisterInput) => SignInResult;
+  signIn: (email: string, password: string) => Promise<SignInResult>;
+  signOut: () => Promise<void>;
+  registerAdmin: (input: RegisterInput) => Promise<SignInResult>;
   registerEmployee: (
     input: RegisterEmployeeInput,
-    options?: RegisterEmployeeOptions,
-  ) => SignInResult;
-  changePassword: (current: string, next: string) => SignInResult;
+  ) => Promise<{ ok: boolean; error?: string }>;
+  changePassword: (current: string, next: string) => Promise<SignInResult>;
 }
 
-const STORAGE_KEY = "roster.session";
+const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function readAccounts(): RegisteredAdmin[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(ADMINS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as RegisteredAdmin[];
-    return Array.isArray(parsed)
-      ? parsed.filter((a) => a?.email && a?.password)
-      : [];
-  } catch {
-    return [];
-  }
-}
+// One-time cutover: stale localStorage-based auth from the pre-Supabase
+// prototype is dead weight — clear it so it can't collide with the new
+// session model. Runs once per browser (marker key), only when a Supabase
+// env var is present (i.e. this build has actually cut over).
+const LEGACY_AUTH_KEYS = [
+  "roster.session",
+  "roster.accounts",
+  "roster.employeeAccounts",
+  "roster.passwordOverrides",
+];
+const CUTOVER_MARKER_KEY = "roster.supabaseCutoverDone";
 
-function readEmployeeAccounts(): RegisteredEmployee[] {
-  if (typeof window === "undefined") return [];
+function clearLegacyAuthStorage() {
+  if (typeof window === "undefined") return;
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return;
   try {
-    const raw = window.localStorage.getItem(EMPLOYEE_ACCOUNTS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as RegisteredEmployee[];
-    return Array.isArray(parsed)
-      ? parsed.filter((a) => a?.email && a?.password)
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function readPasswordOverrides(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  try {
-    return JSON.parse(window.localStorage.getItem(PASSWORD_OVERRIDES_KEY) ?? "{}") ?? {};
-  } catch {
-    return {};
-  }
-}
-
-function writePasswordOverride(email: string, password: string): void {
-  try {
-    const all = readPasswordOverrides();
-    all[email] = password;
-    window.localStorage.setItem(PASSWORD_OVERRIDES_KEY, JSON.stringify(all));
+    if (window.localStorage.getItem(CUTOVER_MARKER_KEY)) return;
+    LEGACY_AUTH_KEYS.forEach((key) => window.localStorage.removeItem(key));
+    window.localStorage.setItem(CUTOVER_MARKER_KEY, "1");
   } catch {
     // storage unavailable — ignore
   }
 }
 
-function demoPasswordFor(email: string): string | undefined {
-  if (email === DEMO_EMAIL) return DEMO_PASSWORD;
-  return undefined;
+async function loadAuthUser(): Promise<AuthUser | null> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, company_id, person_id, role, email, name, companies(name)")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile) return null;
+
+  return {
+    id: profile.id,
+    email: profile.email,
+    name: profile.name,
+    role: profile.role,
+    companyId: profile.company_id,
+    personId: profile.person_id,
+    company: (profile.companies as { name?: string } | null)?.name,
+  };
 }
-
-function demoIdentityFor(
-  email: string,
-): { name: string; role: AuthRole } | undefined {
-  if (email === DEMO_EMAIL) {
-    return { name: "Bishal Adhikari", role: "super_admin" };
-  }
-  return undefined;
-}
-
-function readPeopleForAuth(): {
-  id: string;
-  email: string;
-  name: string;
-  role: "employee" | "manager";
-}[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(PEOPLE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as {
-      id: string;
-      email: string;
-      name: string;
-      role?: "employee" | "manager";
-    }[];
-    return Array.isArray(parsed)
-      ? parsed
-          .filter(
-            (p) =>
-              p?.email &&
-              (p.role === "employee" || p.role === "manager"),
-          )
-          .map((p) => ({
-            id: p.id,
-            email: (p.email as string).toLowerCase(),
-            name: p.name,
-            role: p.role as "employee" | "manager",
-          }))
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-type Listener = () => void;
-const listeners = new Set<Listener>();
-let cachedUser: AuthUser | null | undefined;
-
-function readStoredUser(): AuthUser | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as AuthUser;
-    if (!parsed?.email) return null;
-    if (parsed.role === "super_admin") {
-      return parsed.email.toLowerCase() === DEMO_EMAIL ? parsed : null;
-    }
-    if (parsed.role === "manager") {
-      return readEmployeeAccounts().some(
-        (a) =>
-          a.email.toLowerCase() === parsed.email.toLowerCase() &&
-          a.role === "manager",
-      )
-        ? parsed
-        : null;
-    }
-    if (parsed.role === "employee") {
-      const email = parsed.email.toLowerCase();
-      return readEmployeeAccounts().some((a) => a.email.toLowerCase() === email)
-        ? parsed
-        : null;
-    }
-    if (
-      parsed.role === "company_admin" &&
-      readAccounts().some((a) => a.email.toLowerCase() === parsed.email.toLowerCase())
-    ) {
-      return parsed;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function getSnapshot(): AuthUser | null {
-  if (cachedUser === undefined) cachedUser = readStoredUser();
-  return cachedUser;
-}
-
-function getServerSnapshot(): AuthUser | null {
-  return null;
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function emitChange() {
-  listeners.forEach((listener) => listener());
-}
-
-function persistSession(session: AuthUser) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-  } catch {
-    // storage unavailable — keep in-memory session only
-  }
-  cachedUser = session;
-  emitChange();
-}
-
-function displayNameFromEmail(email: string): string {
-  const local = email.split("@")[0] ?? email;
-  return local
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const user = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  // Guards against acting on the SSR-only `null` snapshot before the
-  // client has synced with localStorage on hydration.
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [ready, setReady] = useState(false);
+
   useEffect(() => {
-    setReady(true);
+    clearLegacyAuthStorage();
+    const supabase = createClient();
+
+    let cancelled = false;
+    loadAuthUser().then((u) => {
+      if (cancelled) return;
+      setUser(u);
+      setReady(true);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      loadAuthUser().then((u) => {
+        if (!cancelled) setUser(u);
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
-  const signIn = useCallback(
-    (email: string, password: string): SignInResult => {
-      const normalized = email.trim().toLowerCase();
-      const overrides = readPasswordOverrides();
-
-      if (
-        normalized === DEMO_EMAIL &&
-        password === (overrides[DEMO_EMAIL] ?? DEMO_PASSWORD)
-      ) {
-        const session: AuthUser = {
-          email: DEMO_EMAIL,
-          name: "Bishal Adhikari",
-          role: "super_admin",
-        };
-        persistSession(session);
-        return { ok: true, user: session };
-      }
-
-      const account = readAccounts().find((a) => a.email === normalized);
-      if (account && account.password === password) {
-        const session: AuthUser = {
-          email: account.email,
-          name: account.name,
-          role: account.role,
-          company: account.company,
-        };
-        persistSession(session);
-        return { ok: true, user: session };
-      }
-
-      const employeeAccount = readEmployeeAccounts().find(
-        (a) => a.email === normalized,
-      );
-      if (employeeAccount && employeeAccount.password === password) {
-        const session: AuthUser = {
-          email: employeeAccount.email,
-          name: employeeAccount.name,
-          role: employeeAccount.role ?? "employee",
-        };
-        persistSession(session);
-        return { ok: true, user: session };
-      }
-
-      // Legacy fallback: accounts and people created before passwords
-      // were stored sign in with the default password.
-      if (password === DEFAULT_PASSWORD) {
-        const demo = demoIdentityFor(normalized);
-        if (demo) {
-          writePasswordOverride(normalized, DEFAULT_PASSWORD);
-          const session: AuthUser = { email: normalized, name: demo.name, role: demo.role };
-          persistSession(session);
-          return { ok: true, user: session };
-        }
-        const person = readPeopleForAuth().find((p) => p.email === normalized);
-        if (person) {
-          try {
-            const employee: RegisteredEmployee = {
-              email: normalized,
-              password: DEFAULT_PASSWORD,
-              personId: person.id,
-              name: person.name,
-              role: person.role,
-              createdAt: new Date().toISOString(),
-            };
-            window.localStorage.setItem(
-              EMPLOYEE_ACCOUNTS_KEY,
-              JSON.stringify([...readEmployeeAccounts(), employee]),
-            );
-          } catch {
-            // storage unavailable — keep in-memory session only
-          }
-          const session: AuthUser = {
-            email: normalized,
-            name: person.name,
-            role: person.role,
-          };
-          persistSession(session);
-          return { ok: true, user: session };
-        }
-      }
-
+  const signIn = useCallback(async (email: string, password: string): Promise<SignInResult> => {
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+    if (error) {
       return { ok: false, error: "Invalid email or password." };
-    },
-    [],
-  );
+    }
+    const nextUser = await loadAuthUser();
+    setUser(nextUser);
+    if (!nextUser) {
+      return { ok: false, error: "Signed in, but no profile found for this account." };
+    }
+    return { ok: true, user: nextUser };
+  }, []);
 
-  const registerAdmin = useCallback((input: RegisterInput): SignInResult => {
+  const signOut = useCallback(async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setUser(null);
+  }, []);
+
+  const registerAdmin = useCallback(async (input: RegisterInput): Promise<SignInResult> => {
     const email = input.email.trim().toLowerCase();
     const company = input.company.trim();
 
     if (!email || !company || !input.password) {
       return { ok: false, error: "Please fill out every field." };
     }
-    if (email === DEMO_EMAIL) {
-      return { ok: false, error: "That email is already in use." };
-    }
-    if (readAccounts().some((a) => a.email === email)) {
-      return { ok: false, error: "An admin with that email already exists." };
-    }
     if (input.password.length < 8) {
       return { ok: false, error: "Password must be at least 8 characters." };
     }
-    try {
-      const admin: RegisteredAdmin = {
-        name: displayNameFromEmail(email),
-        email,
-        password: input.password,
-        company,
-        role: "company_admin",
-        createdAt: new Date().toISOString(),
-      };
-      window.localStorage.setItem(
-        ADMINS_KEY,
-        JSON.stringify([...readAccounts(), admin]),
-      );
-      // Spec: register auto-signs-in the new admin (docs/04-mvp-plan.md §Flow 1)
-      persistSession({
-        email,
-        name: admin.name,
-        role: admin.role,
-        company: admin.company,
-      });
-    } catch {
-      // storage unavailable — registration cannot persist
-      return { ok: false, error: "Storage unavailable. Try again in a private tab." };
+
+    const supabase = createClient();
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: input.password,
+      options: {
+        data: { intended_role: "company_admin", company_name: company },
+      },
+    });
+
+    if (error) {
+      return { ok: false, error: error.message };
     }
-    return { ok: true };
+    if (!data.session) {
+      // Email confirmation is required by the project's Auth settings —
+      // no session yet, so we can't auto-sign-in.
+      return {
+        ok: false,
+        error: "Account created. Check your email to confirm before signing in.",
+      };
+    }
+
+    const nextUser = await loadAuthUser();
+    setUser(nextUser);
+    return { ok: true, user: nextUser ?? undefined };
   }, []);
 
   const registerEmployee = useCallback(
-    (
-      input: RegisterEmployeeInput,
-      options?: RegisterEmployeeOptions,
-    ): SignInResult => {
-      const email = input.email.trim().toLowerCase();
-
-      if (!email || !input.password || !input.personId) {
-        return { ok: false, error: "Please fill out every field." };
-      }
-      if (input.password.length < 8) {
-        return { ok: false, error: "Password must be at least 8 characters." };
-      }
-      if (readEmployeeAccounts().some((a) => a.email === email)) {
-        return { ok: false, error: "An account with that email already exists." };
-      }
-      try {
-        const employee: RegisteredEmployee = {
-          email,
-          password: input.password,
-          personId: input.personId,
-          name: input.name,
-          role: input.role ?? "employee",
-          createdAt: new Date().toISOString(),
-        };
-        window.localStorage.setItem(
-          EMPLOYEE_ACCOUNTS_KEY,
-          JSON.stringify([...readEmployeeAccounts(), employee]),
-        );
-        if (options?.autoSignIn !== false) {
-          persistSession({
-            email,
-            name: employee.name,
-            role: employee.role ?? "employee",
-          });
-        }
-      } catch {
-        return { ok: false, error: "Storage unavailable. Try again in a private tab." };
-      }
-      return { ok: true };
+    async (input: RegisterEmployeeInput): Promise<{ ok: boolean; error?: string }> => {
+      return inviteEmployeeAction({
+        email: input.email.trim().toLowerCase(),
+        personId: input.personId,
+        role: input.role ?? "employee",
+      });
     },
     [],
   );
 
   const changePassword = useCallback(
-    (current: string, next: string): SignInResult => {
+    async (current: string, next: string): Promise<SignInResult> => {
       if (!user) {
         return { ok: false, error: "You must be signed in." };
       }
@@ -463,75 +226,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (next === current) {
         return { ok: false, error: "New password must be different from the current one." };
       }
-      const email = user.email.toLowerCase();
 
-      const demo = demoPasswordFor(email);
-      if (demo) {
-        const overrides = readPasswordOverrides();
-        if ((overrides[email] ?? demo) !== current) {
-          return { ok: false, error: "Current password is incorrect." };
-        }
-        writePasswordOverride(email, next);
-        return { ok: true };
+      const supabase = createClient();
+      // Re-auth to validate the current password before allowing the change.
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: current,
+      });
+      if (reauthError) {
+        return { ok: false, error: "Current password is incorrect." };
       }
 
-      const admins = readAccounts();
-      const adminIdx = admins.findIndex((a) => a.email === email);
-      if (adminIdx >= 0) {
-        if (admins[adminIdx].password !== current) {
-          return { ok: false, error: "Current password is incorrect." };
-        }
-        const updated = [...admins];
-        updated[adminIdx] = { ...admins[adminIdx], password: next };
-        try {
-          window.localStorage.setItem(ADMINS_KEY, JSON.stringify(updated));
-        } catch {
-          return { ok: false, error: "Storage unavailable. Try again in a private tab." };
-        }
-        return { ok: true };
+      const { error } = await supabase.auth.updateUser({ password: next });
+      if (error) {
+        return { ok: false, error: error.message };
       }
-
-      const employeeAccounts = readEmployeeAccounts();
-      const empIdx = employeeAccounts.findIndex((a) => a.email === email);
-      if (empIdx >= 0) {
-        if (employeeAccounts[empIdx].password !== current) {
-          return { ok: false, error: "Current password is incorrect." };
-        }
-        const updated = [...employeeAccounts];
-        updated[empIdx] = { ...employeeAccounts[empIdx], password: next };
-        try {
-          window.localStorage.setItem(EMPLOYEE_ACCOUNTS_KEY, JSON.stringify(updated));
-        } catch {
-          return { ok: false, error: "Storage unavailable. Try again in a private tab." };
-        }
-        return { ok: true };
-      }
-
-      return { ok: false, error: "No account found for this email." };
+      return { ok: true };
     },
     [user],
   );
 
-  const signOut = useCallback(() => {
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
-    }
-    cachedUser = null;
-    emitChange();
-  }, []);
-
-  const value = useMemo(
-    () => ({
-      user,
-      ready,
-      signIn,
-      signOut,
-      registerAdmin,
-      registerEmployee,
-      changePassword,
-    }),
+  const value = useMemo<AuthContextValue>(
+    () => ({ user, ready, signIn, signOut, registerAdmin, registerEmployee, changePassword }),
     [user, ready, signIn, signOut, registerAdmin, registerEmployee, changePassword],
   );
 
@@ -542,4 +258,26 @@ export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within <AuthProvider>");
   return ctx;
+}
+
+// ---------------------------------------------------------------------------
+// Legacy compatibility shims — lib/store.tsx (AdminProvider) is a Phase 5
+// rewrite target (real service-role queries replace this). Kept as
+// empty/no-op so it still compiles and renders (with an empty registered-
+// companies list) until then.
+// ---------------------------------------------------------------------------
+
+/** @deprecated Phase 5 will rewrite lib/store.tsx against real tables. */
+export interface RegisteredAdmin {
+  name: string;
+  email: string;
+  password: string;
+  company: string;
+  role: "company_admin";
+  createdAt: string;
+}
+
+/** @deprecated Always returns []. Phase 5 will rewrite lib/store.tsx against real tables. */
+export function readAccounts(): RegisteredAdmin[] {
+  return [];
 }

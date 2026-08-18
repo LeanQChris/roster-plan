@@ -35,9 +35,11 @@ export default function PeoplePage() {
     setFormOpen(true);
   };
 
-  const handleSave = (input: PersonFormInput): { ok: boolean; error?: string } => {
+  const handleSave = async (
+    input: PersonFormInput,
+  ): Promise<{ ok: boolean; error?: string }> => {
     if (editing) {
-      updatePerson(editing.id, {
+      await updatePerson(editing.id, {
         name: input.name,
         phone: input.phone,
         role: input.role,
@@ -46,7 +48,7 @@ export default function PeoplePage() {
         timezone: input.timezone,
       });
     } else {
-      const result = invitePerson({
+      const result = await invitePerson({
         name: input.name,
         email: input.email,
         phone: input.phone,
@@ -59,17 +61,14 @@ export default function PeoplePage() {
         return { ok: false, error: result.error };
       }
       if (input.password && result.personId) {
-        updatePerson(result.personId, { status: "active" });
-        const account = registerEmployee(
-          {
-            email: input.email.trim().toLowerCase(),
-            password: input.password,
-            personId: result.personId,
-            name: input.name.trim(),
-            role: input.role,
-          },
-          { autoSignIn: false },
-        );
+        await updatePerson(result.personId, { status: "active" });
+        const account = await registerEmployee({
+          email: input.email.trim().toLowerCase(),
+          password: input.password,
+          personId: result.personId,
+          name: input.name.trim(),
+          role: input.role,
+        });
         if (!account.ok) {
           return { ok: false, error: account.error };
         }

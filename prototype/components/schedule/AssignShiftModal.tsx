@@ -26,7 +26,10 @@ interface AssignShiftModalProps {
   assignments: ShiftAssignment[];
   people: Person[];
   teamPeople: Person[];
-  onAssign: (personId: string, override?: boolean) => { ok: boolean; error?: string; conflict?: boolean };
+  onAssign: (
+    personId: string,
+    override?: boolean,
+  ) => Promise<{ ok: boolean; error?: string; conflict?: boolean }>;
   onRemove: (assignmentId: string) => void;
   onClose: () => void;
 }
@@ -47,9 +50,9 @@ export default function AssignShiftModal({
   } | null>(null);
   const [assignError, setAssignError] = useState<string | null>(null);
 
-  const handleAssignClick = (person: Person) => {
+  const handleAssignClick = async (person: Person) => {
     setAssignError(null);
-    const result = onAssign(person.id);
+    const result = await onAssign(person.id);
     if (result.ok) return;
     if (result.conflict) {
       setConflict({
@@ -62,9 +65,9 @@ export default function AssignShiftModal({
     }
   };
 
-  const handleOverride = () => {
+  const handleOverride = async () => {
     if (!conflict) return;
-    onAssign(conflict.personId, true);
+    await onAssign(conflict.personId, true);
     setConflict(null);
   };
 

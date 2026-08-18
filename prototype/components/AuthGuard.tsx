@@ -21,7 +21,7 @@ export default function AuthGuard({
   const router = useRouter();
 
   useEffect(() => {
-    if (!ready) return; // wait for localStorage session to hydrate on mount
+    if (!ready) return; // wait for Supabase session to load on mount
     if (!user) {
       router.replace(redirectTo);
       return;

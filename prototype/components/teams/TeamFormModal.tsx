@@ -24,7 +24,7 @@ interface TeamFormModalProps {
   locations: Location[];
   people: Person[];
   onClose: () => void;
-  onSave: (input: TeamFormInput) => { ok: boolean; error?: string };
+  onSave: (input: TeamFormInput) => Promise<{ ok: boolean; error?: string }>;
 }
 
 export default function TeamFormModal({
@@ -46,10 +46,10 @@ export default function TeamFormModal({
   );
   const [error, setError] = useState<string | null>(null);
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    const result = onSave({
+    const result = await onSave({
       name: name.trim(),
       description: description.trim() || undefined,
       locationId,
