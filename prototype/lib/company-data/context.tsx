@@ -23,6 +23,7 @@ import {
   shiftTimesOverlap,
 } from "./business";
 import { initialState, reducer } from "./reducer";
+import { inviteEmployee } from "@/lib/supabase/actions";
 import {
   deleteAssignmentRow,
   deleteLocationRow,
@@ -316,12 +317,29 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   );
 
   const resendInvite = useCallback(
-    async (id: string) => {
-      const updated = await updatePersonRow(id, { status: "invited" });
-      dispatch({ type: "updatePerson", id, patch: updated });
-      await logActivity(id, "resent", "Invite resent");
+    async (id: string): Promise<{ ok: boolean; error?: string }> => {
+      const person = state.people.find((p) => p.id === id);
+      if (!person) {
+        return { ok: false, error: "Person not found." };
+      }
+      try {
+        const result = await inviteEmployee({
+          email: person.email,
+          personId: id,
+          role: person.role,
+        });
+        if (!result.ok) {
+          return { ok: false, error: result.error };
+        }
+        const updated = await updatePersonRow(id, { status: "invited" });
+        dispatch({ type: "updatePerson", id, patch: updated });
+        await logActivity(id, "resent", "Invite resent");
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: errorMessage(e) };
+      }
     },
-    [logActivity],
+    [state.people, logActivity],
   );
 
   const deletePerson = useCallback(async (id: string) => {

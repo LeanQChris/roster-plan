@@ -45,12 +45,6 @@ export type RegisterEmployeeInput = {
   personId: string;
   name: string;
   role?: "employee" | "manager";
-  /**
-   * @deprecated Real Supabase invites let the invitee set their own
-   * password via the emailed link — this is ignored. Kept optional so
-   * pre-migration call sites (Phase 2 people domain) still compile.
-   */
-  password?: string;
 };
 
 interface AuthContextValue {

@@ -151,16 +151,6 @@ export default function LoginForm() {
             Back to home
           </Link>
         </div>
-
-        <p className="mt-3 text-center text-xs text-ink-subtle">
-          Have an invite?{" "}
-          <Link
-            href="/accept-invite"
-            className="font-medium text-primary transition-colors hover:text-primary-hover"
-          >
-            Accept it here
-          </Link>
-        </p>
       </div>
     </div>
   );

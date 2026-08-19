@@ -307,7 +307,7 @@ export interface CompanyContextValue extends CompanyState {
   deleteTeam: (id: string) => Promise<void>;
   invitePerson: (input: InviteInput) => Promise<{ ok: boolean; error?: string; personId?: string }>;
   updatePerson: (id: string, patch: Partial<Person>) => Promise<boolean>;
-  resendInvite: (id: string) => Promise<void>;
+  resendInvite: (id: string) => Promise<{ ok: boolean; error?: string }>;
   deletePerson: (id: string) => Promise<void>;
   createLocation: (input: LocationInput) => Promise<Location | null>;
   updateLocation: (id: string, patch: Partial<Location>) => Promise<boolean>;

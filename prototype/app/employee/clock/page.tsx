@@ -230,7 +230,7 @@ export default function EmployeeClockPage() {
                       type="button"
                       onClick={() => handleStartBreak("meal")}
                       disabled={mealCapped}
-                      className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex min-h-8 flex-1 items-center justify-center rounded-lg border border-hairline bg-surface-2 px-2 py-1.5 text-center text-[13px] font-medium leading-tight text-ink transition-colors hover:bg-surface-4 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Start meal break{mealCapped ? " (limit reached)" : ""}
                     </button>
@@ -238,7 +238,7 @@ export default function EmployeeClockPage() {
                       type="button"
                       onClick={() => handleStartBreak("rest")}
                       disabled={restCapped}
-                      className="h-8 flex-1 rounded-lg border border-hairline bg-surface-2 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex min-h-8 flex-1 items-center justify-center rounded-lg border border-hairline bg-surface-2 px-2 py-1.5 text-center text-[13px] font-medium leading-tight text-ink transition-colors hover:bg-surface-4 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Start rest break{restCapped ? " (limit reached)" : ""}
                     </button>

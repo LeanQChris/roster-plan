@@ -6,7 +6,14 @@ import { updateSession } from "@/lib/supabase/proxy";
 // (requireRole, used in Server Components/Actions). This just pre-filters
 // obviously-unauthenticated requests away from protected routes and keeps
 // the session cookie refreshed on every request.
-const PUBLIC_PATHS = ["/", "/login", "/register", "/accept-invite", "/auth/callback"];
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/register",
+  "/accept-invite",
+  "/auth/callback",
+  "/auth/confirm",
+];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(

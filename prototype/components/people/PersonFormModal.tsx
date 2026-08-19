@@ -10,11 +10,7 @@ import type {
   Team,
 } from "@/lib/company-data";
 import { DEFAULT_TIMEZONE, TIMEZONES } from "@/lib/company";
-import {
-  ChevronDownIcon,
-  EyeIcon,
-  EyeOffIcon,
-} from "@/components/ui/icons";
+import { ChevronDownIcon } from "@/components/ui/icons";
 import TeamMultiSelect from "./TeamMultiSelect";
 
 const inputClass =
@@ -31,50 +27,6 @@ export interface PersonFormInput {
   teamIds: string[];
   locationId: string | null;
   timezone: string;
-  password?: string;
-}
-
-function PasswordField({
-  id,
-  label,
-  value,
-  onChange,
-  visible,
-  onToggleVisible,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  visible: boolean;
-  onToggleVisible: (visible: boolean) => void;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="block text-xs font-medium text-ink-muted">
-        {label}
-      </label>
-      <div className="relative mt-1.5">
-        <input
-          id={id}
-          type={visible ? "text" : "password"}
-          autoComplete="new-password"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="At least 8 characters"
-          className={`${inputClass} pr-9`}
-        />
-        <button
-          type="button"
-          onClick={() => onToggleVisible(!visible)}
-          aria-label={visible ? "Hide password" : "Show password"}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-ink-subtle transition-colors hover:text-ink"
-        >
-          {visible ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
-        </button>
-      </div>
-    </div>
-  );
 }
 
 interface PersonFormModalProps {
@@ -104,26 +56,11 @@ export default function PersonFormModal({
   const [timezone, setTimezone] = useState(
     person?.timezone ?? DEFAULT_TIMEZONE,
   );
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-
-    if (!isEdit) {
-      if (password && password.length < 8) {
-        setError("Password must be at least 8 characters.");
-        return;
-      }
-      if (password !== confirm) {
-        setError("Passwords do not match.");
-        return;
-      }
-    }
 
     const result = await onSave({
       name: name.trim(),
@@ -133,7 +70,6 @@ export default function PersonFormModal({
       teamIds,
       locationId,
       timezone,
-      password: password || undefined,
     });
     if (!result.ok) {
       setError(result.error ?? "Couldn't save — try again.");
@@ -147,7 +83,7 @@ export default function PersonFormModal({
       description={
         isEdit
           ? "Update team, role, and contact details."
-          : "Set a password so they can sign in right away — or leave it blank to send an invite email instead."
+          : "They'll get an email to set their own password and accept the invite."
       }
       confirmLabel={isEdit ? "Save changes" : "Send invite"}
       hideFooter
@@ -276,27 +212,6 @@ export default function PersonFormModal({
             onChange={setTeamIds}
           />
         </div>
-
-        {!isEdit && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <PasswordField
-              id="person-password"
-              label="Password"
-              value={password}
-              onChange={setPassword}
-              visible={showPassword}
-              onToggleVisible={setShowPassword}
-            />
-            <PasswordField
-              id="person-confirm"
-              label="Confirm password"
-              value={confirm}
-              onChange={setConfirm}
-              visible={showConfirm}
-              onToggleVisible={setShowConfirm}
-            />
-          </div>
-        )}
 
         <div>
           <label

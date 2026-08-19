@@ -19,10 +19,23 @@ export default function PeoplePage() {
   const [formOpen, setFormOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Person | null>(null);
   const [saved, setSaved] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
 
   const flashSaved = () => {
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2600);
+  };
+
+  const flashResendError = (message: string) => {
+    setResendError(message);
+    window.setTimeout(() => setResendError(null), 4000);
+  };
+
+  const handleResend = async (person: Person) => {
+    const result = await resendInvite(person.id);
+    if (!result.ok) {
+      flashResendError(result.error ?? `Couldn't resend invite to ${person.name}.`);
+    }
   };
 
   const openInvite = () => {
@@ -57,21 +70,17 @@ export default function PeoplePage() {
         locationId: input.locationId,
         timezone: input.timezone,
       });
-      if (!result.ok) {
+      if (!result.ok || !result.personId) {
         return { ok: false, error: result.error };
       }
-      if (input.password && result.personId) {
-        await updatePerson(result.personId, { status: "active" });
-        const account = await registerEmployee({
-          email: input.email.trim().toLowerCase(),
-          password: input.password,
-          personId: result.personId,
-          name: input.name.trim(),
-          role: input.role,
-        });
-        if (!account.ok) {
-          return { ok: false, error: account.error };
-        }
+      const account = await registerEmployee({
+        email: input.email.trim().toLowerCase(),
+        personId: result.personId,
+        name: input.name.trim(),
+        role: input.role,
+      });
+      if (!account.ok) {
+        return { ok: false, error: account.error };
       }
     }
     setFormOpen(false);
@@ -89,6 +98,11 @@ export default function PeoplePage() {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
+          {resendError && (
+            <span className="rounded-lg border border-danger/30 bg-danger-weak px-2.5 py-1.5 text-xs font-medium text-danger">
+              {resendError}
+            </span>
+          )}
           {saved && (
             <span className="rounded-lg border border-success/25 bg-success-weak px-2.5 py-1.5 text-xs font-medium text-success">
               Saved
@@ -115,7 +129,7 @@ export default function PeoplePage() {
           onInvite={openInvite}
           onEdit={openEdit}
           onDelete={setConfirmDelete}
-          onResend={(person) => resendInvite(person.id)}
+          onResend={handleResend}
         />
       )}
 

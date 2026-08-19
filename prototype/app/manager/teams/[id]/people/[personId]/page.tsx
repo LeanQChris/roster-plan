@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCompany } from "@/lib/company-data";
@@ -26,8 +26,18 @@ export default function ManagerTeamMemberDetailPage() {
   const params = useParams<{ id: string; personId: string }>();
   const { locations, activity, clockEntries, resendInvite } = useCompany();
   const { team, teamPeople } = useTeamDetail();
+  const [resendError, setResendError] = useState<string | null>(null);
 
   const person = teamPeople.find((p) => p.id === params.personId);
+
+  const handleResend = async () => {
+    if (!person) return;
+    const result = await resendInvite(person.id);
+    if (!result.ok) {
+      setResendError(result.error ?? "Couldn't resend invite.");
+      window.setTimeout(() => setResendError(null), 4000);
+    }
+  };
 
   const personActivity = useMemo(
     () => activity.filter((a) => a.personId === params.personId),
@@ -94,15 +104,22 @@ export default function ManagerTeamMemberDetailPage() {
           </div>
         </div>
 
-        {person.status === "invited" && (
-          <button
-            onClick={() => resendInvite(person.id)}
-            className="flex h-8 items-center gap-2 rounded-lg border border-hairline bg-surface-2 px-3.5 text-[13px] font-medium text-ink transition-colors hover:bg-surface-3"
-          >
-            <MailIcon className="size-3.5" />
-            Resend invite
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {resendError && (
+            <span className="rounded-lg border border-danger/30 bg-danger-weak px-2.5 py-1.5 text-xs font-medium text-danger">
+              {resendError}
+            </span>
+          )}
+          {person.status === "invited" && (
+            <button
+              onClick={handleResend}
+              className="flex h-8 items-center gap-2 rounded-lg border border-hairline bg-surface-2 px-3.5 text-[13px] font-medium text-ink transition-colors hover:bg-surface-3"
+            >
+              <MailIcon className="size-3.5" />
+              Resend invite
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[300px_1fr]">

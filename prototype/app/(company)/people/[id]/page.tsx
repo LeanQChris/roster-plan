@@ -86,6 +86,7 @@ export default function PersonDetailPage() {
     notes: "",
   });
   const [saved, setSaved] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
 
   const personActivity = useMemo(
     () => activity.filter((a) => a.personId === params.id),
@@ -154,6 +155,14 @@ export default function PersonDetailPage() {
     window.setTimeout(() => setSaved(false), 2600);
   };
 
+  const handleResend = async () => {
+    const result = await resendInvite(person.id);
+    if (!result.ok) {
+      setResendError(result.error ?? "Couldn't resend invite.");
+      window.setTimeout(() => setResendError(null), 4000);
+    }
+  };
+
   return (
     <div>
       <Link
@@ -187,6 +196,11 @@ export default function PersonDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {resendError && (
+            <span className="rounded-lg border border-danger/30 bg-danger-weak px-2.5 py-1.5 text-xs font-medium text-danger">
+              {resendError}
+            </span>
+          )}
           {saved && (
             <span className="rounded-lg border border-success/25 bg-success-weak px-2.5 py-1.5 text-xs font-medium text-success">
               Saved
@@ -194,7 +208,7 @@ export default function PersonDetailPage() {
           )}
           {person.status === "invited" && (
             <button
-              onClick={() => resendInvite(person.id)}
+              onClick={handleResend}
               className="flex h-8 items-center gap-2 rounded-lg border border-hairline bg-surface-2 px-3.5 text-[13px] font-medium text-ink transition-colors hover:bg-surface-3"
             >
               <MailIcon className="size-3.5" />
