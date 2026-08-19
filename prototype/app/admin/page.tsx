@@ -33,14 +33,8 @@ const SORT_OPTIONS = [
   { value: "members" as const, label: "Most members" },
 ];
 
-const regionLabel: Record<string, string> = {
-  "us-east": "US East",
-  "eu-central": "EU Central",
-  "ap-southeast": "AP Southeast",
-};
-
 export default function CompaniesPage() {
-  const { companies, pushToast } = useAdmin();
+  const { companies, loading, pushToast } = useAdmin();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<SortKey>("created");
@@ -65,6 +59,14 @@ export default function CompaniesPage() {
   const activeCount = companies.filter((c) => c.status === "active").length;
   const suspendedCount = companies.length - activeCount;
   const memberTotal = companies.reduce((sum, c) => sum + c.members, 0);
+
+  if (loading) {
+    return (
+      <p className="py-16 text-center text-sm text-ink-muted">
+        Loading companies…
+      </p>
+    );
+  }
 
   return (
     <div>
@@ -158,7 +160,6 @@ export default function CompaniesPage() {
                   "Members",
                   "Teams",
                   "Shifts / week",
-                  "Region",
                   "Plan",
                   "Added",
                 ].map((h) => (
@@ -191,11 +192,6 @@ export default function CompaniesPage() {
                         <span className="block truncate font-mono text-[11px] text-ink-subtle">
                           {c.slug}
                         </span>
-                        {c.id.startsWith("reg_") && (
-                          <span className="mt-0.5 inline-block rounded border border-primary/25 bg-primary-weak px-1 py-px text-[10px] font-medium uppercase tracking-wide text-primary">
-                            Registered
-                          </span>
-                        )}
                       </span>
                     </Link>
                   </td>
@@ -210,9 +206,6 @@ export default function CompaniesPage() {
                   </td>
                   <td className="px-4 py-3 text-[13px] text-ink-muted tabular-nums">
                     {formatCount(c.shifts)}
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-ink-muted">
-                    {regionLabel[c.region] ?? c.region}
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-[13px] text-ink-muted capitalize">

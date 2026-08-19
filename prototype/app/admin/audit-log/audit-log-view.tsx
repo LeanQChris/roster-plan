@@ -40,7 +40,7 @@ const roleLabel: Record<string, string> = {
 
 export default function AuditLogView() {
   const searchParams = useSearchParams();
-  const { audit, companies } = useAdmin();
+  const { audit, companies, loading } = useAdmin();
 
   const companyOptions = useMemo(
     () => [
@@ -64,7 +64,7 @@ export default function AuditLogView() {
     return audit.filter((a) => {
       if (tone !== "all" && a.tone !== tone) return false;
       if (company === "platform") {
-        if (a.companyId !== "comp_00") return false;
+        if (a.companyId !== null) return false;
       } else if (company !== "all" && a.companyId !== company) {
         return false;
       }
@@ -75,6 +75,14 @@ export default function AuditLogView() {
         .includes(q);
     });
   }, [audit, query, company, tone]);
+
+  if (loading) {
+    return (
+      <p className="py-16 text-center text-sm text-ink-muted">
+        Loading audit log…
+      </p>
+    );
+  }
 
   return (
     <div>

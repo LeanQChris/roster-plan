@@ -112,6 +112,17 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
   return fromRow(data as CompanyRow);
 }
 
+// PostgREST rejects UPDATE requests with no filter at all (independent of
+// RLS — a safety guard against accidental full-table writes). SELECT has no
+// such requirement, so resolve the signed-in user's own company id first,
+// then use it as the required .eq() filter on the UPDATE.
+async function getOwnCompanyId(
+  supabase: ReturnType<typeof createClient>,
+): Promise<string | null> {
+  const { data } = await supabase.from("companies").select("id").maybeSingle();
+  return (data as { id: string } | null)?.id ?? null;
+}
+
 export interface CompanySettingsPatch {
   name?: string;
   timezone?: string;
@@ -129,6 +140,9 @@ export async function saveCompanySettings(
   patch: CompanySettingsPatch,
 ): Promise<CompanySettings | null> {
   const supabase = createClient();
+  const id = await getOwnCompanyId(supabase);
+  if (!id) return null;
+
   const update: Record<string, unknown> = {};
   if (patch.name !== undefined) update.name = patch.name;
   if (patch.timezone !== undefined) update.timezone = patch.timezone;
@@ -140,6 +154,7 @@ export async function saveCompanySettings(
   const { data, error } = await supabase
     .from("companies")
     .update(update)
+    .eq("id", id)
     .select(COMPANY_COLUMNS)
     .single();
   if (error || !data) return null;
@@ -157,9 +172,13 @@ export async function completeCompanySetup(
   timezone: string,
 ): Promise<CompanySettings | null> {
   const supabase = createClient();
+  const id = await getOwnCompanyId(supabase);
+  if (!id) return null;
+
   const { data, error } = await supabase
     .from("companies")
     .update({ timezone, completed_setup_at: new Date().toISOString() })
+    .eq("id", id)
     .select(COMPANY_COLUMNS)
     .single();
   if (error || !data) return null;

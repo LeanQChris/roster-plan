@@ -259,25 +259,3 @@ export function useAuth(): AuthContextValue {
   if (!ctx) throw new Error("useAuth must be used within <AuthProvider>");
   return ctx;
 }
-
-// ---------------------------------------------------------------------------
-// Legacy compatibility shims — lib/store.tsx (AdminProvider) is a Phase 5
-// rewrite target (real service-role queries replace this). Kept as
-// empty/no-op so it still compiles and renders (with an empty registered-
-// companies list) until then.
-// ---------------------------------------------------------------------------
-
-/** @deprecated Phase 5 will rewrite lib/store.tsx against real tables. */
-export interface RegisteredAdmin {
-  name: string;
-  email: string;
-  password: string;
-  company: string;
-  role: "company_admin";
-  createdAt: string;
-}
-
-/** @deprecated Always returns []. Phase 5 will rewrite lib/store.tsx against real tables. */
-export function readAccounts(): RegisteredAdmin[] {
-  return [];
-}

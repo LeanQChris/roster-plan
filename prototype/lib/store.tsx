@@ -4,14 +4,19 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useReducer,
+  useState,
 } from "react";
 import type { ReactNode } from "react";
-import { seedAudit, ts, COMPANY_COLORS } from "./data";
-import type { AuditEntry, AuditTone, Company, CompanyStatus } from "./data";
-import { useAuth, readAccounts } from "./auth";
-import type { RegisteredAdmin } from "./auth";
+import { createClient } from "@/lib/supabase/client";
+import { hash, COMPANY_COLORS } from "./data";
+import type { AuditEntry, Company, CompanyStatus } from "./data";
+import {
+  setCompanyStatus as setCompanyStatusAction,
+  deleteCompany as deleteCompanyAction,
+} from "@/lib/supabase/admin-actions";
 
 export interface Toast {
   id: string;
@@ -27,24 +32,27 @@ interface AdminState {
 }
 
 type AdminAction =
-  | { type: "setCompanyStatus"; id: string; status: CompanyStatus }
-  | { type: "deleteCompany"; id: string }
+  | { type: "hydrate"; companies: Company[]; audit: AuditEntry[] }
+  | { type: "patchCompanyStatus"; id: string; status: CompanyStatus; updatedAt: string }
+  | { type: "removeCompany"; id: string }
   | { type: "addAudit"; entry: AuditEntry }
   | { type: "addToast"; toast: Toast }
   | { type: "dismissToast"; id: string };
 
 const reducer = (state: AdminState, action: AdminAction): AdminState => {
   switch (action.type) {
-    case "setCompanyStatus":
+    case "hydrate":
+      return { ...state, companies: action.companies, audit: action.audit };
+    case "patchCompanyStatus":
       return {
         ...state,
         companies: state.companies.map((c) =>
           c.id === action.id
-            ? { ...c, status: action.status, updatedAt: ts(0) }
+            ? { ...c, status: action.status, updatedAt: action.updatedAt }
             : c,
         ),
       };
-    case "deleteCompany":
+    case "removeCompany":
       return {
         ...state,
         companies: state.companies.filter((c) => c.id !== action.id),
@@ -62,16 +70,9 @@ const reducer = (state: AdminState, action: AdminAction): AdminState => {
 };
 
 interface AdminContextValue extends AdminState {
-  setCompanyStatus: (id: string, status: CompanyStatus) => void;
-  deleteCompany: (id: string) => void;
-  recordAudit: (partial: {
-    action: string;
-    tone: AuditTone;
-    resource: string;
-    resourceId: string;
-    companyId: string;
-    company: string;
-  }) => void;
+  loading: boolean;
+  setCompanyStatus: (id: string, status: CompanyStatus) => Promise<{ ok: boolean; error?: string }>;
+  deleteCompany: (id: string) => Promise<{ ok: boolean; error?: string }>;
   pushToast: (toast: { tone: Toast["tone"]; message: string; detail?: string }) => void;
   dismissToast: (id: string) => void;
 }
@@ -82,119 +83,146 @@ let seq = 0;
 const nextId = (prefix: string) =>
   `${prefix}_${Date.now().toString(36)}_${(seq += 1).toString(36)}`;
 
-const hash = (s: string) => {
-  let h = 0;
-  for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0;
-  return Math.abs(h);
-};
+interface CompanyRow {
+  id: string;
+  name: string;
+  slug: string;
+  status: CompanyStatus;
+  plan: Company["plan"];
+  created_at: string;
+  updated_at: string;
+}
 
-const slugify = (name: string) =>
-  name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+interface AuditLogRow {
+  id: string;
+  actor: string;
+  actor_role: AuditEntry["actorRole"];
+  action: string;
+  tone: AuditEntry["tone"];
+  resource: string;
+  resource_id: string;
+  company_id: string | null;
+  company_name: string;
+  ip: string | null;
+  created_at: string;
+}
 
-const readStored = <T,>(key: string, fallback: T): T => {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return fallback;
-    return (JSON.parse(raw) as T) ?? fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-// Real numbers come from the company console data this browser holds.
-// Company data is single-workspace per browser in the prototype.
-const liveStats = () => {
-  const people = readStored<{ role: string }[]>("roster.people", []);
-  const teams = readStored<unknown[]>("roster.teams", []);
-  const shifts = readStored<unknown[]>("roster.shifts", []);
-  return {
-    members: people.length,
-    teams: teams.length,
-    managers: people.filter((p) => p.role === "manager").length,
-    shifts: shifts.length,
-  };
-};
-
-const regId = (email: string) =>
-  `reg_${email.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
-
-// Registered companies come from real signups (roster.accounts in localStorage).
-const registeredToCompany = (a: RegisteredAdmin): Company => ({
-  id: regId(a.email),
-  name: a.company,
-  slug: slugify(a.company),
-  status: "active",
-  region: "us-east",
-  plan: "free",
-  contactEmail: a.email,
-  ...liveStats(),
-  createdAt: a.createdAt,
-  updatedAt: a.createdAt,
-  color: COMPANY_COLORS[hash(a.email) % COMPANY_COLORS.length],
+const fromAuditRow = (row: AuditLogRow): AuditEntry => ({
+  id: row.id,
+  timestamp: row.created_at,
+  actor: row.actor,
+  actorRole: row.actor_role,
+  action: row.action,
+  tone: row.tone,
+  resource: row.resource,
+  resourceId: row.resource_id,
+  companyId: row.company_id,
+  company: row.company_name,
+  ip: row.ip,
 });
 
-const initialCompanies = (): Company[] => readAccounts().map(registeredToCompany);
+async function fetchAdminData(): Promise<{ companies: Company[]; audit: AuditEntry[] }> {
+  const supabase = createClient();
+  const [
+    { data: companyRows },
+    { data: peopleRows },
+    { data: teamRows },
+    { data: shiftRows },
+    { data: adminProfileRows },
+    { data: auditRows },
+  ] = await Promise.all([
+    supabase.from("companies").select("id, name, slug, status, plan, created_at, updated_at"),
+    supabase.from("people").select("id, company_id, role"),
+    supabase.from("teams").select("id, company_id"),
+    supabase.from("shifts").select("id, company_id"),
+    supabase
+      .from("profiles")
+      .select("id, company_id, role, email")
+      .eq("role", "company_admin"),
+    supabase
+      .from("platform_audit_log")
+      .select("*")
+      .order("created_at", { ascending: false }),
+  ]);
 
-const initialAudit = (): AuditEntry[] => [
-  ...readAccounts().map(
-    (a): AuditEntry => ({
-      id: `evt_reg_${regId(a.email)}`,
-      timestamp: a.createdAt,
-      actor: a.email,
-      actorRole: "company_admin",
-      action: "company.registration",
-      tone: "success",
-      resource: a.company,
-      resourceId: `company:${regId(a.email)}`,
-      companyId: regId(a.email),
-      company: a.company,
-      ip: "198.51.100.23",
-    }),
-  ),
-  ...seedAudit,
-];
+  const people = (peopleRows ?? []) as { company_id: string; role: string }[];
+  const teams = (teamRows ?? []) as { company_id: string }[];
+  const shifts = (shiftRows ?? []) as { company_id: string }[];
+  const adminProfiles = (adminProfileRows ?? []) as { company_id: string | null; email: string }[];
 
-export function AdminProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  const [state, dispatch] = useReducer(reducer, undefined, () => ({
-    companies: initialCompanies(),
-    audit: initialAudit(),
-    toasts: [],
+  const contactEmailByCompany = new Map<string, string>();
+  for (const p of adminProfiles) {
+    if (p.company_id && !contactEmailByCompany.has(p.company_id)) {
+      contactEmailByCompany.set(p.company_id, p.email);
+    }
+  }
+
+  const companies = ((companyRows ?? []) as CompanyRow[]).map((row): Company => ({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    status: row.status,
+    plan: row.plan,
+    contactEmail: contactEmailByCompany.get(row.id),
+    members: people.filter((p) => p.company_id === row.id).length,
+    teams: teams.filter((t) => t.company_id === row.id).length,
+    managers: people.filter((p) => p.company_id === row.id && p.role === "manager").length,
+    shifts: shifts.filter((s) => s.company_id === row.id).length,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    color: COMPANY_COLORS[hash(row.id) % COMPANY_COLORS.length],
   }));
 
+  const audit = ((auditRows ?? []) as AuditLogRow[]).map(fromAuditRow);
+
+  return { companies, audit };
+}
+
+export function AdminProvider({ children }: { children: ReactNode }) {
+  const [state, dispatch] = useReducer(reducer, { companies: [], audit: [], toasts: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { companies, audit } = await fetchAdminData();
+        if (cancelled) return;
+        dispatch({ type: "hydrate", companies, audit });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const setCompanyStatus = useCallback(
-    (id: string, status: CompanyStatus) =>
-      dispatch({ type: "setCompanyStatus", id, status }),
+    async (id: string, status: CompanyStatus): Promise<{ ok: boolean; error?: string }> => {
+      const result = await setCompanyStatusAction(id, status);
+      if (!result.ok) return { ok: false, error: result.error };
+      dispatch({
+        type: "patchCompanyStatus",
+        id,
+        status: result.status,
+        updatedAt: result.updatedAt,
+      });
+      dispatch({ type: "addAudit", entry: result.auditEntry });
+      return { ok: true };
+    },
     [],
   );
 
   const deleteCompany = useCallback(
-    (id: string) => dispatch({ type: "deleteCompany", id }),
+    async (id: string): Promise<{ ok: boolean; error?: string }> => {
+      const result = await deleteCompanyAction(id);
+      if (!result.ok) return { ok: false, error: result.error };
+      dispatch({ type: "removeCompany", id });
+      dispatch({ type: "addAudit", entry: result.auditEntry });
+      return { ok: true };
+    },
     [],
-  );
-
-  const recordAudit = useCallback(
-    (p: {
-      action: string;
-      tone: AuditTone;
-      resource: string;
-      resourceId: string;
-      companyId: string;
-      company: string;
-    }) =>
-      dispatch({
-        type: "addAudit",
-        entry: {
-          id: nextId("evt"),
-          timestamp: ts(0),
-          actor: user?.email ?? "superadmin@gmail.com",
-          actorRole: "super_admin",
-          ip: "203.0.113.4",
-          ...p,
-        },
-      }),
-    [user],
   );
 
   const dismissToast = useCallback(
@@ -219,13 +247,13 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AdminContextValue>(
     () => ({
       ...state,
+      loading,
       setCompanyStatus,
       deleteCompany,
-      recordAudit,
       pushToast,
       dismissToast,
     }),
-    [state, setCompanyStatus, deleteCompany, recordAudit, pushToast, dismissToast],
+    [state, loading, setCompanyStatus, deleteCompany, pushToast, dismissToast],
   );
 
   return (

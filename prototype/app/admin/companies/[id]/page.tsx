@@ -20,12 +20,6 @@ import {
   UsersIcon,
 } from "@/components/ui/icons";
 
-const regionLabel: Record<string, string> = {
-  "us-east": "US East (us-east-1)",
-  "eu-central": "EU Central (eu-central-1)",
-  "ap-southeast": "AP Southeast (ap-southeast-1)",
-};
-
 const actionTone: Record<string, string> = {
   "company.suspended": "danger",
   "company.activated": "success",
@@ -42,14 +36,7 @@ const actionTone: Record<string, string> = {
 
 export default function CompanyDetailPage() {
   const params = useParams<{ id: string }>();
-  const {
-    companies,
-    audit,
-    setCompanyStatus,
-    deleteCompany,
-    recordAudit,
-    pushToast,
-  } = useAdmin();
+  const { companies, audit, setCompanyStatus, deleteCompany, pushToast } = useAdmin();
 
   const company = companies.find((c) => c.id === params.id);
   const [confirm, setConfirm] = useState<null | "suspend" | "activate" | "delete">(null);
@@ -78,18 +65,13 @@ export default function CompanyDetailPage() {
     .filter((a) => a.companyId === company.id)
     .slice(0, 6);
 
-  const run = (action: "suspend" | "activate") => {
+  const run = async (action: "suspend" | "activate") => {
     const status = action === "suspend" ? "suspended" : "active";
-    setCompanyStatus(company.id, status);
-    recordAudit({
-      action:
-        action === "suspend" ? "company.suspended" : "company.activated",
-      tone: action === "suspend" ? "danger" : "success",
-      resource: company.name,
-      resourceId: `company:${company.id}`,
-      companyId: company.id,
-      company: company.name,
-    });
+    const result = await setCompanyStatus(company.id, status);
+    if (!result.ok) {
+      pushToast({ tone: "danger", message: "Failed", detail: result.error });
+      return;
+    }
     pushToast({
       tone: action === "suspend" ? "danger" : "success",
       message:
@@ -104,16 +86,12 @@ export default function CompanyDetailPage() {
     setConfirm(null);
   };
 
-  const runDelete = () => {
-    deleteCompany(company.id);
-    recordAudit({
-      action: "company.deleted",
-      tone: "danger",
-      resource: company.name,
-      resourceId: `company:${company.id}`,
-      companyId: company.id,
-      company: company.name,
-    });
+  const runDelete = async () => {
+    const result = await deleteCompany(company.id);
+    if (!result.ok) {
+      pushToast({ tone: "danger", message: "Failed", detail: result.error });
+      return;
+    }
     pushToast({
       tone: "danger",
       message: `${company.name} deleted`,
@@ -224,7 +202,6 @@ export default function CompanyDetailPage() {
           <dl className="divide-y divide-hairline/60 px-4">
             {[
               ["Plan", company.plan],
-              ["Region", regionLabel[company.region] ?? company.region],
               ["Contact email", company.contactEmail ?? "—"],
               ["Slug", company.slug],
               ["Company ID", company.id],
@@ -321,7 +298,7 @@ export default function CompanyDetailPage() {
         open={confirm === "delete"}
         tone="danger"
         title={`Delete ${company.name}?`}
-        description="This permanently deletes the workspace and its data. Clock entries are preserved for compliance per the data-retention policy."
+        description="This permanently deletes the workspace and all its data. This can't be undone."
         confirmLabel="Delete company"
         onConfirm={runDelete}
         onClose={() => setConfirm(null)}
